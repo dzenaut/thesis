@@ -4,23 +4,74 @@
     \usepackage[parfill]{parskip}
     \usepackage[utf8]{inputenc}
 
+    % Images
     \usepackage{graphicx}
+
+    % Colors
+    \usepackage{xcolor}
     
     % Related to math
-    \usepackage{amsmath,amssymb,amsfonts,amsthm}
+    \usepackage{amsmath,amssymb,amsfonts,amsthm,bm}
 
 \begin{document}
 
-Document
+\subsection*{Dynamic Simulation}
+\subsubsection*{TODOS}
+\begin{itemize}
+    \item What is dynamic simulation?
+    \item What is the standard approach?
+    \item What are the challenges?
+    \item Enter constraints!
+\end{itemize}
 
-\section*{Part a}
+Simulating effects such as incompressibility, inextensibility and joints between atriculated rigid bodies 
+can be achieved in elasticity-based simulations by using high stiffness values. High stiffness values lead to 
+large forces which in turn cause numerical issues in the solver. 
 
-Section
+We demonstrate these issues based on the example of maintaining a desired distance between two points using a stiff 
+spring \cite{tournier2015}. Let $\bm{x_1, x_2}$ be the positions, $\bm{v_1, v_2}$ the velocities and $\bm{a_1, a_2}$
+be the accelerations of the two particles. Let $\overline{l}$ be the rest length and $l = \lVert \bm{x_1} - \bm{x_2} \rVert$ 
+be the current length of the spring with stiffness $k$. It can be shown that the force that the spring applies at each particle
+is equal to $\bm{f_1} = -\bm{f_2} = \lambda\bm{u}$, where $\bm{u} = (\bm{x_1} - \bm{x_2}) / l$
+and $\lambda = -\frac{\delta V}{\delta l} = k(\overline{l} - l)$. 
+
+Once the forces, accelerations, velocities and positions are combined into a single vectors $\bm{f}, \bm{a}, \bm{v}, \bm{x}$, 
+respectively, the motions of the system can be modeled via Newton's Ordinary Differential Equation (ODE) $\bm{f} = \bm{Ma}$,
+where $\bm{M}$ is a $n_d \times n_d$ diagonal matrix and $n_d$ is the total number of independent degrees of freedom for the 
+particles.
+
+This system can be integrated via the symplectic Euler method as follows:
+
+\begin{align*}
+    \bm{v_{n+1}} &= \bm{v_n} + h\bm{a_n} \\
+    \bm{x_{n+1}} &= \bm{x_n} + h\bm{v_{n+1}}
+\end{align*}
+
+As the stiffness $k$ of the spring increases, so does the magnitude of the acceleration $\bm{a}$. Consequently, the integration
+diverges unless the timestep is prohibitively small. The stability issues are often addressed by switching to an implicit 
+integration scheme, such as the backward Euler method \cite{baraff1998}. Replacing current accelerations with future accelerations
+requires the solution of the following linear system of equations (LSE):
+
+\[
+    (\bm{M} - h^2\bm{K})\bm{\Delta v} = \bm{p} + h\bm{f}
+\]
+
+where $\bm{\Delta v} = \bm{v_{n+1}} - \bm{v_{n}}$, $\bm{p} = \bm{Mv}$ is the momentum, and $\bm{K} = \frac{\delta \bm{f}}{\delta \bm{x}}$ 
+is the stiffness matrix. \textcolor{red}{Check whether using $\Delta v$ is correct here. Check \cite{baraff1998}}. Note that $\bm{K}$
+is typically non-singular since elastic forces are invariant under rigid body transforms. When using large stiffness $k$ for springs, 
+the entries of $\bm{K}$ are large (due to large restorative forces for stiff springs) and dominate the entries of the system matrix 
+$\bm{H} = \bm{M} - h^2\bm{K}$. In these cases, $\bm{H}$ will be almost non-singular as well, leading to numerical issues and poor 
+convergence for many solvers.
+
+\subsection*{Constraint-based Dynamics}
+
+\subsubsection*{Soft Constraints}
+
+
 
 % Bibliography ------------------------------------------------------------------------
 
-% Comment in once you have a bibliography!
-% \bibliographystyle{plain}
-% \bibliography{bibliography/references}
+\bibliographystyle{plain}
+\bibliography{bibliography/references}
 
 \end{document}
