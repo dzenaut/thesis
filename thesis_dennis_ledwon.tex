@@ -53,16 +53,17 @@ integration scheme, such as the backward Euler method \cite{baraff1998}. Replaci
 requires the solution of the following linear system of equations (LSE):
 
 \[
-    (\bm{M} - h^2\bm{K})\bm{\Delta v} = \bm{p} + h\bm{f}
+    (\bm{M} - h^2\bm{K})\bm{v_{n+1}} = \bm{p} + h\bm{f}
 \]
 
-where $\bm{\Delta v} = \bm{v_{n+1}} - \bm{v_{n}}$, $\bm{p} = \bm{Mv}$ is the momentum, and $\bm{K} = \frac{\delta \bm{f}}{\delta \bm{x}}$ 
-is the stiffness matrix. \textcolor{red}{Check whether using $\Delta v$ is correct here. Check \cite{baraff1998}}. \textcolor{blue}{This
-this system is in terms of $\Delta v$ only (no $\Delta x$), because $\Delta x$ can be expressed in terms of $\Delta v$, allowing $\Delta x$ 
-to be moved out of the equation.} Note that $\bm{K}$ is typically non-singular since elastic forces are invariant under rigid body 
-transforms. When using large stiffness $k$ for springs, the entries of $\bm{K}$ are large (due to large restorative forces for stiff 
-springs) and dominate the entries of the system matrix $\bm{H} = \bm{M} - h^2\bm{K}$. In these cases, $\bm{H}$ will be almost non-singular 
-as well, leading to numerical issues and poor convergence for many solvers.
+where $\bm{p} = \bm{Mv_n}$ is the momentum, and $\bm{K} = \frac{\delta \bm{f}}{\delta \bm{x}}$ is the stiffness matrix. Note that 
+$\bm{K}$ is typically non-singular since elastic forces are invariant under rigid body transforms. When using large stiffness 
+$k$ for springs, the entries of $\bm{K}$ are large (due to large restorative forces for stiff springs) and dominate the entries 
+of the system matrix $\bm{H} = \bm{M} - h^2\bm{K}$. In these cases, $\bm{H}$ will be almost non-singular as well, leading to 
+numerical issues and poor convergence for many solvers. 
+
+\textcolor{blue}{This system results from performing the implicit integration and solving the non-linear system via linearization
+using the Taylor expansion. Positions can be eliminated can be expressed in terms of velocities and eliminated from the system.}
 
 \subsection*{Constraint-based Dynamics}
 
@@ -70,12 +71,12 @@ as well, leading to numerical issues and poor convergence for many solvers.
 The problem of maintaining hard distance constraints between particles can be formulated as a Differential Algebraic Equation (DAE)
 \cite{ascher1995, baraff1996}. In this framework, the standard ODE $\bm{f} = \bm{Ma}$ is handled together with algebraic equations 
 that model the constraints on the system. Distance constraints are typically implemented using holonomic constraints of the form 
-$\bm{psi(x)} = 0$. Note that the distance constraint $\bm{psi}(x)$ is formulated in terms of the particle positions, whereas the ODE
+$\bm{phi(x)} = 0$. Note that the distance constraint $\bm{phi}(x)$ is formulated in terms of the particle positions, whereas the ODE
 works on accelerations or velocities. Consequently, the constraints need to be differentiated once or twice so that they can be 
 combined with the ODE in terms of velocties or accelerations, respectively. \textcolor{blue}{In xPBD, we go the other way! The ODE
 is tanslated so that it is in terms of positions, so that it can be handled together with the constraints. Is there a reason nobody bothered to
 do this before? What are the challenges here? Is this exactly what xPBD is? Is there a way to view the simplifications made in 
-terms of the other frameworks?}. Using $\bm{J} = \frac{\delta \bm{psi}}{\delta \bm{x}}$, where $\bm{J}$ is a $n_c \times n_d$ matrix
+terms of the other frameworks?}. Using $\bm{J} = \frac{\delta \bm{phi}}{\delta \bm{x}}$, where $\bm{J}$ is a $n_c \times n_d$ matrix
 and $n_c$ is the number of scalar constraints, this leads to the following constraint formulations:
 
 \begin{align*}
@@ -92,7 +93,32 @@ avoid adding linear and angular momentum to the system \cite{baraff1996}:
     \bm{f_c} = \bm{J^T \lambda}
 \]
 
-where the $\lambda$ are the Lagrange multipliers of the constraints. The DAE can now be expressed in an impulse-based \cite{tournier2015}
+where the $\lambda$ are the Lagrange multipliers of the constraints. With external forces $\bm{f_e}$, the DAE can now be expressed as follows 
+\cite{ascher1995}:
+
+\[
+    \begin{pmatrix}
+        \bm{M} & \bm{J^T} \\
+        \bm{J} & 0
+    \end{pmatrix}
+    \begin{pmatrix}
+        \bm{a} \\
+        \bm{\lambda}
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        \bm{f_e} \\
+        \bm{c(v)}
+    \end{pmatrix}
+\]
+
+Note that the lower block-row of the system drives towards accelerations that satisfy the constraints imposed by $\bm{\phi(x)}$ (or, striclty 
+speaking, the differentiations thereof) exactly. This is indicated by the lower-right zero block in the system matrix in either formulation. 
+\textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}.
+
+In \cite{ascher1995}, the DAE is approached by eliminating the $\lambda$ from the system entirely and constructing an ODE in terms of positions
+and velocities. In \cite{tournier2015}, the authors suggest applying implicit integration schemes to the system directly by constructing the 
+following Karush-Kuhn-Tucker (KKT) equation system:
 
 \[
 \begin{pmatrix}
@@ -110,40 +136,33 @@ where the $\lambda$ are the Lagrange multipliers of the constraints. The DAE can
 \end{pmatrix}
 \]
 
-where $\bm{\mu} = h \bm{\lambda}$ and $\bm{f_e}$ are the external forces, or in a force-based formulation \cite{ascher1995}:
+\textcolor{blue}{Reverse-engineering how the authors arrived at this system is quite enlightening. Start out from the equations of motion \cite{ascher1995}
+    \begin{align*}
+        \dot{\bm{v}} &= \bm{M^{-1}(f - J^T) \lambda}
+    \end{align*}
+    and perform implicit integration:
+    \begin{align*}
+        \bm{v_{n+1}} &= \bm{v_n} + h\bm{M^{-1}(f_e(x_{n+1})} - \bm{J^T(x_{n+1})\lambda)} \\
+        \bm{Mv_{n+1}} &= \bm{p} + h\bm{f_e(x_{n+1})} - h\bm{J^T(x_{n+1})\lambda} \\ 
+        \bm{Mv_{n+1}} + h\bm{J^T(x_{n+1})\lambda} &= \bm{p} + h\bm{f_e(x_{n+1})} \\ 
+        \bm{Mv_{n+1}} + \bm{J^T(x_{n+1}) \mu} &= \bm{p} + h\bm{f_e(x_{n+1})}
+    \end{align*}
+}
+\textcolor{red}{If we assume that $\bm{f_e}$ and the constraint gradients $\bm{J}$ are constant across the time step, we arrive at the formulation from the
+paper. For the external forces, which are usually only comprised of gravitational forces, this is not a big deal. Is this what authors mean when they say 
+that the constraints are effectively linearized during one solve, e.g. \cite{}?}
 
-\[
-\begin{pmatrix}
-    \bm{M} & \bm{J^T} \\
-    \bm{J} & 0
-\end{pmatrix}
-\begin{pmatrix}
-    \bm{a} \\
-    \bm{\lambda}
-\end{pmatrix}
-=
-\begin{pmatrix}
-    \bm{f_e} \\
-    \bm{c(v)}
-\end{pmatrix}
-\]
-
-Note that in either case the lower block-row of the system drives towards velocities or accelerations that satisfy the constraints 
-imposed by $\bm{\psi(x)}$ (or striclty speaking the differentiations thereof) exactly. This is indicated by the lower-right zero
-block in the system matrix in either formulation. \textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ also part of the 
-differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}
-
-In both cases the system matrix is sparse. This can be exploited by sparse matrix solvers which work on it directly \cite{baraff1996}.
-Alternatively, the Schur complement can be employed due to the non-singularity of the mass matrix in the upper-left block to arrive
-at a smaller, albeit less sparse, system. For the impulse-based approach described in \cite{tournier2015}, this yields:
+Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers in order to solve the system efficiently
+\cite{baraff1996}. Alternatively, the Schur complement can be constructed since the mass matrix in the upper left block is invertible.
+This leads to a smaller, albeit less sparse system \cite{tournier2015}:
 
 \[
     \bm{JM^{-1}J^T \mu} = \bm{-JM^{-1}(p + } h \bm{f_e)}
 \]
 
-If the constraints are not redundant, $\bm{JM^{-1}J^T}$ is non-singular and symmetric positive definite \cite{baraff1996}. In 
-\cite{ascher1995} the $\lambda$ are eliminated from the system entirely, yielding an ODE in terms of positions and velocities. However,
-when the tensile force with respect to particle masses is large, instabilities in the transverse direction of the constraints occur.
+If the constraints are not redundant, $\bm{JM^{-1}J^T}$ is non-singular and symmetric positive definite \cite{baraff1996}, which are desirable
+properties for many solvers. The disadvantage of using hard constraints is that instabilities in the traverse direction of the constraints
+occur when the tensile force with respect to particle masses is large \cite{tournier2015}.
 
 % Bibliography ------------------------------------------------------------------------
 
