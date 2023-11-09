@@ -35,7 +35,7 @@ be the current length of the spring with stiffness $k$. It can be shown that the
 is equal to $\bm{f_1} = -\bm{f_2} = \lambda\bm{u}$, where $\bm{u} = (\bm{x_1} - \bm{x_2}) / l$
 and $\lambda = -\frac{\delta V}{\delta l} = k(\overline{l} - l)$. 
 
-Once the forces, accelerations, velocities and positions are combined into a single vectors $\bm{f}, \bm{a}, \bm{v}, \bm{x}$, 
+Once the forces, accelerations, velocities and positions are combined into vectors $\bm{f}, \bm{a}, \bm{v}, \bm{x}$, 
 respectively, the motions of the system can be modeled via Newton's Ordinary Differential Equation (ODE) $\bm{f} = \bm{Ma}$,
 where $\bm{M}$ is a $n_d \times n_d$ diagonal matrix and $n_d$ is the total number of independent degrees of freedom for the 
 particles.
@@ -60,10 +60,11 @@ where $\bm{p} = \bm{Mv_n}$ is the momentum, and $\bm{K} = \frac{\delta \bm{f}}{\
 $\bm{K}$ is typically non-singular since elastic forces are invariant under rigid body transforms. When using large stiffness 
 $k$ for springs, the entries of $\bm{K}$ are large (due to large restorative forces for stiff springs) and dominate the entries 
 of the system matrix $\bm{H} = \bm{M} - h^2\bm{K}$. In these cases, $\bm{H}$ will be almost non-singular as well, leading to 
-numerical issues and poor convergence for many solvers. 
+numerical issues and poor convergence for many solvers. Additionally, implicit integration introduces noticable numerical damping
+\cite{servin2006}.
 
 \textcolor{blue}{This system results from performing the implicit integration and solving the non-linear system via linearization
-using the Taylor expansion. Positions can be eliminated can be expressed in terms of velocities and eliminated from the system.}
+using the Taylor expansion. Positions can be expressed in terms of velocities and eliminated from the system.}
 
 \subsection*{Constraint-based Dynamics}
 
@@ -71,12 +72,12 @@ using the Taylor expansion. Positions can be eliminated can be expressed in term
 The problem of maintaining hard distance constraints between particles can be formulated as a Differential Algebraic Equation (DAE)
 \cite{ascher1995, baraff1996}. In this framework, the standard ODE $\bm{f} = \bm{Ma}$ is handled together with algebraic equations 
 that model the constraints on the system. Distance constraints are typically implemented using holonomic constraints of the form 
-$\bm{phi(x)} = 0$. Note that the distance constraint $\bm{phi}(x)$ is formulated in terms of the particle positions, whereas the ODE
+$\bm{\phi(x)} = 0$. Note that the distance constraint $\bm{\phi}(x)$ is formulated in terms of the particle positions, whereas the ODE
 works on accelerations or velocities. Consequently, the constraints need to be differentiated once or twice so that they can be 
 combined with the ODE in terms of velocties or accelerations, respectively. \textcolor{blue}{In xPBD, we go the other way! The ODE
 is tanslated so that it is in terms of positions, so that it can be handled together with the constraints. Is there a reason nobody bothered to
 do this before? What are the challenges here? Is this exactly what xPBD is? Is there a way to view the simplifications made in 
-terms of the other frameworks?}. Using $\bm{J} = \frac{\delta \bm{phi}}{\delta \bm{x}}$, where $\bm{J}$ is a $n_c \times n_d$ matrix
+terms of the other frameworks?}. Using $\bm{J} = \frac{\delta \bm{\phi}}{\delta \bm{x}}$, where $\bm{J}$ is a $n_c \times n_d$ matrix
 and $n_c$ is the number of scalar constraints, this leads to the following constraint formulations:
 
 \begin{align*}
@@ -114,7 +115,7 @@ where the $\lambda$ are the Lagrange multipliers of the constraints. With extern
 
 Note that the lower block-row of the system drives towards accelerations that satisfy the constraints imposed by $\bm{\phi(x)}$ (or, striclty 
 speaking, the differentiations thereof) exactly. This is indicated by the lower-right zero block in the system matrix in either formulation. 
-\textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}.
+\textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}
 
 In \cite{ascher1995}, the DAE is approached by eliminating the $\lambda$ from the system entirely and constructing an ODE in terms of positions
 and velocities. In \cite{tournier2015}, the authors suggest applying implicit integration schemes to the system directly by constructing the 
@@ -136,6 +137,8 @@ following Karush-Kuhn-Tucker (KKT) equation system:
 \end{pmatrix}
 \]
 
+If internal forces are taken into account, the upper-left matrix $\bm{M}$ is replaced by the matrix $\bm{H}$ from above.
+
 \textcolor{blue}{Reverse-engineering how the authors arrived at this system is quite enlightening. Start out from the equations of motion \cite{ascher1995}
     \begin{align*}
         \dot{\bm{v}} &= \bm{M^{-1}(f - J^T) \lambda}
@@ -150,7 +153,7 @@ following Karush-Kuhn-Tucker (KKT) equation system:
 }
 \textcolor{red}{If we assume that $\bm{f_e}$ and the constraint gradients $\bm{J}$ are constant across the time step, we arrive at the formulation from the
 paper. For the external forces, which are usually only comprised of gravitational forces, this is not a big deal. Is this what authors mean when they say 
-that the constraints are effectively linearized during one solve, e.g. \cite{}?}
+that the constraints are effectively linearized during one solve, e.g. second page of \cite{mueller2020}?}
 
 Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers in order to solve the system efficiently
 \cite{baraff1996}. Alternatively, the Schur complement can be constructed since the mass matrix in the upper left block is invertible.
@@ -161,8 +164,9 @@ This leads to a smaller, albeit less sparse system \cite{tournier2015}:
 \]
 
 If the constraints are not redundant, $\bm{JM^{-1}J^T}$ is non-singular and symmetric positive definite \cite{baraff1996}, which are desirable
-properties for many solvers. The disadvantage of using hard constraints is that instabilities in the traverse direction of the constraints
-occur when the tensile force with respect to particle masses is large \cite{tournier2015}.
+properties for many solvers. According to \cite{servin2006}, the common approaches for linearizing the constraint forces and stabilizing the constraints 
+$\bm{\phi(x)} = 0$ are notoriously unstable. Additionally, instabilities in the traverse direction of the constraints occur when the tensile force with 
+respect to particle masses is large when using hard constraints \cite{tournier2015}.
 
 % Bibliography ------------------------------------------------------------------------
 
