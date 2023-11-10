@@ -66,6 +66,46 @@ numerical issues and poor convergence for many solvers. Additionally, implicit i
 \textcolor{blue}{This system results from performing the implicit integration and solving the non-linear system via linearization
 using the Taylor expansion. Positions can be expressed in terms of velocities and eliminated from the system.}
 
+\subsection*{Penalty Forces}
+In the example above, the energy was derived from Hooke's Law for springs. However, it is also possible to derive energies from 
+geometric displacement functions $\bm{\phi(x)}$ which vanish in the rest configuration. From the displacement functions, quadratic 
+potential energies of the form $U(\bm{x}) = \Sigma_i (k / 2) \bm{\phi^2(x)}$, where $k$ is a positive stiffness parameter, are 
+constructed \cite{terz1987}. The potential energy $U(\bm{x})$ is zero if the displacement function is satisfied, and greater than 
+zero otherwise. The resulting forces are called penalty forces.
+Using the geometric displacement function $\bm{\phi_{\text{spring}}(x)} = (\lVert \bm{x_i} - \bm{x_j} \rVert) - l$ with $k_{\text{spring}}$ 
+recovers the behavior of a spring with stiffness $k_{\text{spring}}$. Its displacement function $\bm{\phi_{\text{spring}}(x)}$ is 
+satisfied when the distance of the particles $\bm{x_i}, \bm{x_j}$ is equal to a desired rest length $l$. By constructing different 
+geometric displacement functions, various properties such as the bending angle between triangles and in-plane shearing of triangles 
+can be controlled via the corresponding quadratic energy potentials \cite{baraff1998}. Geometric displacement functions with the desired effect are 
+often intuitive and simple to define. However, as the corresponding energy potentials are not physically derived, choosing stiffness 
+parameters that correspond to measurable physical properties of the simulated material and orchestrating multiple constraints becomes 
+challenging \cite{servin2006, nealen2006}. Additionally, the generated penalty forces do not converge in the limit of infinite stiffess, leading
+to oscillations unless the timestep is reduced significantly \cite{rubin1957}.
+
+\textcolor{blue}{Maybe explain the challenges with penalty forces a bit better! Also read \cite{terz1987, nealen2006, rubin1957}. 
+I just skimmed over \cite{terz1987} for now, but want to make sure that I am citing this correctly. The term penalty forces is not used
+in the paper, I am just following the trail from \cite{servin2006}. \cite{nealen2006} is a review that might be intersting to read.
+\cite{rubin1957} would be really interesting to read for once, just to understand why strong penalty forces oscillate. Is this a
+general problem with penalty forces, or is it an issue with the solver?}
+
+\subsection*{Mass Modification}
+The motion of a particle can be influenced by modifying the inverse mass matrix $\bm{M^{-1}}$ of the system. 
+For a single particle $\bm{x_i}$, it is $\ddot{\bm{x_i}} = \bm{M_i^{-1} f}$, where $\bm{M_i^{-1}}$ is the inverse mass matrix for 
+particle $i$. If, for example, the first diagonal entry of $\bm{M_i^{-1}}$ is zero, no acceleration in the x-direction is possible. 
+It is possible to construct modified inverse mass matrices $\bm{W}$ such that the accelerations in the three axes of an arbitraty 
+orthogonal coordinate system can be restricted. The modified inverse mass matrices $\bm{W}$ can be used in the LSE that results 
+from the implicit integration above. By adding simple velocity and position terms to the system equations the magnitude of the 
+change in velocity in each direction and even the exact position of each constrained particle can be controlled. This approach is
+called mass modification \cite{baraff1998}. In \cite{baraff1998}, the authors use mass modification to model collision constraints 
+between objects and cloth and other user defined constraints. 
+
+Since the velocity and position of each constrained particle is controlled via a single velocity and position term, multiple 
+constraints that affect the same particle have to be handled together. This can lead to constraints which affect arbitrarily many
+particles. For that reason, self-collisions of cloth are not handled via mass modification in \cite{baraff1998}. Instead, penalty
+forces are used. Additionally, accurately constraining particle positions is only possible for particles whose velocity is 
+constrained as well. The resulting system is unbanded, but sparse, and is solved using a modified version of the conjugate gradient
+(CG) method.
+
 \subsection*{Constraint-based Dynamics}
 
 \subsubsection*{Hard Constraints}
