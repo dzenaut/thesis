@@ -155,7 +155,8 @@ where the $\lambda$ are the Lagrange multipliers of the constraints. With extern
 
 Note that the lower block-row of the system drives towards accelerations that satisfy the constraints imposed by $\bm{\phi(x)}$ (or, striclty 
 speaking, the differentiations thereof) exactly. This is indicated by the lower-right zero block in the system matrix in either formulation. 
-\textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}
+Thus, the system does not have a solution if constraints are contradictory. \textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ 
+also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}
 
 In \cite{ascher1995}, the DAE is approached by eliminating the $\lambda$ from the system entirely and constructing an ODE in terms of positions
 and velocities. In \cite{tournier2015}, the authors suggest applying implicit integration schemes to the system directly by constructing the 
