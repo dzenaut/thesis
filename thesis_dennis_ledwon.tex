@@ -208,6 +208,39 @@ properties for many solvers. According to \cite{servin2006}, the common approach
 $\bm{\phi(x)} = 0$ are notoriously unstable. Additionally, instabilities in the traverse direction of the constraints occur when the tensile force with 
 respect to particle masses is large when using hard constraints \cite{tournier2015}.
 
+\subsubsection*{Compliant Constraints}
+\begin{itemize}
+    \item It is well know that kinematic constraints of the form $\bm{\phi(x) = 0}$ are the physical lmit of strong potential forces of the form
+        $\frac{k}{2} \bm{\phi^2(x)}$ for very large $k$.
+    \item Till now: Penalty forces or hard constraints
+    \item Basically: We still want to restrict the motion, but leave some wiggle room. 
+    \item Start from hard constraints, but try to find a way to express constraints as the limit of strong potentials, i.e. simply using a very high
+        stiffness. This is easier to do by using the inverse of stiffness, called compliance. \textcolor{red}{Why can't we just express the problem
+        in terms of stiffness? Where would that fail and why?}
+    \item Benefits (\textcolor{red}{Figure out why this is true!}):
+        \begin{itemize}
+            \item almost entire range of parameters from zero to infinity allowed 
+            \item removing numerical problems which occur when constraints are degenerate or overdefined
+            \item stabilize the linear equation solving process by making the matrices strongly positive definite 
+                \begin{itemize}
+                    \item If you look that the systems that we have constructed earlier, the lower right block matrix is zero. This means that the entire 
+                    system matrix is indefinite from my understanding (\textcolor{red}{Check whether this is actually true!}). Adding the compliance
+                    matrix, which is strictly positive definite, makes the entire system matrix positive definite, which is a nice property for most 
+                    solvers
+                \end{itemize}
+        \end{itemize}
+    \item From a constraint, define the constraint potential in terms of the compliance. \textcolor{red}{Fill in the equations}
+    \item In order to remove the large stiffness parameters (\textcolor{red}{Remove from where exactly? Is this just removal from $\bm{K}$}), 
+        introduce $\bm{\lambda}$ (\textcolor{red}{Show the equations}).
+    \item \textcolor{red}{Show the resulting system!}
+    \item In the limit of infinite stiffness, hard constraints are recovered.
+    \item Don't use intuitive geometric displacement functions, instead derive geometric displacement functions from elasticity theory
+    \item The approximations for the symplectic Euler solver do not make sense to me, in particular the time-average for lamba. No idea
+        where the term $\beta \dot{\phi}$ comes from. The mean of a function $f$ over and interval $(a, b)$ is defined as $\frac{1}{b-a}
+        \int_a^b f(x) dx$, so what they are saying does not make a lot of sense. In \cite{tournier2015}, they simply incorporate the regularization into
+        an implicit integration scheme. Maybe I just present that?
+\end{itemize}
+
 % Bibliography ------------------------------------------------------------------------
 
 \bibliographystyle{plain}
