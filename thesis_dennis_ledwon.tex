@@ -11,7 +11,7 @@
     \usepackage{xcolor}
     
     % Related to math
-    \usepackage{amsmath,amssymb,amsfonts,amsthm,bm}
+    \usepackage{amsmath,amssymb,amsfonts,amsthm,bm, mathtools}
 
 \begin{document}
 
@@ -217,37 +217,82 @@ $\bm{\phi(x)} = 0$ are notoriously unstable. Additionally, instabilities in the 
 respect to particle masses is large when using hard constraints \cite{tournier2015}.
 
 \subsubsection*{Compliant Constraints}
-\begin{itemize}
-    \item It is well know that kinematic constraints of the form $\bm{\phi(x) = 0}$ are the physical lmit of strong potential forces of the form
-        $\frac{k}{2} \bm{\phi^2(x)}$ for very large $k$.
-    \item Till now: Penalty forces or hard constraints
-    \item Basically: We still want to restrict the motion, but leave some wiggle room. 
-    \item Start from hard constraints, but try to find a way to express constraints as the limit of strong potentials, i.e. simply using a very high
-        stiffness. This is easier to do by using the inverse of stiffness, called compliance. \textcolor{red}{Why can't we just express the problem
-        in terms of stiffness? Where would that fail and why?}
-    \item Benefits (\textcolor{red}{Figure out why this is true!}):
-        \begin{itemize}
-            \item almost entire range of parameters from zero to infinity allowed 
-            \item removing numerical problems which occur when constraints are degenerate or overdefined
-            \item stabilize the linear equation solving process by making the matrices strongly positive definite 
-                \begin{itemize}
-                    \item If you look that the systems that we have constructed earlier, the lower right block matrix is zero. This means that the entire 
-                    system matrix is indefinite from my understanding (\textcolor{red}{Check whether this is actually true!}). Adding the compliance
-                    matrix, which is strictly positive definite, makes the entire system matrix positive definite, which is a nice property for most 
-                    solvers
-                \end{itemize}
-        \end{itemize}
-    \item From a constraint, define the constraint potential in terms of the compliance. \textcolor{red}{Fill in the equations}
-    \item In order to remove the large stiffness parameters (\textcolor{red}{Remove from where exactly? Is this just removal from $\bm{K}$}), 
-        introduce $\bm{\lambda}$ (\textcolor{red}{Show the equations}).
-    \item \textcolor{red}{Show the resulting system!}
-    \item In the limit of infinite stiffness, hard constraints are recovered.
-    \item Don't use intuitive geometric displacement functions, instead derive geometric displacement functions from elasticity theory
-    \item The approximations for the symplectic Euler solver do not make sense to me, in particular the time-average for lamba. No idea
-        where the term $\beta \dot{\phi}$ comes from. The mean of a function $f$ over and interval $(a, b)$ is defined as $\frac{1}{b-a}
-        \int_a^b f(x) dx$, so what they are saying does not make a lot of sense. In \cite{tournier2015}, they simply incorporate the regularization into
-        an implicit integration scheme. Maybe I just present that?
-\end{itemize}
+By combining ideas from hard constraints and penalty forces, it is possible to formulate the system matrix for hard constraints such that
+constraints do not have to be enforced exactly. In this approach, called compliant constraints, the constraints are combined with the the ODE
+$\bm{f} = \bm{Ma}$ in a way that allows relaxation of constraints in a physically meaningful manner \cite{servin2006}. The key insight is that
+constraints of the form $\bm{\phi(x)}$ are the physical limit of strong potential forces of the form $\frac{k}{2}\bm{\phi^2(x)}$ with high 
+stiffness values $k$. However, using large, but finite, stiffness values has adverse affects on the numerical properties of the system matrix. 
+Thus, the equations of motion are rewritten in terms of the inverse stiffness. The potential energy for the constraint $\bm{\phi}$ is then 
+defined as:
+
+\[
+    U(\bm{x}) = \frac{1}{2}\bm{\phi^T(x)} \alpha^{-1}\bm{\phi(x)}
+\]
+
+where $\alpha$ is a symmetric, positive definite matrix of dimension $n_c \times n_c$. The correspondence to the penalty terms above is the 
+case where $\alpha^{-1}$ is a diagonal matrix with diagonal entries $\frac{1}{k_i}$ for the stiffness $k_i$ of constraint $\bm{\phi(x)}$. The
+resulting forces $\bm{f_c} = \delta U / \delta \bm{x} = -J^T\alpha^{-1} \bm{\phi}$. In order to replace the large parameters $\alpha^{-1}$ with
+the small $\alpha$ in the equations of motion, artificial variables $\lambda = -\alpha^{-1}\bm{\phi}$ are introduced, yielding 
+$\bm{f_c} = J^T\lambda$.
+
+This leads to the following DAE:
+
+\begin{align*}
+    \bm{\dot{x}} &= \bm{v} \\
+    \bm{M\dot{v}} &= \bm{f_{e} + J^T\lambda} \\
+    \alpha\lambda(\bm{x}, t) &= -\bm{\phi}(\bm{x}, t)
+\end{align*}
+
+Note, that in the limit of infinite stiffness, the formulation from hard constraints is recovered. By performing backwards differentiation and 
+assuming that the constraint gradients are constant across the timestep, it is:
+
+\[
+    \bm{\alpha\lambda_{n+1}} = \bm{C}\frac{\bm{\mu_{n+1}}}{h} = -\bm{\phi_{n+1}} \approx -\bm{\phi} - h\bm{Jv_{n+1}}
+\]
+
+leading to the following LSE \cite{tournier2015}:
+
+\[
+\begin{pmatrix}
+    \bm{M} & \bm{-J^T} \\
+    \bm{J} & \frac{1}{h^2}\bm{\alpha}
+\end{pmatrix}
+\begin{pmatrix}
+    \bm{v_{n+1}} \\
+    \bm{\mu_{n+1}}
+\end{pmatrix}
+=
+\begin{pmatrix}
+    \bm{p} + h\bm{f_e} \\
+    - \frac{1}{h}\bm{\phi}
+\end{pmatrix}
+\]
+
+\textcolor{red}{Regarding the backwards differentiation above, this does not perform the Taylor approximation again. It should be something
+like:
+\begin{align*}
+    \phi_+ \approx \phi + h\dot{\phi_+} &= \phi + hJ_+v_+ \\
+                                        &\approx \phi + h(J + h\dot{J})v_+ \\
+                                        &= \phi + h(J + h\frac{\delta J}{\delta x}\frac{\delta x}{\delta t})v_+ \\
+                                        &= \phi + h(J + h\frac{\delta J}{\delta x}v)v_+
+\end{align*}
+Now, we need second derivatives of the constraints. This can be seen in \cite{baraff1998} and is also mentioned in \cite{servin2006}.
+}
+
+This formulation comes with a couple of advantages. Firstly, relaxing the constraints by keeping a finite but large penalty parameter helps
+counteracting numerical problems in the presence of over defined or degenerate constraints. Secondly, in comparison to the system from hard
+constraints, introducing $\alpha$ in the lower right block of the system matrix makes the system matrix strongly positive definite, which 
+is beneficial for many solvers. Lastly, in comparison to penalty forces, entries of large magnitudes in the system matrix due to high 
+stiffness terms are exchanged for small entries in terms of inverse stiffness, which improves the condition number of the matrix. 
+
+\textcolor{red}{
+    All these concepts from numerics are a bit unclear to me. I might have to go back to some textbook and do some reading to improve my understanding. 
+    I might have to go back to some textbook and do some reading to improve my understanding. Not sure the last part is entirely true.}
+
+\textcolor{red}{
+    In \cite{servin2006}, a solver based on symplectic Euler which does not require second derivatives is derived. I do not understand some of the
+    estimations made in that derivation. In particular the mean of a function $f$ over and interval $(a, b)$ is defined as $\frac{1}{b-a}
+    \int_a^b f(x) dx$, so what they are saying does not make a lot of sense.}
 
 % Bibliography ------------------------------------------------------------------------
 
