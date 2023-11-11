@@ -178,23 +178,30 @@ following Karush-Kuhn-Tucker (KKT) equation system:
 \end{pmatrix}
 \]
 
-If internal forces are taken into account, the upper-left matrix $\bm{M}$ is replaced by the matrix $\bm{H}$ from above.
+Here, the external forces $\bm{f_e}$ and the constraint gradients $\bm{J}$ are considered constant across the timestep and $\bm{J(x_{n+1})}$ 
+is not approximated using the Taylor expansion like it is in \cite{baraff1998}. If internal forces are taken into account, the upper-left 
+matrix $\bm{M}$ is replaced by the matrix $\bm{H}$ from above.
 
-\textcolor{blue}{Reverse-engineering how the authors arrived at this system is quite enlightening. Start out from the equations of motion \cite{ascher1995}
+\textcolor{blue}{Reverse-engineering how the authors arrived at this system is quite enlightening. Start out from the equations of motion 
+\cite{ascher1995}
     \begin{align*}
         \dot{\bm{v}} &= \bm{M^{-1}(f - J^T) \lambda}
     \end{align*}
     and perform implicit integration:
     \begin{align*}
-        \bm{v_{n+1}} &= \bm{v_n} + h\bm{M^{-1}(f_e(x_{n+1})} - \bm{J^T(x_{n+1})\lambda)} \\
-        \bm{Mv_{n+1}} &= \bm{p} + h\bm{f_e(x_{n+1})} - h\bm{J^T(x_{n+1})\lambda} \\ 
-        \bm{Mv_{n+1}} + h\bm{J^T(x_{n+1})\lambda} &= \bm{p} + h\bm{f_e(x_{n+1})} \\ 
-        \bm{Mv_{n+1}} + \bm{J^T(x_{n+1}) \mu} &= \bm{p} + h\bm{f_e(x_{n+1})}
+        \bm{v_{n+1}} &= \bm{v_n} + h\bm{M^{-1}(f_e(x_{n+1})} - \bm{J^T(x_{n+1})\lambda(x_{n+1}))} \\
+        \bm{Mv_{n+1}} &= \bm{p} + h\bm{f_e(x_{n+1})} - h\bm{J^T(x_{n+1})\lambda(x_{n+1})} \\ 
+        \bm{Mv_{n+1}} + h\bm{J^T(x_{n+1})\lambda(x_{n+1})} &= \bm{p} + h\bm{f_e(x_{n+1})} \\ 
+        \bm{Mv_{n+1}} + \bm{J^T(x_{n+1}) \mu(x_{n+1})} &= \bm{p} + h\bm{f_e(x_{n+1})}
     \end{align*}
 }
-\textcolor{red}{If we assume that $\bm{f_e}$ and the constraint gradients $\bm{J}$ are constant across the time step, we arrive at the formulation from the
-paper. For the external forces, which are usually only comprised of gravitational forces, this is not a big deal. Is this what authors mean when they say 
-that the constraints are effectively linearized during one solve, e.g. second page of \cite{mueller2020}?}
+\textcolor{red}{If we assume that $\bm{f_e}$ and the constraint gradients $\bm{J}$ are constant across the time step, we arrive at the 
+formulation from the paper. For the external forces, which are usually only comprised of gravitational forces, this is not a big 
+deal. For the constraint gradients, I am not sure what the ramifications are. In \cite{baraff1998}, the Taylor expansion is performed
+which requires the compution of second derivatives over the constraint functions. This is not happening here at all! Is this what 
+authors mean when they say that the constraints are effectively linearized during one solve, e.g. second page 
+of \cite{mueller2020}? Technically, speaking, even if the Taylor expansion is performed, the constraints are linearized, if I 
+understand correctly.}
 
 Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers in order to solve the system efficiently
 \cite{baraff1996}. Alternatively, the Schur complement can be constructed since the mass matrix in the upper left block is invertible.
