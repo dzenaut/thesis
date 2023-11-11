@@ -139,7 +139,7 @@ where the $\lambda$ are the Lagrange multipliers of the constraints. With extern
 
 \[
     \begin{pmatrix}
-        \bm{M} & \bm{J^T} \\
+        \bm{M} & \bm{-J^T} \\
         \bm{J} & 0
     \end{pmatrix}
     \begin{pmatrix}
@@ -168,8 +168,8 @@ following Karush-Kuhn-Tucker (KKT) equation system:
     \bm{J} & 0
 \end{pmatrix}
 \begin{pmatrix}
-    \bm{v} \\
-    \bm{\mu}
+    \bm{v_{n+1}} \\
+    \bm{\mu_{n+1}}
 \end{pmatrix}
 =
 \begin{pmatrix}
