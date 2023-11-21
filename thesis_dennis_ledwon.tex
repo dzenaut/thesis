@@ -294,6 +294,35 @@ stiffness terms are exchanged for small entries in terms of inverse stiffness, w
     estimations made in that derivation. In particular the mean of a function $f$ over and interval $(a, b)$ is defined as $\frac{1}{b-a}
     \int_a^b f(x) dx$, so what they are saying does not make a lot of sense.}
 
+
+\subsection*{Projective Dynamics}
+
+\textcolor{red}{Make sure to change the phrasing. For now, this is mostly copied from the relevant papers \cite{bouaziz2014}.}
+
+\begin{itemize}
+    \item Restrict energy potientials to a specific structure. Convex quadratic distance measure from a constraint. The constraints are general
+        nonlinear functions that express the desired state of an element.
+    \item This structure trades general material nonlinearity (some energy potentials cannot be recreated using with this structure) against 
+        efficiency and robustness.
+    \item Structure of these constraint-based energy potentials allows efficient local/global optimization (block coordinate descent).
+    \item Energy decreases weakly in every iteration without any specific precautions.
+    \item For a fixed set of constraints, the linear system of the global step can be pre-factored.
+    \item The local steps consists of small independent optimization problems, which can be all executed in parallel.
+    \item Robust and efficient, often significantly outperforming classical Newton methods.
+    \item Projective dynamics is an extension of \cite{liu2013} from mass-sprint systems to exmploying projection onto constraint sets to 
+        simulate general nodal dynamical systems.
+    \item Constraint projection is performed globally here, while it is performed locally in (x)PBD
+        \begin{itemize}
+            \item Understand exactly where and how the projection is achieved in (x)PBD
+        \end{itemize}
+
+    \item \textcolor{red}{The global solve (10) has a Hessian matrix according to \cite{bouaziz2014}. Look at the minimization problem with
+        fixed projetion variables again }
+
+    \item \cite{bouaziz2014} show some interesting experiments in their results. Additionally, the listed weaknesses of projective dynamics are 
+        pretty interesting.
+\end{itemize}
+
 % Bibliography ------------------------------------------------------------------------
 
 \bibliographystyle{plain}
