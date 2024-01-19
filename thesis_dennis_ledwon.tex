@@ -297,7 +297,39 @@ stiffness terms are exchanged for small entries in terms of inverse stiffness, w
 
 \subsection*{Projective Dynamics}
 
-\textcolor{red}{Make sure to change the phrasing. For now, this is mostly copied from the relevant papers \cite{bouaziz2014}.}
+In the approaches to physical simulations via implicit time integration that we have encountered so far a new linear system needs to be solved
+at every timestep. For large simulations, tackling a new, different linear system of equations every time step can quickly become prohibitively 
+expensive. At each timestep, new factorizations for the system matrix need to be computed. In PBD, this issue is dealt with by using an iterative 
+solver. In Projective Dynamics (PD), energy potentials are restricted to a specific structure which allow for efficient implicit time integration 
+via alternating steps of local and global optimization. The local optimization steps are comprised of per-constraint projections of particle 
+positions onto constraint manifolds. The global optimization step combines the results from the individual local projection steps while taking
+into consideration global effects including inertia and external forces. This is achieved by solving a linear system of equations whose system 
+matrix is constant across timesteps. Since the local steps can be carried out in parallel and the factorization for the system matrix of the 
+global step can be precomputed and reused, physical simulations that are restricted to energy potentials from the PD framework can be solved 
+efficienty and robustly.
+
+\subsubsection*{Energy Potentials}
+
+Energy potentials of the general form $\psi(\bm{E}(\bm{F}(\bm{q})))$, where $\bm{E}(\bm{F}(\bm{q}))$ is a strain measure that depends on the 
+deformation gradient $\bm{F}(\bm{q})$, or $\bm{F}$ for short, of a discrete element, are frequently used in nonlinear continuum mechanics. If 
+Green's strain measure $\bm{E_{\text{Green}}}$ defined by 
+
+\[
+\bm{E_{\text{Green}}}(\bm{F}) = \frac{1}{2}(\bm{F^TF} - \bm{I})
+\]
+
+is used, then $\bm{E_{\text{Green}}}(\bm{F}) = 0$ corresponds to $\bm{F} = \bm{R}$ for some rotation $\bm{R}$ since $\bm{F^TF} = \bm{I}$, i.e.
+the element is undeformed. Assuming that $\psi(\bm{0}) = \rho$ for some $\rho \in \mathbb{R}$ and that $\psi$ reaches its minimum at the undeformed
+configuration, then 
+
+\[
+    \psi\prime(\bm{E_{\text{Green}}}(\bm{F})) = \psi(\bm{E_{\text{Green}}}(\bm{F})) - \rho
+\]
+
+can be considered a distance measure of how far the configuration is from the constraint manifold defined by the undeformed configurations, or 
+formally $\bm{E_{\text{Green}}}(\bm{F}) = 0$. The key insight is that the constraint manifolds already capture nonlinearities, relaxing the need
+for complicated distance functions $\psi\prime$. In particular, potential energies in projective dynamics are restricted to quadratic distance 
+measures $\psi\prime$.
 
 \begin{itemize}
     \item Restrict energy potientials to a specific structure. Convex quadratic distance measure from a constraint. The constraints are general
