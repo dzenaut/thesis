@@ -501,10 +501,12 @@ satisfied. This requires solving the linear system
 \]
 
 Since the system matrix is constant as long as the constraints remain unchanged it can be prefactorized at initialization, making efficient
-global solves possible. However, the right side needs to be recomputed in every iteration as the projections $\bm{p}_i$ change during the 
-local optimization steps. The objective function is bounded below and both local and global steps are guaranteed to weakly decrease it. As 
-a result, the optimization converges without additional safeguards, even if non-convex constraint manifolds are used in the energy potentials.
-An overview over the algorithm is given \textcolor{red}{below}.
+global solves possible. Additionally, note that the system can be solved for each coordinate independently, lending itself to parallelization. 
+This results from the fact that $\bm{q} \in \mathbb{R}^{m \times 3}$, which is also enabled by the structure of the PD energy potentials. 
+The right side needs to be recomputed in every iteration as the projections $\bm{p}_i$ change during the local optimization steps. The 
+objective function is bounded below and both local and global steps are guaranteed to weakly decrease it. As a result, the optimization 
+converges without additional safeguards, even if non-convex constraint manifolds are used in the energy potentials. An overview over the 
+algorithm is given \textcolor{red}{below}.
 
 \begin{algorithm}
 \caption{Projective Implicit Euler Solver}
