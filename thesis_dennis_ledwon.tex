@@ -380,7 +380,83 @@ In summary, PD energy potentials have the following form:
     \psi({\bm{q}}) = \min_{\bm{p}} \frac{w}{2} \norm{\bm{Aq} - \bm{Bp}}^2_F + \delta_{\bm{C}}(\bm{p}).
 \]
 
-\subsubsection*{Implicit Integration}
+\subsubsection*{Equations of Motion}
+\textcolor{red}{Should there be a rough general introduction to implicit integration? Or is it enough to show the resulting equations
+in the context of the ODE with the equations of motion?}
+
+\textcolor{red}{For now, this only has the information required for PD. Check whether more information is required for (x)PBD, ADMM, QN.}
+
+\textcolor{red}{Maybe mention other integration schemes than the implicit Euler integration.}
+
+The motion of a spatially discretized system with $m$ particles evolving in time according to Newton's laws of motion can be modeled via 
+the following ordinary differential equation (ODE), which will be referred to as Newton's ODE \cite{bouaziz2014, macklin2016, bender2017}:
+
+\begin{align*}
+    \bm{q}(t)\prime &= \bm{v}(t) \\
+    \bm{v}(t)\prime &= \bm{M}^{-1}\bm{f}(\bm{q}(t), \bm{v}(t))
+\end{align*}
+
+where $\bm{q}(t)$, $\bm{v}(t)$, $\bm{f}(\bm{q}(t), \bm{v}(t))$ are the particle positions, particle velocities and forces acting on each particle
+at time $t$, respectively, and $\bm{M}$ is a diagonal matrix with the particle masses as diagonal entries. Depending on the context, either 
+$\bm{q}(t), \bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{m \times 3}$ and $\bm{M} \in \mathbb{R}^{m \times m}$ or $\bm{q}(t), 
+\bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{3m}$ and $\bm{M} \in \mathbb{R}^{3m \times 3m}$. $\bm{q}(t)\prime$ and $\bm{v}(t)\prime$ are short for $\bm{D_tq}(t)$ and
+$\bm{D_tv}(t)$, respectively. From now on, we write $\bm{q}$ instead of $\bm{q}(t)$ for time-dependent quantities for the sake of brevity.
+
+\subsubsection*{Integration of Newton's ODE}
+For general nonlinear forces, analytical solutions to Newton's ODE are usually not available. Thus, the ODE needs to be solved numerically. 
+One popular integration scheme for tackling Newton's ODE is implicit Euler integration \cite{bouaziz2014, macklin2016, bender2017}. Here, 
+the positions and velocities are computed at discrete timesteps via the following update formulas
+
+\begin{align*}
+    \bm{q}_{n+1} &= \bm{q}_n + h\bm{v}_{n+1}\\
+    \bm{v}_{n+1} &= \bm{v}_n + h\bm{M}^{-1}\bm{f}(\bm{q}_{n+1}, \bm{p}_{n+1})
+\end{align*}
+
+for some timestep $h$. Note how $\bm{q}_{n+1}$ and $\bm{v}_{n+1}$ appear on both sides of the equations. Consequently, performing implicit 
+Euler integration includes solving a set of nonlinear algebraic equations. It can be shown that implicit Euler integration is unconditionally 
+stable and first-order accurate \cite{chapra2005}. However, implicit Euler integration is also known to exhibit numerical damping 
+\cite{servin2006, bender2017, macklin2019}.
+
+By rewriting the \textcolor{red}{first equation} as 
+
+\[
+    \bm{v}_{n+1} = \frac{1}{h}(\bm{q}_{n+1} - \bm{q}_n)
+\]
+
+and substituting into the \textcolor{red}{second equation} the following equation can be derived
+
+\[
+    \bm{M}(\bm{q}_{n+1} - \bm{q}_n - h\bm{v}_n) = h^2(\bm{f}(\bm{q}_{n+1}, \bm{v}_{n+1})).
+\]
+
+We separate forces $\bm{f}(\bm{q}, \bm{v})$ into internal forces $\bm{f}_{\text{int}}(\bm{q}, \bm{p}) = \sum_i \bm{f}^i_{\text{int}}
+(\bm{q}, \bm{p})$ and external forces $\bm{f}_{\text{ext}}(\bm{q}, \bm{p}) = \sum_i \bm{f}^i_{\text{ext}}(\bm{q}, \bm{p})$. 
+We consider all external forces to be constant. Internal forces are conservative and defined in terms of scalar potential energy functions 
+$\psi_i$ via $\bm{f}^i_{\text{int}}(\bm{q}) = -\nabla \psi_i(\bm{q})$. Together, we have $\bm{f}(\bm{q}, \bm{v}) = \bm{f} (\bm{q}) 
+= \bm{f}_{\text{int}} (\bm{q}) + \bm{f}_{\text{ext}} = \sum_i -\nabla \psi_i(\bm{q}) + \bm{f}_{\text{ext}}$. Plugging into the 
+\textcolor{red}{equation above}, it is
+
+\[
+    \bm{M}(\bm{q}_{n+1} - \bm{q}_n - h\bm{v}_n) = h^2(\bm{f_\text{ext}} - \sum_i \nabla \psi_i(\bm{q})).
+\]
+
+By computing first-order optimality conditions, it is easily verified that the above system of equations is equivalent to the optimization 
+problem
+
+\[
+    \min_{\bm{q}_{n+1}} \frac{1}{2h^2} \norm{\bm{q}_{n+1} - \bm{s}_n}^2_F + \sum_i \psi_i(\bm{q}_{n+1}).
+\]
+
+where $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$. This minimization problem whose solution corresponds to the next
+iteration of the state of the implicit Euler integration is called the variational form of implicit Euler integration \cite{bouaziz2014}. 
+The first and second term of the objective function are called the momentum potential and the elastic potential, respectively. Thus, the 
+minimization problem requires that the solution minimizes the elastic deformation as best as possible while ensuring that the solution is 
+close to following its momentum plus external forces. The weighting between the momentum potential and the elastic potential depends on the 
+particle masses $\bm{M}$, the timestep $h$ and the material stiffness of the elastic potentials $\psi_i$. According to Noether's theorem, 
+the solution preserves linear and angular momentum as long as the elastic potentials are rigid motion invariant.
+
+\textcolor{red}{Add some words about how it is often favorable to use the variational formulation because solving an optimization problem is
+often easier than just solving a system of equations. That is because one can be guided by the objective function.}
 
 \begin{itemize}
     \item Restrict energy potientials to a specific structure. Convex quadratic distance measure from a constraint. The constraints are general

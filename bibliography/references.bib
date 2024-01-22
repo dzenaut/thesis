@@ -179,3 +179,61 @@
     numpages = {7},
     keywords = {implicit Euler method, mass-spring systems, time integration}
 }
+
+@book{chapra2005,
+    author = {Chapra, Steven C. and Canale, Raymond},
+    title = {Numerical Methods for Engineers},
+    year = {2005},
+    isbn = {0073101567},
+    publisher = {McGraw-Hill, Inc.},
+    address = {USA},
+    edition = {5},
+    abstract = {The fifth edition of Numerical Methods for Engineers continues its tradition of excellence. Instructors love this text because it is a comprehensive text that is easy to teach from. Students love it because it is written for them--with great pedagogy and clear explanations and examples throughout. The text features a broad array of applications, including all engineering disciplines. The revision retains the successful pedagogy of the prior editions. Chapra and Canale's unique approach opens each part of the text with sections called Motivation, Mathematical Background, and Orientation, preparing the student for what is to come in a motivating and engaging manner. Each part closes with an Epilogue containing sections called Trade-Offs, Important Relationships and Formulas, and Advanced Methods and Additional References. Much more than a summary, the Epilogue deepens understanding of what has been learned and provides a peek into more advanced methods. Users will find use of software packages, specifically MATLAB and Excel with VBA. This includes material on developing MATLAB m-files and VBA macros. Approximately 80\% of the problems are new or revised for this edition. The expanded breadth of engineering disciplines covered is especially evident in the problems, which now cover such areas as biotechnology and biomedical engineering. Table of contentsPart 1 Modeling, Computers, and Error Analysis1 Mathematical Modeling and Engineering Problem Solving2 Programming and Software3 Approximations and Round-Off Errors4 Truncation Errors and the Taylor SeriesPart 2 Roots of Equations5 Bracketing Methods 6 Open Methods7 Roots of Polynomials8 Case Studies: Roots of EquationsPart 3 Linear Algebraic Equations9 Gauss Elimination10 LU Decomposition and Matrix Inversion11 Special Matrices and Gauss-Seidel12 Case Studies: Linear Algebraic EquationsPart 4 Optimization13 One-Dimensional Unconstrained Optimization14 Multidimensional Unconstrained Optimization15 Constrained Optimization16 Case Studies: OptimizationPart 5 Curve Fitting17 Least-Squares Regression18 Interpolation19 Fourier Approximation20 Case Studies: Curve FittingPart 6 Numerical Differentiation and Integration21 Newton-Cotes Integration Formulas22 Integration of Equations23 Numerical Differentiation24 Case Studies: Numerical Integration and DifferentiationPart 7 Ordinary Differential Equations25 Runge-Kutta Methods26 Stiffness and Multistep Methods27 Boundary-Value and Eigenvalue Problems28 Case Studies: Ordinary Differential EquationsPart 8 Partial Differential Equations29 Finite Difference: Elliptic Equations30 Finite Difference: Parabolic Equations31 Finite-Element Method32 Case Studies: Partial Differential EquationsAppendix A The Fourier SeriesAppendix B Getting Started with MatlabBibliographyIndex}
+}
+
+@inproceedings {bender2017,
+    booktitle = {EG 2017 - Tutorials},
+    editor = {Adrien Bousseau and Diego Gutierrez},
+    title = {{A Survey on Position Based Dynamics}},
+    author = {Bender, Jan and Müller, Matthias and Macklin, Miles},
+    year = {2017},
+    publisher = {The Eurographics Association},
+    ISSN = {1017-4656},
+    DOI = {10.2312/egt.20171034}
+}
+
+@inproceedings{macklin2019,
+    author = {Macklin, Miles and Storey, Kier and Lu, Michelle and Terdiman, Pierre and Chentanez, Nuttapong and Jeschke, Stefan and M\"{u}ller, Matthias},
+    title = {Small steps in physics simulation},
+    year = {2019},
+    isbn = {9781450366779},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3309486.3340247},
+    doi = {10.1145/3309486.3340247},
+    abstract = {In this paper we re-examine the idea that implicit integrators with large time steps offer the best stability/performance trade-off for stiff systems. We make the surprising observation that performing a single large time step with n constraint solver iterations is less effective than computing n smaller time steps, each with a single constraint solver iteration. Based on this observation, our approach is to split every visual time step into n substeps of length Δt/n and to perform a single iteration of extended position-based dynamics (XPBD) in each such substep. When compared to a traditional implicit integrator with large time steps we find constraint error and damping are significantly reduced. When compared to an explicit integrator we find that our method is more stable and robust for a wider range of stiffness parameters. This result holds even when compared against more sophisticated implicit solvers based on Krylov methods. Our method is straightforward to implement, and is not sensitive to matrix conditioning nor is it to overconstrained problems.},
+    booktitle = {Proceedings of the 18th Annual ACM SIGGRAPH/Eurographics Symposium on Computer Animation},
+    articleno = {2},
+    numpages = {7},
+    keywords = {real-time simulation, physics-based animation},
+    location = {Los Angeles, California},
+    series = {SCA '19}
+}
+
+@inproceedings{macklin2016,
+author = {Macklin, Miles and M\"{u}ller, Matthias and Chentanez, Nuttapong},
+title = {XPBD: position-based simulation of compliant constrained dynamics},
+year = {2016},
+isbn = {9781450345927},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2994258.2994272},
+doi = {10.1145/2994258.2994272},
+abstract = {We address the long-standing problem of iteration count and time step dependent constraint stiffness in position-based dynamics (PBD). We introduce a simple extension to PBD that allows it to accurately and efficiently simulate arbitrary elastic and dissipative energy potentials in an implicit manner. In addition, our method provides constraint force estimates, making it applicable to a wider range of applications, such those requiring haptic user-feedback. We compare our algorithm to more expensive non-linear solvers and find it produces visually similar results while maintaining the simplicity and robustness of the PBD method.},
+booktitle = {Proceedings of the 9th International Conference on Motion in Games},
+pages = {49–54},
+numpages = {6},
+keywords = {position based dynamics, physics simulation, constrained dynamics},
+location = {Burlingame, California},
+series = {MIG '16}
+}
