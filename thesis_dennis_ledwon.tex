@@ -524,14 +524,7 @@ algorithm is given \textcolor{red}{below}.
 \end{algorithm}
 
 \begin{itemize}
-    \item Restrict energy potientials to a specific structure. Convex quadratic distance measure from a constraint. The constraints are general
-        nonlinear functions that express the desired state of an element.
-    \item This structure trades general material nonlinearity (some energy potentials cannot be recreated using with this structure) against 
-        efficiency and robustness.
     \item Structure of these constraint-based energy potentials allows efficient local/global optimization (block coordinate descent).
-    \item Energy decreases weakly in every iteration without any specific precautions.
-    \item For a fixed set of constraints, the linear system of the global step can be pre-factored.
-    \item The local steps consists of small independent optimization problems, which can be all executed in parallel.
     \item Robust and efficient, often significantly outperforming classical Newton methods.
     \item Projective dynamics is an extension of \cite{liu2013} from mass-sprint systems to exmploying projection onto constraint sets to 
         simulate general nodal dynamical systems.
