@@ -13,6 +13,9 @@
     % Related to math
     \usepackage{amsmath,amssymb,amsfonts,amsthm,bm, mathtools}
 
+    \usepackage{algorithm}
+    \usepackage{algpseudocode}
+
     \newcommand{\norm}[1]{\left\lVert#1\right\rVert}
 
 \begin{document}
@@ -368,7 +371,7 @@ of the form
 
 where $\bm{G} \in \mathbb{R}^{r \times m}$ for some $r \in \mathbb{N}$.
 
-Note that since $\bm{p}, \bm{q} \in \mathbb{R}^{m \times 3}$, the distance measure $d$ has no dependencies between $x$-, $y$- and 
+Note that since $\bm{q} \in \mathbb{R}^{m \times 3}$, the distance measure $d$ has no dependencies between $x$-, $y$- and 
 $z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: Many arbitrary 
 nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
 in terms of PD elastic potentials. However, their structure enables an efficient algorithm for implicit integration, as discussed in
@@ -458,7 +461,65 @@ the solution preserves linear and angular momentum as long as the elastic potent
 \textcolor{red}{Add some words about how it is often favorable to use the variational formulation because solving an optimization problem is
 often easier than just solving a system of equations. That is because one can be guided by the objective function.}
 
+\subsubsection*{Projective Implicit Euler Solver}
+We start by substituting the PD energy potentials into the variatonal form of implicit Euler integration, which yields the following joint 
+optimization problem over the positions $\bm{q}_{n+1}$ and auxiliary variables $\bm{p}_i$
 
+\[
+    \min_{\bm{q}, \bm{p_i}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \norm{\bm{G}_i\bm{q} - \bm{p_i}}^2_F + 
+    \delta_{\bm{C}_i}(\bm{p_i}).
+\]
+
+We write $\bm{q} \coloneqq \bm{q}_{n+1}$ for the sake of brevity. 
+
+This optimization problem is optimized using a local/global alternating minimization technique. Local and global steps are carried out
+sequentially for a fixed number of iterations during each timestep. The local step consists of minimizing the objective function over 
+the auxiliary variables $\bm{p}_i$ while keeping the positions $\bm{q}$ fixed. This corresponds to finding the projection points of 
+the current positions onto the constraint manifolds used to define the PD energy potentials. Each constraint has its own, independent 
+set of auxiliary variables, making the optimization amendable to massive parallelization. For each energy potential, we solve the 
+following minimization problem
+
+\[
+    \min_{\bm{p}_i} \frac{w_i}{2}\norm{\bm{G}_i\bm{q} - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i).
+\]
+
+In the global step, the minimization problem is optimized over the positions $\bm{q}$ while keeping the auxiliary variables $\bm{p}_i$ fixed.
+This corresponds to moving the positions $\bm{q}$ according to their momentum and external forces while trying to maintain short distances
+to the projections points as defined by the distance measures of the PD energy potentials. The optimization problem for the global solve is 
+given by
+
+\[
+    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \norm{\bm{G}_i\bm{q} - \bm{p_i}}^2_F.
+\]
+
+By design of the PD energy potentials, the objective function of the global optimization problem is quadratic in the positions $\bm{q}$. 
+Consequently, the minimization can be carried out in a single step by picking $\bm{q}$ such that the first-order optimality conditions are
+satisfied. This requires solving the linear system
+
+\[
+    (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i.
+\]
+
+Since the system matrix is constant as long as the constraints remain unchanged it can be prefactorized at initialization, making efficient
+global solves possible. However, the right side needs to be recomputed in every iteration as the projections $\bm{p}_i$ change during the 
+local optimization steps. The objective function is bounded below and both local and global steps are guaranteed to weakly decrease it. As 
+a result, the optimization converges without additional safeguards, even if non-convex constraint manifolds are used in the energy potentials.
+An overview over the algorithm is given \textcolor{red}{below}.
+
+\begin{algorithm}
+\caption{Projective Implicit Euler Solver}
+\begin{algorithmic}
+\State $\bm{s}_n \gets \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
+\State $\bm{q}_{n+1} = \bm{s}_n$
+\For{all iterations}
+\For{constraints $i$}
+\State $\bm{p}_i = \text{ProjectOnConstraintSet}(\bm{C}_i, \bm{q}_{n+1}) $
+\EndFor
+\State $\bm{q}_{n+1} = \text{SolveLinearSystem}(\bm{s}_n, \bm{p}_1, \bm{p}_2, \ldots) $
+\EndFor
+\State $\bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n) / h$
+\end{algorithmic}
+\end{algorithm}
 
 \begin{itemize}
     \item Restrict energy potientials to a specific structure. Convex quadratic distance measure from a constraint. The constraints are general
