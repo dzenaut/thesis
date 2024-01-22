@@ -341,7 +341,7 @@ following form:
     \psi({\bm{q}}) = \min_{\bm{p}} d(\bm{q}, \bm{p}) + \delta_{\bm{C}}(\bm{p}).
 \]
 
-Here, $\bm{p} \in \mathbb{R}^{m \times 3}$ are auxiliary projection variables and $\delta_{\bm{C}}(\bm{p})$ is an indicator function with 
+Here, $\bm{p} \in \mathbb{R}^{r \times 3}, r \in \mathbb{N}$ are auxiliary projection variables and $\delta_{\bm{C}}(\bm{p})$ is an indicator function with 
 
 \[
     \delta_{\bm{C}}(\bm{p})= 
@@ -363,10 +363,10 @@ of the form
 % TODO: Mention that q and p have three columns. Thus, no x-y-z interations are captured in distance functions of the form given below
 
 \[
-    d(\bm{q}) = \frac{w}{2} \norm{\bm{Aq} - \bm{Bp}}^2_F,
+    d(\bm{q}) = \frac{w}{2} \norm{\bm{Gq} - \bm{p}}^2_F,
 \]
 
-where $\bm{A}$, $\bm{B} \in \mathbb{R}^{r \times 3}$ for some $r \in \mathbb{N}$.
+where $\bm{G} \in \mathbb{R}^{r \times m}$ for some $r \in \mathbb{N}$.
 
 Note that since $\bm{p}, \bm{q} \in \mathbb{R}^{m \times 3}$, the distance measure $d$ has no dependencies between $x$-, $y$- and 
 $z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: Many arbitrary 
@@ -377,7 +377,7 @@ the \textcolor{red}{next section}.
 In summary, PD energy potentials have the following form:
 
 \[
-    \psi({\bm{q}}) = \min_{\bm{p}} \frac{w}{2} \norm{\bm{Aq} - \bm{Bp}}^2_F + \delta_{\bm{C}}(\bm{p}).
+    \psi({\bm{q}}) = \min_{\bm{p}} \frac{w}{2} \norm{\bm{Gq} - \bm{p}}^2_F + \delta_{\bm{C}}(\bm{p}).
 \]
 
 \subsubsection*{Equations of Motion}
@@ -457,6 +457,8 @@ the solution preserves linear and angular momentum as long as the elastic potent
 
 \textcolor{red}{Add some words about how it is often favorable to use the variational formulation because solving an optimization problem is
 often easier than just solving a system of equations. That is because one can be guided by the objective function.}
+
+
 
 \begin{itemize}
     \item Restrict energy potientials to a specific structure. Convex quadratic distance measure from a constraint. The constraints are general
