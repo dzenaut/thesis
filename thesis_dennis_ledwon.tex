@@ -575,8 +575,19 @@ can be shown that line search methods where $\alpha_k$ satisfies the strong Wolf
 point $\bm{x}^*$ with $\nabla f(\bm{x}^*) = 0$ if the search direction $\bm{p}_k$ is sufficiently far from orthogonal to the steepest
 descent direction $\nabla f(\bm{x}_k)$ for all $k$.
 
+\subsubsection*{Steepest Descent}
+The most obvious choice for the search direction $\bm{p}_k$ at iteration $k$ is the steepest descent direction given by 
+
+\[
+    \bm{p}_k = -\nabla f(\bm{x}_k).
+\]
+
+This method is called steepest descent. While simple, steepest descent exhibits poor performance, even for simple problems \cite{nocedal2006}. 
+Its convergence rate is only linear and depends on the eigenvalue distribution of the Hessian $\nabla^2 f(\bm{x}^*)$ at the local minimizer
+$\bm{x}^*$. If the eigenvalues distribution is wide, steepest descent often requires an unacceptably large number of iterations to find a 
+stationary point.
+
 \begin{itemize}
-    \item Steepest descent
     \item Newton's method
     \item Issues with Newton's method for large scale optimization
     \item Quasi-Newton methods
