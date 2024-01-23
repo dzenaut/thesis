@@ -12,11 +12,12 @@
     
     % Related to math
     \usepackage{amsmath,amssymb,amsfonts,amsthm,bm, mathtools}
+    \usepackage{commath}
 
     \usepackage{algorithm}
     \usepackage{algpseudocode}
 
-    \newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+    % \newcommand{\norm}[1]{\left\lVert#1\right\rVert}
 
 \begin{document}
 
@@ -494,7 +495,7 @@ given by
 
 By design of the PD energy potentials, the objective function of the global optimization problem is quadratic in the positions $\bm{q}$. 
 Consequently, the minimization can be carried out in a single step by picking $\bm{q}$ such that the first-order optimality conditions are
-satisfied. This requires solving the linear system
+satisfied \cite{nocedal2006}. This requires solving the linear system
 
 \[
     (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i.
@@ -522,6 +523,64 @@ algorithm is given \textcolor{red}{below}.
 \State $\bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n) / h$
 \end{algorithmic}
 \end{algorithm}
+
+\subsection*{Unconstrained Optimization}
+The goal of unconstrained optimization is to find the global minimizer of smooth, but generally nonlinear functions of the form $f \colon 
+\mathbb{R}^n \to \mathbb{R}, n \in \mathbb{N}$, or formally
+
+\[
+    \min_{\bm{x}} f(\bm{x}).
+\]
+
+Here, $f$ is called the objective function. Most algorithms are incapable of finding global minimizers of general nonlinear functions. 
+Instead, these algorithms begin their search at a starting point $\bm{x}_0$ and then iteratively improve this initial guess until a local 
+minimizer is found \cite{nocedal2006}. A local minimizer is a point $\bm{x}^*$ such that there is a neighborhood $\mathcal{N}$ of 
+$\bm{x}^*$ such that $f(\bm{x}^*) \leq f(\bm{x})$ for all $\bm{x} \in \mathcal{N}$. If the initial guess $\bm{x}^*$ is close enough 
+to the global minimizer the local minimizer that the algorithm converges to can often coincide with a global minimizer. 
+
+\subsubsection*{Line Search Methods}
+It can be shown that $\nabla f(\bm{x}^*) = 0$ if $\bm{x}^*$ is a local minimizer and f is continuously differentiable in an open neighborhood
+of $\bm{x}^*$ \cite{nocedal2006}. The proof is by contradiction and establishes that if $\nabla f(\bm{x}^*) \neq 0$, then it is possible to pick a descent 
+direction along which it is possible to decrease the value of the objective function if the step size is picked sufficiently small. This 
+observation gives rise to the idea of a family of optimization algorithms called line search algorithms: Given the current iterate $\bm{x}_k$,
+pick a descent direction $\bm{p}_k$ and search along this direction for a new iterate $\bm{x}_{k+1}$ with $\bm{x}_{k+1} = \bm{x}_k + \alpha_k
+\bm{p}_k$. This process is repeated until $\nabla f(\bm{x}_k)$ is sufficiently close to zero. It is important to note that $\nabla f(\bm{x})$
+does not imply that $\bm{x}$ is a local minimizer. Instead, $\bm{x}$ is only guaranteed to be a local minimizer if the second-order optimality
+conditions are satisfied, which additionally require $\nabla^2 f(\bm{x})$ to be positive semidefinite.
+
+Ideally, $\alpha_k$ is picked such that it is the minimizer of the one-dimensional optimization problem
+
+\[
+    \min_{\alpha_k > 0} f(\bm{x}_k + \alpha_k \bm{p}_k).
+\]
+
+In most cases, it is infeasible to compute $\alpha_k$ exactly. Instead, the idea is to compute an approximation of $\alpha_k$ such that 
+the objective function decreases sufficiently and that $\alpha_k$ is close enough to the true minimizer. Formally, these requirements
+are captured in the strong Wolfe conditions for step lenghts $\alpha_k$ \cite{nocedal2006}:
+
+\begin{align*}
+    f(\bm{x}_k + \alpha_k \bm{p}_k) &\leq f(\bm{x}_k) + c_1 \alpha_k \nabla f(\bm{x}_k) \bm{p}_k \\
+    \abs{\nabla f(\bm{x}_k + \alpha_k \bm{p}_k)^T \bm{p}_k} &\leq c_2 \abs{\nabla f(\bm{x}_k)^T \bm{p}_k}
+\end{align*}
+
+for some constants $c_1 \in (0, 1), c_2 \in (c_1, 1)$. The first condition is called the sufficient decrease or the Armijo condition 
+and states that the reduction in $f$ should be proportional to both the step length $\alpha_k$ and the directional derivative 
+$\nabla f(\bm{x}_k \bm{p}_k)$. Informally, the second condition, known as the curvature condition, ensures that there is no more fast 
+progress to be made along the search direction $\bm{p}_k$, indicated by the fact that $\abs{\nabla f(\bm{x}_k + \alpha_k \bm{p}_k)^T 
+\bm{p}_k}$ is already rather small. 
+
+Step sizes satisfying the strong Wolfe conditions have the following properties under mild assumptions \cite{nocedal2006}. Firstly, 
+if $\bm{p}_k$ is a descent direction, it is possible to find a step size that satisfies the strong Wolfe conditions. Secondly, it 
+can be shown that line search methods where $\alpha_k$ satisfies the strong Wolfe conditions for all $k$ converge to a stationary
+point $\bm{x}^*$ with $\nabla f(\bm{x}^*) = 0$ if the search direction $\bm{p}_k$ is sufficiently far from orthogonal to the steepest
+descent direction $\nabla f(\bm{x}_k)$ for all $k$.
+
+\begin{itemize}
+    \item Steepest descent
+    \item Newton's method
+    \item Issues with Newton's method for large scale optimization
+    \item Quasi-Newton methods
+\end{itemize}
 
 \begin{itemize}
     \item Structure of these constraint-based energy potentials allows efficient local/global optimization (block coordinate descent).
