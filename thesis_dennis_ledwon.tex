@@ -524,6 +524,23 @@ algorithm is given \textcolor{red}{below}.
 \end{algorithmic}
 \end{algorithm}
 
+\begin{itemize}
+    \item Structure of these constraint-based energy potentials allows efficient local/global optimization (block coordinate descent).
+    \item Robust and efficient, often significantly outperforming classical Newton methods.
+    \item Projective dynamics is an extension of \cite{liu2013} from mass-sprint systems to exmploying projection onto constraint sets to 
+        simulate general nodal dynamical systems.
+    \item Constraint projection is performed globally here, while it is performed locally in (x)PBD
+        \begin{itemize}
+            \item Understand exactly where and how the projection is achieved in (x)PBD
+        \end{itemize}
+
+    \item \textcolor{red}{The global solve (10) has a Hessian matrix according to \cite{bouaziz2014}. Look at the minimization problem with
+        fixed projetion variables again }
+
+    \item \cite{bouaziz2014} show some interesting experiments in their results. Additionally, the listed weaknesses of projective dynamics are 
+        pretty interesting.
+\end{itemize}
+
 \subsection*{Unconstrained Optimization}
 The goal of unconstrained optimization is to find the global minimizer of smooth, but generally nonlinear functions of the form $f \colon 
 \mathbb{R}^n \to \mathbb{R}, n \in \mathbb{N}$, or formally
@@ -542,11 +559,11 @@ to the global minimizer the local minimizer that the algorithm converges to can 
 It can be shown that $\nabla f(\bm{x}^*) = 0$ if $\bm{x}^*$ is a local minimizer and f is continuously differentiable in an open neighborhood
 of $\bm{x}^*$ \cite{nocedal2006}. The proof is by contradiction and establishes that if $\nabla f(\bm{x}^*) \neq 0$, then it is possible to pick a descent 
 direction along which it is possible to decrease the value of the objective function if the step size is picked sufficiently small. This 
-observation gives rise to the idea of a family of optimization algorithms called line search algorithms: Given the current iterate $\bm{x}_k$,
-pick a descent direction $\bm{p}_k$ and search along this direction for a new iterate $\bm{x}_{k+1}$ with $\bm{x}_{k+1} = \bm{x}_k + \alpha_k
-\bm{p}_k$. This process is repeated until $\nabla f(\bm{x}_k)$ is sufficiently close to zero. It is important to note that $\nabla f(\bm{x})$
-does not imply that $\bm{x}$ is a local minimizer. Instead, $\bm{x}$ is only guaranteed to be a local minimizer if the second-order optimality
-conditions are satisfied, which additionally require $\nabla^2 f(\bm{x})$ to be positive semidefinite.
+observation gives rise to the idea of a family of optimization algorithms called line search algorithms \cite{nocedal2006}: Given the current 
+iterate $\bm{x}_k$, pick a descent direction $\bm{p}_k$ and search along this direction for a new iterate $\bm{x}_{k+1}$ with $\bm{x}_{k+1} = 
+\bm{x}_k + \alpha_k \bm{p}_k$. This process is repeated until $\nabla f(\bm{x}_k)$ is sufficiently close to zero. It is important to note that 
+$\nabla f(\bm{x})$ does not imply that $\bm{x}$ is a local minimizer. Instead, $\bm{x}$ is only guaranteed to be a local minimizer if the second-order 
+optimality conditions are satisfied, which additionally require $\nabla^2 f(\bm{x})$ to be positive semidefinite \cite{nocedal2006}.
 
 Ideally, $\alpha_k$ is picked such that it is the minimizer of the one-dimensional optimization problem
 
@@ -573,11 +590,10 @@ Step sizes satisfying the strong Wolfe conditions have the following properties 
 if $\bm{p}_k$ is a descent direction, it is possible to find a step size that satisfies the strong Wolfe conditions. Secondly, it 
 can be shown that line search methods where $\alpha_k$ satisfies the strong Wolfe conditions for all $k$ converge to a stationary
 point $\bm{x}^*$ with $\nabla f(\bm{x}^*) = 0$ if the search direction $\bm{p}_k$ is sufficiently far from orthogonal to the steepest
-descent direction $\nabla f(\bm{x}_k)$ for all $k$.
+descent direction $\nabla f(\bm{x}_k)$ for all $k$. Such line search algorithms are called globally convergent.
 
 \subsubsection*{Steepest Descent}
 The most obvious choice for the search direction $\bm{p}_k$ at iteration $k$ is the steepest descent direction given by 
-
 \[
     \bm{p}_k = -\nabla f(\bm{x}_k).
 \]
@@ -587,27 +603,151 @@ Its convergence rate is only linear and depends on the eigenvalue distribution o
 $\bm{x}^*$. If the eigenvalues distribution is wide, steepest descent often requires an unacceptably large number of iterations to find a 
 stationary point.
 
-\begin{itemize}
-    \item Newton's method
-    \item Issues with Newton's method for large scale optimization
-    \item Quasi-Newton methods
-\end{itemize}
+\subsubsection*{Newton Method}
+It can be shown that any search direction $\bm{p}_k$ that makes an angle of strictly less than $\pi/2$ radians with the steepest descent
+direction $\nabla f(\bm{x}_k)$ is a descent direction as well \cite{nocedal2006}. As long as $\bm{p}_k$ does not get arbitrarily close to 
+orthogonal to $\nabla f(\bm{x}_k)$, any such $\bm{p}_k$ can be used in the line search framework. The so called Newton direction $\bm{p}^N_k$ 
+is a popular choice. It is derived from the second-order Taylor series approximation to $f(\bm{x}_k + \bm{p})$ which is given by
+
+\[
+    f(\bm{x}_k + \bm{p}) \approx f(\bm{x}_k) + \bm{p}^T \nabla f(\bm{x}_k) + \frac{1}{2}\bm{p}^T \nabla^2 f(\bm{x}_k) \bm{p} \eqqcolon 
+    m_k(\bm{p}).
+\]
+
+The model function $m_k$ has a unique minimizer if $\nabla^2 f(\bm{x}_k)$ is positive definite. In this case, the Newton direction is defined
+as the unique minimizer $\bm{p}^N_k$ of $m_k$, which can be found by setting the derivative of $m_k(\bm{p})$ to zero:
+
+\[
+    \bm{p}^N_k = - (\nabla^2 f(\bm{x}_k))^{-1} \nabla f(\bm{x_k}).
+\]
+
+The better the quadratic model function $m_k(\bm{p})$ approximates $f(\bm{x}_k + \bm{p})$ around $\bm{x}_k$, the more reliable is the 
+Newton direction. 
+
+It is easy to show that $\bm{p}^N_k$ is a descent direction, given that $\nabla^2 f(\bm{x}_k)$ is positive definite \cite{nocedal2006}. 
+Otherwise, the Newton direction is not guaranteed to exist, or to be a descent direction if it does. In such cases, the Newton direction cannot 
+be used without modification. Thus, in its naive form, the Newton method is not globally convergent. However, if $\nabla^2 f(\bm{x}^*)$ is positive
+definite at a local solution $\bm{x}^*$ and $f$ is twice differentiable, then $\nabla^2 f(\bm{x})$ is also positive definite for $\bm{x} \in 
+\mathcal{N}$ for some neighborhood $\mathcal{N}$ of $\bm{x}^*$. If we have $\bm{x}_0 \in \mathcal{N}$ for the starting point of $\bm{x}_0$
+of Newton's method and $\bm{x}_0$ is sufficiently close to the solution $\bm{x}^*$ it can be shown that Newton's method with step length
+$\alpha_k = 1$ converges to $\bm{x}^*$ with a quadratic rate of convergence under mild conditions \cite{nocedal2006}. Thus, Newton's method 
+has satisfactory convergence properties close to the solution $\bm{x}^*$ and the Newton direction $\bm{p}^N_k$ has a natural step size 
+$\alpha_k = 1$ associated with it. Since $\alpha_k = 1$ often does not satisfy the Wolfe conditions when the current iterate $\bm{x}_k$ is still 
+far away from the solution $\bm{x}^*$, line searches are still necessary in Newton's method. However, it is recommended to use $\alpha_k = 1$ as the
+initial guess as $\alpha_k = 1$ guarantees quadratic convergence once $\bm{x}_k$ gets sufficiently close to $\bm{x}^*$.
+
+Despite its favorable convergence properties, Newton's method comes with a couple of disadvantages. Firstly, computing the Hessian matrix
+$\nabla^2 f(\bm{x}_k)$ is expensive and error prone. Additionally, a new system 
+
+\[
+    \nabla^2 f(\bm{x}_k) \bm{p}^N_k = - \nabla f(\bm{x_k})
+\]
+
+needs to be solved at every iteration as the Hessian matrix changes with the current iterate $\bm{x}_k$. For these reasons, while a single
+Newton iteration often makes quite a lot of progress towards the solution, it takes a significant amount of time to compute. If $\bm{x}_k
+\in \mathbb{R}^n$ for some large $n \in \mathbb{N}$, computing the exact Newton iteration can become infeasible, especially for real-time
+applications. Concomitantly, the memory required to store the Hessian matrix of size $\mathcal{O}(n^2)$ becomes prohibitive.
+
+\subsubsection*{Quasi-Newton Methods}
+Due to the shortcomings of Newton's method mentioned \textcolor{red}{above}, it can be favorable to simply approximate the Newton direction
+in order to find an effective search direction while keeping the cost of a single iteration low. Effective Newton approximations can be 
+computed without the need to compute the Hessian $\nabla^2 f(\bm{x}_k)$ during each iteration \cite{nocedal2006}. Usually, multiple Quasi-Newton 
+iterations fit into the same time budget as a single Newton iteration. As a result, Quasi-Newton methods can converge to a solution in a 
+shorter amount of time than the Newton method, even though their search directions are not as effective as the exact Newton direction.
+
+In Quasi-Newton methods, search directions of the following form are used
+
+\[
+    \bm{p}_k = -\bm{B}^{-1}_k \nabla f(\bm{x}_k),
+\]
+
+where $\bm{B}_k \in \mathbb{R}^{n \times n}$ is positive definite \cite{nocedal2006}. Note that the Newton direction is a special case of 
+\textcolor{red}{the above} with $\bm{B}_k = \nabla^2 f(\bm{x}_k)$. Just like for the Newton direction $\bm{p}^N_k$, a model function $m_k$ 
+that attains its minimum at $\bm{p}_k  = -\bm{B}^{-1}_k \nabla f(\bm{x}_k)$ can be defined via
+
+\[
+    m_k(\bm{p}) = f(\bm{x}_k)  + \nabla f(\bm{x}_k)^T \bm{p} + \frac{1}{2} \bm{p}^T\bm{B}_k\bm{p}.
+\]
+
+As $\bm{B}_k \neq \nabla^2 f(\bm{x}_k)$, $m_k$ does not correspond to a second-order Taylor approximation of $f$ around $\bm{x}_k$ anymore.
+Instead, $\bm{B}_k$ is picked such that the gradient of $m_k$ matches the gradient of $f$ at the last two iterates $\bm{x}_k$ and $\bm{x}_{k-1}$.
+Since $\nabla m_{k}(\bm{0}) = \nabla f(\bm{x}_k + \bm{0}) = \nabla f(\bm{x}_k)$, the first condition is true independent of $\bm{B}_k$. The 
+second condition yields
+
+\[
+    \nabla m_{k}(-\alpha_{k-1}\bm{p}_{k-1}) = \nabla f(\bm{x}_k) - \alpha_{k-1}\bm{B}_{k}\bm{p}_{k-1} = \nabla f(\bm{x}_k - \alpha_{k-1}\bm{p}_{k-1})
+    = \nabla f(\bm{x}_{k-1}).
+\]
+
+Rearranging gives
+
+\[
+    \bm{B}_k \bm{s}_{k-1} = \bm{y}_{k-1},
+\]
+
+where $\bm{s}_{k-1} = \bm{x}_k - \bm{x}_{k-1} = \alpha_{k-1}\bm{p}_{k-1}$. This is called the secant equation. Multiplying both sides from the 
+left with $\bm{s}_{k-1}^T$ yields the curvature condition given by
+
+\[
+    \bm{s}_{k-1}^T \bm{y}_{k-1} > 0,
+\]
+
+since $\bm{B}_k$ is positive definite. Note that the curvature condition is not satisfied for arbitrary $\bm{x}_k, \bm{x}_{k-1}$ if $f$ is 
+not convex. However, it can be shown that the curvature condition always holds when the step size $\alpha_{k-1}$ satisfies the strong Wolfe 
+conditions \cite{nocedal2006}. Thus, a proper line search strategy is vital for the viability of Quasi-Newton methods.
+
+Since $\bm{B}_k$ is positive definite, the secant equation can be written in terms of the inverse $\bm{H}_k \coloneqq \bm{B}^{-1}_k$ as
+
+\[
+    \bm{H}_k \bm{y}_{k-1} = \bm{s}_{k-1}
+\]
+
+and the formula for the new search direction becomes $-\bm{H}_k \nabla f(\bm{x}_k)$. The secant equation is not enough to uniquely determine
+the entries of $\bm{H}_k$, even if $\bm{H}_k$ is required to be symmetric positive definite. Thus, the additional requirement that $\bm{H}_k$
+is closest to $\bm{H}_{k-1}$ according to some norm is imposed. In summary, $\bm{H}_k$ is picked such that it solves the following constrained
+minimization problem
+
+\begin{align*}
+    \min_{H} \norm{\bm{H} - \bm{H}_{k-1}} \text{, subject to } \bm{H} = \bm{H}^T \text{ and } \bm{H}\bm{y}_{k-1} = \bm{s}_{k-1}.
+\end{align*}
+
+Using a scale-invariant version of the weighted Frobenius norm gives rise to the popular Broyden- Fletcher-Goldfarb-Shanno (BFGS) algorithm.
+It is defined via the following update formula for $\bm{H}_k$
+
+\[
+    \bm{H}_k = (I - \rho_{k-1}\bm{s}_{k-1}\bm{y}^T_{k-1})\bm{H}_{k-1}(I - \rho_{k-1}\bm{s}_{k-1}\bm{y}^T_{k-1}) + \rho_{k-1}\bm{s}_{k-1}\bm{s}^T_{k-1},
+\]
+
+where $\rho_{k-1} = 1 / (\bm{s}^T_{k-1}\bm{y}_{k-1})$. Alternatively, the update formula can be given in terms of $\bm{B}_k$ as
+
+\[
+    \bm{B}_{k} = \bm{B}_{k-1} - \frac{\bm{B}_{k-1} \bm{s}_{k-1} \bm{s}^T_{k-1} \bm{B}_{k-q}}{\bm{s}^T_{k-1} \bm{B}_{k-1} \bm{s}_{k-1}}
+    + \frac{\bm{y}_{k-1} \bm{y}^T_{k-1}}{\bm{y}_{k-1}^T \bm{s}_{k-1}}.
+\]
+
+Generally, using the formulation in terms of the inverse matrices $\bm{H}_k$ is preferrable since the computation of the new descent direction can
+be achieved by simple matrix-vector multiplication instead of solving a linear system if $\bm{B}_k$ is maintained instead.
+
+While global convergence of the BFGS method cannot be established for general nonlinear smooth functions, it is possible to show that it converges 
+superlinearly if the initial guess $\bm{x}_0$ is close to the solution $\bm{x}^*$ and $\alpha_k = 1$ for sufficiently large $k$ \cite{nocedal2006}
+under mild conditions. Typically, the BFGS method dramatically outperforms steepest descent and performs comparably to Newton's method on many 
+practical problems. 
+
+The behavior of the BFGS method depends on the choice of the initial inverse matrix $\bm{H}_0$. One obvious choice is $\bm{H}_0 = \nabla^2 
+f(\bm{x}_0)$. However, there is no guarantee that $\nabla^2 f(\bm{x}_0)$ is positive definite. Additionally, computing even a single inverse
+matrix can be prohibitively expensive for large problems. Thus, scaled versions of the identity matrix $\gamma I, \gamma \in \mathbb{R}^+$ are
+often used instead. There is no good general strategy for choosing $\gamma$, even though heuristic appraoches are popular. \textcolor{red}{Maybe
+explain one heuristic, if necessary down the line}.
+
+Even though BFGS iterations are typically faster to compute than Newton iterations, the BFGS method is still not suitable for large problems 
+in its naive form. Just like in Newton's method, either $\bm{H}_k$ or $\bm{B}_k$ needs to be stored explicitly, which can be infeasible for 
+large-scale problems. While the BFGS update formula using the inverse matrices $\bm{H}_k$ replaces the need for a matrix factorization with a simple 
+matrix-vector multiplication, $\bm{H}_k$ and $\bm{B}_k$ are generally dense, even if $\nabla^2 f(\bm{x}_k)$ is sparse. This removes the possibility
+of alleviating storage requirements and speeding up computations via sparse matrix techniques when using the naive BFGS method.
 
 \begin{itemize}
-    \item Structure of these constraint-based energy potentials allows efficient local/global optimization (block coordinate descent).
-    \item Robust and efficient, often significantly outperforming classical Newton methods.
-    \item Projective dynamics is an extension of \cite{liu2013} from mass-sprint systems to exmploying projection onto constraint sets to 
-        simulate general nodal dynamical systems.
-    \item Constraint projection is performed globally here, while it is performed locally in (x)PBD
-        \begin{itemize}
-            \item Understand exactly where and how the projection is achieved in (x)PBD
-        \end{itemize}
-
-    \item \textcolor{red}{The global solve (10) has a Hessian matrix according to \cite{bouaziz2014}. Look at the minimization problem with
-        fixed projetion variables again }
-
-    \item \cite{bouaziz2014} show some interesting experiments in their results. Additionally, the listed weaknesses of projective dynamics are 
-        pretty interesting.
+    \item L-BFGS
+    \item Double recursion
 \end{itemize}
 
 % Bibliography ------------------------------------------------------------------------
