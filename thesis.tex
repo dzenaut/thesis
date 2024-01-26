@@ -1,0 +1,37 @@
+\documentclass{thesis}
+
+\thesisTitle{Comparison of xPBD and Projective Dynamics}
+\thesisType{Master Thesis}
+\thesisAuthor{Dennis Ledwon}
+\thesisStudentID{370425}
+\thesisMonth{July 2024}
+\thesisPrimaryReviewer{Prof.\ Dr.\ Jan Bender}
+\thesisSecondaryReviewer{Prof.\ Dr.\ Torten Kuhlen}
+
+\begin{document}
+\makeFrontMatter
+
+\mainmatter
+\input{introduction.tex}
+\input{related-work.tex}
+\input{method.tex}
+\begin{appendices}
+\input{appendix.tex}
+\end{appendices}
+\cleardoublepage
+
+\backmatter
+\phantomsection
+\addcontentsline{toc}{chapter}{Bibliography}
+\begingroup
+\setlength{\emergencystretch}{8em}
+\printbibliography{}
+\endgroup
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Index}
+\printindex
+\cleardoublepage
+
+\end{document}

@@ -1,0 +1,34 @@
+% Mathematical notation conventions
+
+\let\hacek\v
+\renewcommand{\v}[1]{\ensuremath{\mathbf{#1}}} % vector
+\newcommand{\m}[1]{\ensuremath{\mathbf{#1}}}   % matrix
+
+\newcommand{\reals}[0]{\ensuremath{\mathds{R}}}     % real numbers
+\newcommand{\naturals}[0]{\ensuremath{\mathds{N}}}  % natural numbers
+\newcommand{\integers}[0]{\ensuremath{\mathds{Z}}}  % integer numbers
+\newcommand{\complexes}[0]{\ensuremath{\mathds{C}}} % complex numbers
+
+\newcommand{\T}[0]{\ensuremath{\mathsf{T}}} % transpose sign
+
+\newcommand{\bigint}[0]{\ensuremath{\int\displaylimits}} % integral with limits below / above
+\renewcommand{\d}[0]{\ensuremath{\mathrm{d}}}            % d in integrals / derivatives
+\newcommand{\intd}[0]{\ensuremath{\;\d}}                 % d at the end of an integral
+
+\newcommand{\argmin}[1]{\ensuremath{\underset{#1}{\operatorname{argmin}}\;}} % argmin with underset domain
+\newcommand{\argmax}[1]{\ensuremath{\underset{#1}{\operatorname{argmax}}\;}} % argmax with underset domain
+
+% Formatting
+
+\newcommand{\eqend}[0]{\ensuremath{\;}} % appropriate space before punctuation at the end of an equation
+
+% Acronyms
+
+\newcommand{\cf}[0]{cf.}                              % "conferre" ("compare")
+\newcommand{\etal}[0]{\emph{et~al}\@ifnextchar.{}{.}} % "et alii" ("and others")
+\newcommand{\etc}[0]{etc\@ifnextchar.{}{.}}           % "et cetera" ("and so forth")
+\newcommand{\eg}[0]{e.\,g.}                           % "exempli gratia" ("for example")
+\newcommand{\Eg}[0]{E.\,g.}                           % "Exempli gratia" ("For example")
+\newcommand{\ie}[0]{i.\,e.}                           % "id est" ("that is", "in other words")
+\newcommand{\wrt}[0]{w.\,r.\,t.}                      % "with respect to"
+\newcommand{\st}[0]{s.\,t.}                           % "such that"
