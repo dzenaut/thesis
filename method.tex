@@ -842,10 +842,37 @@ algorithm is given in \cref{alg:pd}.
 \end{algorithmic}
 \end{algorithm}
 
+\subsection{Properties of Projective Dynamics}\label{ss:pd-properties}
 \begin{itemize}
-    \item Robust and efficient, often significantly outperforming classical Newton methods.
-    \item Projective dynamics is an extension of \cite{liu2013} from mass-sprint systems to exmploying projection onto constraint sets to 
-        simulate general nodal dynamical systems. Mention block coordinate descent.
-    \item Compare to xPBD.
-    \item Weaknesses of PD
+    \item While the minimization problem is simplified by restricting to PD energy potentials, the solver does converge to a 
+        true solution of the minimization problem. That means that the solver strikes a balance between preserving the linear
+        momenta of particles while minimizing the energy potentials.
+    \item Robust, since the energy is bounded from below and quadratic and both local and global steps are guaranteed to only 
+        decrease the energy without provisions.
+    \item Efficient local step, because computation of projections can be carried out in parallel for all constraints. Efficient global step
+        since the system matrix can be prefactorized and the system can be solved for x-, y-, z-coordinates in parallel. In terms of
+        time, more efficient than a Newton solver. In terms of iterations, of course inferior to a Newton solver since the PD solver
+        only exhibits linear convergence. Either way, after a couple of iterations of the PD solver, the results are visually 
+        indistinguishable from the true solution computed by Newton's method.
+    \item Generality is a bit of a mixed bag: While energy potentials are restricted to the structure outlined above, many different
+        types of constraints can be implemented in this framework and handled in a unified manner by the PD solver. Among others, the
+        authors implement strain constraints, bending constraints, collisions and positional constraints using PD energy potentials
+        and achieve visually plausible results. On the other hand, many energy potentials are imcompatible with the structure of PD
+        energy potentials. This included many classical energies, including Neo-Hookean and St. Venant-Kirchoff models. Their behavior 
+        cannot be emulated using PD energy potentials either.
+    \item Simplicity. Much easier than implementing a Newton solver, which requires second derivatives, a line search and possible 
+        Hessian modifications if the Hessian is not positive definite. 
+    \item Independence to meshing since the constraints are derived from continuous energies. This is hard to get right in PBD with 
+        dependence of the material behavior on the underlying meshing and of the number of iterations. \textcolor{red}{Check out whether
+        this also applies to xPBD?}
+    \item Numerical damping since the PD solver performs implicit Euler integration. Apparently, this is particularly severe when the 
+        optimization is terminated early (\textcolor{red}{I did observe that myself when decreasing the number of iterations in my 
+        simulations.}). The authors claim that this is due to the fact that external forces might not be able to propagate fully through the
+        mesh if the optimization is not run for enough iterations. Why external forces in particular? What is the mathematical reason?
+        I could try this out with collisions.
+    \item Pre-factorization needs to be recomputed if the constraint set changes, for example upon collisions. This can cause the solver
+        to take unpredictable performance hits.
+    \item All hard constraints are handed in a soft manner. Hard constraints can be approximated by picking large weights for constraints,
+        but this messes up the numerical properties of the global matrix. As a result, locking artifacts can supposedly occur. Might be 
+        interesting to write down where exactly the large values occur.
 \end{itemize}
