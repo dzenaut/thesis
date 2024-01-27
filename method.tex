@@ -229,7 +229,10 @@ $\nabla^2 f(\bm{x}_k)$ is expensive and error prone. Additionally, a new system
     \nabla^2 f(\bm{x}_k) \bm{p}^N_k = - \nabla f(\bm{x_k})
 \]
 
-\noindent needs to be solved at every iteration as the Hessian matrix changes with the current iterate $\bm{x}_k$. For these reasons, while a single
+\noindent needs to be solved at every iteration as the Hessian matrix changes with the current iterate $\bm{x}_k$.
+If the Hessian $\nabla^2 f(\bm{x}_k)$ is sparse, its factorization can be computed via sparse elimination techniques. However, there is no
+guarantee for the matrix factorization of a sparse matrix to be sparse itself in the general case.
+For these reasons, while a single
 Newton iteration often makes quite a lot of progress towards the solution, it takes a significant amount of time to compute. If $\bm{x}_k
 \in \mathbb{R}^n$ for some large $n \in \mathbb{N}$, computing the exact Newton iteration can become infeasible, especially for real-time
 applications. Concomitantly, the memory required to store the Hessian matrix of size $\mathcal{O}(n^2)$ becomes prohibitive.
@@ -238,7 +241,7 @@ applications. Concomitantly, the memory required to store the Hessian matrix of 
 Due to the shortcomings of Newton's method mentioned in \cref{sss:quasi-newton}, it can be favorable to simply approximate the Newton 
 direction
 in order to find an effective search direction while keeping the cost of a single iteration low. Effective Newton approximations can be 
-computed without the need to compute the Hessian $\nabla^2 f(\bm{x}_k)$ during each iteration \cite{nocedal2006}. Usually, multiple Quasi-Newton 
+computed without the need to compute the Hessian $\nabla^2 f(\bm{x}_k)$ during each iteration \cite{nocedal2006}. Often, multiple Quasi-Newton 
 iterations fit into the same time budget as a single Newton iteration. As a result, Quasi-Newton methods can converge to a solution in a 
 shorter amount of time than the Newton method, even though their search directions are not as effective as the exact Newton direction.
 
@@ -304,24 +307,20 @@ minimization problem
 Using a scale-invariant version of the weighted Frobenius norm gives rise to the popular Broyden- Fletcher-Goldfarb-Shanno (BFGS) algorithm.
 It is defined via the following update formula for $\bm{H}_k$
 
-\[
+\begin{equation}\label{eq:bfgs-update}
     \bm{H}_k = (I - \rho_{k-1}\bm{s}_{k-1}\bm{y}^T_{k-1})\bm{H}_{k-1}(I - \rho_{k-1}\bm{s}_{k-1}\bm{y}^T_{k-1}) + \rho_{k-1}\bm{s}_{k-1}\bm{s}^T_{k-1},
-\]
+\end{equation}
 
-\noindent where $\rho_{k-1} = 1 / (\bm{s}^T_{k-1}\bm{y}_{k-1})$. Alternatively, the update formula can be given in terms of $\bm{B}_k$ as
-
-\[
-    \bm{B}_{k} = \bm{B}_{k-1} - \frac{\bm{B}_{k-1} \bm{s}_{k-1} \bm{s}^T_{k-1} \bm{B}_{k-q}}{\bm{s}^T_{k-1} \bm{B}_{k-1} \bm{s}_{k-1}}
-    + \frac{\bm{y}_{k-1} \bm{y}^T_{k-1}}{\bm{y}_{k-1}^T \bm{s}_{k-1}}.
-\]
-
-Generally, using the formulation in terms of the inverse matrices $\bm{H}_k$ is preferrable since the computation of the new descent direction can
+\noindent where $\rho_{k-1} = 1 / (\bm{s}^T_{k-1}\bm{y}_{k-1})$. Is is possible to give a similar update formula in terms of $\bm{B}_k$.
+Generally, using the formulation in terms of the inverse matrices $\bm{H}_k$ is preferrable since the computation of the new descent 
+direction can
 be achieved by simple matrix-vector multiplication instead of solving a linear system if $\bm{B}_k$ is maintained instead.
 
 While global convergence of the BFGS method cannot be established for general nonlinear smooth functions, it is possible to show that it converges 
 superlinearly if the initial guess $\bm{x}_0$ is close to the solution $\bm{x}^*$ and $\alpha_k = 1$ for sufficiently large $k$ \cite{nocedal2006}
-under mild conditions. Typically, the BFGS method dramatically outperforms steepest descent and performs comparably to Newton's method on many 
-practical problems. 
+under mild conditions. Thus, just like the Newton method (\cref{sss:newton-method}), the BFGS method has a natural step length $\alpha=1$,
+which should be the initial guess for all line search algorithms. Typically, the BFGS method dramatically outperforms steepest 
+descent and performs comparably to Newton's method on many practical problems. 
 
 The behavior of the BFGS method depends on the choice of the initial inverse matrix $\bm{H}_0$. One obvious choice is $\bm{H}_0 = \nabla^2 
 f(\bm{x}_0)$. However, there is no guarantee that $\nabla^2 f(\bm{x}_0)$ is positive definite. Additionally, computing even a single inverse
@@ -335,10 +334,63 @@ large-scale problems. While the BFGS update formula using the inverse matrices $
 matrix-vector multiplication, $\bm{H}_k$ and $\bm{B}_k$ are generally dense, even if $\nabla^2 f(\bm{x}_k)$ is sparse. This removes the possibility
 of alleviating storage requirements and speeding up computations via sparse matrix techniques when using the naive BFGS method.
 
-\begin{itemize}
-    \item L-BFGS
-    \item Double recursion
-\end{itemize}
+\subsubsection{Limited-Memory Quasi-Newton Methods}\label{sss:limited-memory-quasi-newton}
+As discussed in \cref{sss:quasi-newton}, the BFGS method is unsuitable for large-scale problems due to the storage requirements of the 
+typically dense inverse Hessian approximation $\bm{H}_k$. This highlights the need for effective Hessian approximations that are not only
+cheap to compute, but also cheap to store. Just like Quasi-Newton methods use approximations of the Newton direction in order to keep 
+the computational cost of a single iteration low, limited-memory Quasi-Newton methods approximate Quasi-Newton directions with 
+the goal of reducing the memory footprint of a single iteration. This comes at the prize of inferiornocedal2006 convergence properties. On the upside,
+limited-memory Quasi-Newton directions can sometimes be computed by using only a couple of vectors of size $n$, without the need to 
+explicitly form the inverse Hessian approximation $\bm{H}_k$. This can drop the space complexity of a single iteration to $\mathcal{O}(n)$ 
+compared to $\mathcal{O}(n^2)$ for the BFGS method.
+
+A popular limited-memory method called L-BFGS can be derived from the BFGS update formula for the inverse Hessian approximation 
+$\bm{H}_k$, given by \cref{eq:bfgs-update} \cite{nocedal2006}. Note that the BFGS update in iteration $k$ is specified entirely 
+by the vector 
+pair $(\bm{s}_n, \bm{y}_n) \in \mathbb{R}^n$. Consequently, $\bm{H}_k$ can be constructed from the initial matrix $\bm{H}_0$ and the familiy 
+of vector pairs $((\bm{s}_i, \bm{y}_i))_{i \in [0, k-1]}$ by simply performing $k$ update steps according to $\cref{eq:bfgs-update}$.
+The idea of L-BFGS is to only keep track of the most recent $m$ vector pairs and generate a modified version of the Hessian approximation 
+from the BFGS method by applying the $m$ updates defined by $((\bm{s}_i, \bm{y}_i))_{i \in [k-m, k-1]}$ to the 
+initial matrix $\bm{H}_0$ at each iteration $k$.
+
+It is important to note that its not the L-BFGS Hessian approximation $\bm{H}_k$ itself, but the search direction $\bm{p}_k = -\bm{H}_k 
+\nabla f(\bm{x}_k)$ that is of interest. It turns out that the L-BFGS search direction $\bm{p}_k$ can be computed without explicitly 
+constructing $\bm{H}_k$ using an algorithm called the L-BFGS two-loop recursion (\cref{alg:lbfgs-recursion}) \cite{nocedal2006}.
+
+\begin{algorithm}
+\caption{L-BFGS two-loop recursion}\label{alg:lbfgs-recursion}
+\begin{algorithmic}
+\State $\bm{t} = \nabla f(\bm{x}_k)$
+\For{$i = k-1, k-2, \ldots, k-m$}
+\State $\alpha_i = \rho_i \bm{s}^T_i \bm{t}$
+\State $\bm{t} = \bm{t} - \alpha_i \bm{y}_i$
+\EndFor
+\State $\bm{r} = \bm{H}_0 \bm{t}$
+\For{$i = k-m, k-m+1, \ldots, k-1$}
+\State $\beta = \rho_i \bm{y}^T_i \bm{r}$
+\State $\bm{r} = \bm{r} + \bm{s}_i(\alpha_i - \beta)$
+\EndFor
+\State \textbf{return with result } $\bm{H}_k \nabla f(\bm{x}_k) = \bm{r}$.
+\end{algorithmic}
+\end{algorithm}
+
+Excluding the matrix-vector multiplication $\bm{H}_0 \bm{t}$, the two-loop recursion scheme has time complexity $\mathcal{O}(n)$. Thus,
+if $\bm{H}_0$ is chosen to be diagonal, the entire L-BFGS iteration can be computed in $\mathcal{O}(n)$. Similarly, the space complexity
+of the L-BFGS iteration is only $\mathcal{O}(n)$ if $\bm{H}_0$ is diagonal. Even if $\bm{H}_0$ is not diagonal, but sparse, the two-loop
+recursion can be significantly faster and more space efficient than a BFGS update where matrix-vector multiplication with a dense matrix
+is required in general.
+
+L-BFGS shares many properties with the BFGS method discussed in \cref{sss:quasi-newton}. The performance of the L-BFGS method depends 
+on the choice of the initial matrix $\bm{H}_0$, with scaled diagonal matrices being popular choices. Again, there is no generally viable
+strategy for picking the scaling factor $\gamma \in \mathbb{R}$. Similarly, the initial guess for the step size $\alpha_k=1$ should be used.
+The window size $m$ is a parameter that needs to be tuned on a per-problem basis \cite{nocedal2006}. While the L-BFGS algorithm is 
+generally less robust if
+$m$ is small, making $m$ arbitrarily large increases the amount of time required to perform the two-loop recursion. If the matrix-vector
+multiplication in \cref{alg:lbfgs-recursion} is expensive to compute, the additional computational cost incurred by increasing $m$ is 
+usually overshadowed by the matrix-vector multiplication. Still, larger values of $m$ do not necessarily lead to better performance. 
+\cite{liu2017} suggest that curvature information from vector pairs $(\bm{s}_i, \bm{y}_i)$ from iterations i with $i << k$ can become 
+out of date, making moderately large values of $m$ more beneficial. The main weakness of the L-BFGS method is its slow convergence on 
+problems where the true Hessian matrices $\nabla^2 f(\bm{x})_k$ are ill-conditioned \cite{nocedal2006}.
 
 \section{Dynamic Simulation}\label{s:dynamic-simulation}
 \begin{itemize}
@@ -797,4 +849,3 @@ algorithm is given in \cref{alg:pd}.
     \item Compare to xPBD.
     \item Weaknesses of PD
 \end{itemize}
-
