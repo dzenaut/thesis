@@ -709,7 +709,7 @@ per-constraint projections of particle positions onto constraint manifolds. The 
 local projection steps while taking into consideration global effects including inertia and external forces. This is achieved by solving a 
 linear system of equations whose system matrix is constant across timesteps. Since the local steps can be carried out in parallel and the 
 factorization for the system matrix of the global step can be precomputed and reused, physical simulations that are restricted to energy potentials 
-from the PD framework can be solved efficienty and robustly.
+from the PD framework can be solved efficienty.
 
 \subsection{Energy Potentials}\label{ss:pd-potentials}
 
@@ -734,7 +734,8 @@ transforms, i.e. transforms that alter the body's position and orientation but k
 \noindent can be considered a distance measure of how far the configuration is away from the constraint manifold defined by the undeformed 
 configurations. 
 
-The energy potentials in PD are designed to fit into this framework: Energy potentials are defined by a constraint manifold $\bm{C}$ -- which 
+The energy potentials in PD are designed to fit into this framework \cite{bouaziz2014}: Energy potentials are defined by a constraint 
+manifold $\bm{C}$ -- which 
 can be different from $\bm{E_{\text{Green}}(\bm{F})} = 0$ -- and a distance measure $d$ of the body's current configuration to that constraint 
 manifold. Formally, this leads to energy potentials which of the 
 following form:
@@ -759,19 +760,15 @@ configuration on the constraint manifold $\bm{C}$ with minimal distance $d(\bm{q
 Consequently, $\psi(\bm{q})$ measures the distance of $\bm{q}$ to the constraint manifold $\bm{C}$.
 
 The authors claim that since the constraint manifolds already capture nonlinearities the need for complicated distance functions $d$
-can be relaxed while still achieving visually plausible simulations. In PD, distance measures $d$ are restricted to quadratic functions 
-of the form
+can be relaxed while still achieving visually plausible simulations \cite{bouaziz2014}. In PD, distance measures $d$ are restricted to 
+quadratic functions of the form
 
-\[
+\begin{equation}\label{eq:pd-distance-measures}
     d(\bm{q}) = \frac{w}{2} \norm{\bm{Gq} - \bm{p}}^2_F,
-\]
+\end{equation}
 
-\noindent where $\bm{G} \in \mathbb{R}^{r \times m}$ for some $r \in \mathbb{N}$ and $w$ is the constraint stiffness. Note that 
-since $\bm{q} \in \mathbb{R}^{m \times 3}$, the distance measure $d$ has no dependencies between $x$-, $y$- and 
-$z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: Many arbitrary 
-nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
-in terms of PD elastic potentials. However, their structure enables an efficient algorithm for implicit integration, as discussed in
-\cref{ss:pd-solver}. In summary, PD energy potentials have the following form:
+\noindent where $\bm{G} \in \mathbb{R}^{r \times m}$ for some $r \in \mathbb{N}$ and $w$ is the constraint stiffness. In summary, PD 
+energy potentials have the following form:
 
 \begin{equation}\label{eq:pd-potentials}
     \psi({\bm{q}}) = \min_{\bm{p}} \frac{w}{2} \norm{\bm{Gq} - \bm{p}}^2_F + \delta_{\bm{C}}(\bm{p}).
@@ -793,13 +790,13 @@ are carried out sequentially for a fixed number of iterations during each timest
 
 The local step consists of minimizing the objective function \cref{eq:pd-minimization} over 
 the auxiliary variables $\bm{p}_i$ while keeping the positions $\bm{q}$ fixed. This corresponds to finding the projection points of 
-the current positions onto the constraint manifolds used to define the PD energy potentials. Each constraint has its own, independent 
-set of auxiliary variables, making the optimization amendable to massive parallelization. For each energy potential, we solve the 
+the current positions onto the constraint manifolds used to define the PD energy potentials. Each constraint has its own 
+set of auxiliary variables, meaning that the projection steps can be carried out independently. For each energy potential, we solve the 
 following minimization problem
 
-\[
+\begin{equation}\label{eq:pd-local-minimization}
     \min_{\bm{p}_i} \frac{w_i}{2}\norm{\bm{G}_i\bm{q} - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i).
-\]
+\end{equation}
 
 In the global step, the minimization problem \cref{eq:pd-minimization} is optimized over the positions $\bm{q}$ while keeping the auxiliary 
 variables $\bm{p}_i$ fixed.
@@ -807,25 +804,20 @@ This corresponds to moving the positions $\bm{q}$ according to their momentum an
 to the projections points as defined by the distance measures of the PD energy potentials. The optimization problem for the global solve is 
 given by
 
-\[
+\begin{equation}\label{eq:pd-global-minimization}
     \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q} - \bm{p_i}}^2_F.
-\]
+\end{equation}
 
 \noindent By design of the PD energy potentials, the objective function of the global optimization problem is quadratic in the positions 
 $\bm{q}$. Consequently, the minimization can be carried out in a single step by picking $\bm{q}$ such that the first-order optimality 
 conditions are satisfied \cite{nocedal2006}. This requires solving the linear system
 
-\[
+\begin{equation}\label{eq:pd-global-system}
     (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i.
-\]
+\end{equation}
 
-Since the system matrix is constant as long as the constraints remain unchanged it can be prefactorized at initialization, making efficient
-global solves possible. Additionally, note that the system can be solved for each coordinate independently, lending itself to parallelization. 
-This results from the fact that $\bm{q} \in \mathbb{R}^{m \times 3}$, which is also enabled by the structure of the PD energy potentials. 
-The right side needs to be recomputed in every iteration as the projections $\bm{p}_i$ change during the local optimization steps. The 
-objective function is bounded below and both local and global steps are guaranteed to weakly decrease it. As a result, the optimization 
-converges without additional safeguards, even if non-convex constraint manifolds are used in the energy potentials. An overview over the 
-algorithm is given in \cref{alg:pd}.
+Note that the system matrix is constant as long as the constraint set remains unchanged. The right side needs to be recomputed in every 
+iteration as the projections $\bm{p}_i$ change during the local optimization steps.  An overview over the algorithm is given in \cref{alg:pd}.
 
 \begin{algorithm}
 \caption{Projective Implicit Euler Solver}\label{alg:pd}
@@ -843,36 +835,46 @@ algorithm is given in \cref{alg:pd}.
 \end{algorithm}
 
 \subsection{Properties of Projective Dynamics}\label{ss:pd-properties}
+The structure of the PD energy potentials allows for \cref{alg:pd} to be implemented efficiently. Since the constraint projections
+in \cref{eq:pd-local-minimization} can be carried out independently, the local optimization step lends itself to massive parallelization. 
+Further, because the system matrix in \cref{eq:pd-global-system} is constant its prefactorization can be computed at initialization, enabling
+efficient solves of the linear system in the global optimization step. Note that since $\bm{q} \in \mathbb{R}^{m \times 3}$ in \cref{eq:pd-global-system}, 
+the global system can be solved independently and in parallel for each coordinate.
+
+The last property follows from the fact that the distance measure $d$ in \cref{eq:pd-distance-measures} has no dependencies between 
+$x$-, $y$- and $z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: 
+Many arbitrary nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
+in terms of PD elastic potentials. Additionally, many classical energies like the Neo-Hookean and St.\ Venant-Kirchoff energies do not fit 
+into the PD framework \cite{liu2017}. On the other hand, the authors show that various different types of constraints, including strain constraints, 
+bending constraints, collisions and positional constraints can be expressed in terms of PD potentials and handled by the PD solver in a 
+unified manner \cite{bouaziz2014}. Where applicable, the constraints are derived from continuous energies, leaving them reasonably independent 
+to the underlying meshing.
+
+It is also important to note that it is impossible to implement hard constraints via energy potentials. Increasing
+the weights of constraints allows approximating hard constraints. However, this comes with adverse effects to the numerical properties of the 
+system matrix in \cref{eq:pd-global-system}.
+
+While a simplified minimization problem is constructed by restricting to PD energy potentials, the solver does converge to a 
+true solution of \cref{eq:pd-minimization}. That means that the solution strikes a balance between preserving 
+the momenta of particles while minimizing the energy potentials. The objective function is quadratic, bounded below and both local and 
+global steps are guaranteed to weakly decrease it. As a result, the optimization converges without additional safeguards, even if 
+non-convex constraint manifolds are used in the energy potentials.
+
+The PD solver (\cref{alg:pd}) performs implicit integration and introduces numerical damping as a result (see \cref{ss:implicit-euler}).
+According to \cite{bouaziz2014}, this is particularly severe when the optimization is terminated early and large meshes are used. One possible
+explanation is that external forces might not be able to propagate fully through the mesh if the optimization is not run for enough iterations
+\cite{bouaziz2014} \textcolor{red}{(Investigate this with experiments!!!)}.
+
+Lastly, it is important to note that the PD solver is not suited for handling frequently changing constraint sets. For example, every time 
+a collision is detected, a new constraint needs to be added to the simulation and the global system matrix from \ref{eq:pd-global-system} needs
+to be refactorized. This can slow down the PD solver quite significantly and lead to unpredictable solver speeds that are infeasible in the
+context of real-time simulations.
+
 \begin{itemize}
-    \item While the minimization problem is simplified by restricting to PD energy potentials, the solver does converge to a 
-        true solution of the minimization problem. That means that the solver strikes a balance between preserving the linear
-        momenta of particles while minimizing the energy potentials.
-    \item Robust, since the energy is bounded from below and quadratic and both local and global steps are guaranteed to only 
-        decrease the energy without provisions.
-    \item Efficient local step, because computation of projections can be carried out in parallel for all constraints. Efficient global step
-        since the system matrix can be prefactorized and the system can be solved for x-, y-, z-coordinates in parallel. In terms of
-        time, more efficient than a Newton solver. In terms of iterations, of course inferior to a Newton solver since the PD solver
-        only exhibits linear convergence. Either way, after a couple of iterations of the PD solver, the results are visually 
+    \item \textcolor{red}{Not sure whether comparisons to the Newton solver belong here or not. Leave them as bullet points for now.}
+    \item In terms of iterations, of course inferior to a Newton solver since the PD solver only exhibits linear convergence. 
+        Either way, after a couple of iterations of the PD solver, the results are visually 
         indistinguishable from the true solution computed by Newton's method.
-    \item Generality is a bit of a mixed bag: While energy potentials are restricted to the structure outlined above, many different
-        types of constraints can be implemented in this framework and handled in a unified manner by the PD solver. Among others, the
-        authors implement strain constraints, bending constraints, collisions and positional constraints using PD energy potentials
-        and achieve visually plausible results. On the other hand, many energy potentials are imcompatible with the structure of PD
-        energy potentials. This included many classical energies, including Neo-Hookean and St. Venant-Kirchoff models. Their behavior 
-        cannot be emulated using PD energy potentials either.
     \item Simplicity. Much easier than implementing a Newton solver, which requires second derivatives, a line search and possible 
         Hessian modifications if the Hessian is not positive definite. 
-    \item Independence to meshing since the constraints are derived from continuous energies. This is hard to get right in PBD with 
-        dependence of the material behavior on the underlying meshing and of the number of iterations. \textcolor{red}{Check out whether
-        this also applies to xPBD?}
-    \item Numerical damping since the PD solver performs implicit Euler integration. Apparently, this is particularly severe when the 
-        optimization is terminated early (\textcolor{red}{I did observe that myself when decreasing the number of iterations in my 
-        simulations.}). The authors claim that this is due to the fact that external forces might not be able to propagate fully through the
-        mesh if the optimization is not run for enough iterations. Why external forces in particular? What is the mathematical reason?
-        I could try this out with collisions.
-    \item Pre-factorization needs to be recomputed if the constraint set changes, for example upon collisions. This can cause the solver
-        to take unpredictable performance hits.
-    \item All hard constraints are handed in a soft manner. Hard constraints can be approximated by picking large weights for constraints,
-        but this messes up the numerical properties of the global matrix. As a result, locking artifacts can supposedly occur. Might be 
-        interesting to write down where exactly the large values occur.
 \end{itemize}
