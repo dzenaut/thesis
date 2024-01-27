@@ -878,3 +878,42 @@ context of real-time simulations.
     \item Simplicity. Much easier than implementing a Newton solver, which requires second derivatives, a line search and possible 
         Hessian modifications if the Hessian is not positive definite. 
 \end{itemize}
+
+\subsection{Projective Dynamics as a Special Case of Quasi-Newton Methods}\label{ss:pd-quasi-newton}
+In PD, the variational form of implicit Euler integration that results from restricting to PD energy potentials (\cref{eq:pd-minimization}) 
+is solved by using a specialized local/global alternating minimization technique (\cref{ss:pd-solver}). If the projection points 
+$\bm{p}^i_{\bm{q}}$ with 
+
+\[
+    \psi_i({\bm{q}}) = \min_{\bm{p}} \frac{w_i}{2} \norm{\bm{Gq} - \bm{p}}^2_F + \delta_{\bm{C}}(\bm{p})
+    = \frac{w_i}{2} \norm{\bm{Gq} - \bm{p}^i_\bm{q}}^2_F
+\]
+
+\noindent are considered functions of $\bm{q}$ with $\bm{p}_i(\bm{q}) = \bm{p}^i_{\bm{q}}$, then the equivalent optimization problem
+
+\begin{equation}\label{eq:pd-minimization-q}
+    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
+    - \bm{p_i}(\bm{q})}^2_F
+\end{equation}
+
+\noindent can be solved using general purpose algorithms for unconstrained optimization, including Newton's method (\cref{sss:newton-method}),
+the BFGS method (\cref{sss:quasi-newton}) or the L-BFGS method (\cref{sss:limited-memory-quasi-newton}). In fact, it can be shown that
+the PD solver applied to \cref{eq:pd-minimization} is a special case of a Quasi-Newton method with constant Hessian approximation 
+applied to \cref{eq:pd-minimization-q} \cite{liu2017}. This allows improving the performance of PD by applying insights from the unconstrained 
+optimization literature. Additionally, since Quasi-Newton methods can be applied to the variational form of implicit Euler integration
+with general conservative energy potentials (\cref{eq:variational-implicit}), this suggests a natural extension of PD to energies that
+do not fit into the original PD framework.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
