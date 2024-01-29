@@ -776,13 +776,14 @@ energy potentials have the following form:
 
 \subsection{Projective Implicit Euler Solver}\label{ss:pd-solver}
 We start by substituting the PD energy potentials (\cref{eq:pd-potentials}) into the variatonal form of implicit Euler integration
-(\cref{eq:variational-implicit}), which yields the following joint 
-optimization problem over the positions $\bm{q}_{n+1}$ and auxiliary variables $\bm{p}_i$ and write $\bm{q} \coloneqq \bm{q}_{n+1}$ 
-for the sake of brevity
+(\cref{eq:variational-implicit}). With abuse of notation, let $\bm{p}_i$ denote the auxiliary variable of the $i$-th constraint or 
+the family of auxiliary variables $(\bm{p}_i)_{i \in \mathcal{I}}$, where $\mathcal{I}$ is the index set of the 
+constraints. This yields the following joint optimization problem over the positions $\bm{q}$ and auxiliary variables $\bm{p}_i$ 
 
 \begin{equation}\label{eq:pd-minimization}
-    \min_{\bm{q}, \bm{p_i}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
-    - \bm{p_i}}^2_F + \delta_{\bm{C}_i}(\bm{p_i}).
+    \min_{\bm{q}, \bm{p}_i} \tilde{g}(\bm{q}, \bm{p}_i) = 
+    \min_{\bm{q}, \bm{p}_i} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
+    - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i).
 \end{equation}
 
 \noindent This optimization problem is optimized using a local/global alternating minimization technique. Local and global steps 
@@ -795,6 +796,7 @@ set of auxiliary variables, meaning that the projection steps can be carried out
 following minimization problem
 
 \begin{equation}\label{eq:pd-local-minimization}
+    \min_{\bm{p}_i} \tilde{g}(\bm{q}, \bm{p}_i) =
     \min_{\bm{p}_i} \frac{w_i}{2}\norm{\bm{G}_i\bm{q} - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i).
 \end{equation}
 
@@ -805,18 +807,30 @@ to the projections points as defined by the distance measures of the PD energy p
 given by
 
 \begin{equation}\label{eq:pd-global-minimization}
+    \min_{\bm{q}} \tilde{g}(\bm{q}, \bm{p}_i) =
     \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q} - \bm{p_i}}^2_F.
+\end{equation}
+
+\noindent The gradient of the objective function with respect to the positions $\nabla_{\bm{q}} 
+\tilde{g}(\bm{q}, \bm{p}_i)$ is given by 
+
+\begin{equation}\label{eq:pd-gradient-q}
+    \nabla_{\bm{q}}\tilde{g}(\bm{q}, \bm{p}_i) = \frac{\bm{M}}{h^2}(\bm{q} - \bm{s}_n) + \sum_i w_i \bm{G}^T_i \bm{G}_i \bm{q}
+    + \sum_i w_i \bm{G}^T_i \bm{p}_i.
 \end{equation}
 
 \noindent By design of the PD energy potentials, the objective function of the global optimization problem is quadratic in the positions 
 $\bm{q}$. Consequently, the minimization can be carried out in a single step by picking $\bm{q}$ such that the first-order optimality 
-conditions are satisfied \cite{nocedal2006}. This requires solving the linear system
+conditions are satisfied \cite{nocedal2006}. This leads to the following system of equations
 
 \begin{equation}\label{eq:pd-global-system}
     (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i.
 \end{equation}
 
-Note that the system matrix is constant as long as the constraint set remains unchanged. The right side needs to be recomputed in every 
+\noindent In the rest of \cref{s:pd} we refer to the system matrix of the global system by 
+$\bm{S} \coloneqq \frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i$.
+
+Note that $\bm{S}$ is constant as long as the constraint set remains unchanged. The right side needs to be recomputed in every 
 iteration as the projections $\bm{p}_i$ change during the local optimization steps.  An overview over the algorithm is given in \cref{alg:pd}.
 
 \begin{algorithm}
@@ -837,7 +851,7 @@ iteration as the projections $\bm{p}_i$ change during the local optimization ste
 \subsection{Properties of Projective Dynamics}\label{ss:pd-properties}
 The structure of the PD energy potentials allows for \cref{alg:pd} to be implemented efficiently. Since the constraint projections
 in \cref{eq:pd-local-minimization} can be carried out independently, the local optimization step lends itself to massive parallelization. 
-Further, because the system matrix in \cref{eq:pd-global-system} is constant its prefactorization can be computed at initialization, enabling
+Further, because the system matrix $\bm{S}$ is constant its prefactorization can be computed at initialization, enabling
 efficient solves of the linear system in the global optimization step. Note that since $\bm{q} \in \mathbb{R}^{m \times 3}$ in \cref{eq:pd-global-system}, 
 the global system can be solved independently and in parallel for each coordinate.
 
@@ -852,7 +866,7 @@ to the underlying meshing.
 
 It is also important to note that it is impossible to implement hard constraints via energy potentials. Increasing
 the weights of constraints allows approximating hard constraints. However, this comes with adverse effects to the numerical properties of the 
-system matrix in \cref{eq:pd-global-system}.
+system matrix $\bm{S}$.
 
 While a simplified minimization problem is constructed by restricting to PD energy potentials, the solver does converge to a 
 true solution of \cref{eq:pd-minimization}. That means that the solution strikes a balance between preserving 
@@ -866,7 +880,7 @@ explanation is that external forces might not be able to propagate fully through
 \cite{bouaziz2014} \textcolor{red}{(Investigate this with experiments!!!)}.
 
 Lastly, it is important to note that the PD solver is not suited for handling frequently changing constraint sets. For example, every time 
-a collision is detected, a new constraint needs to be added to the simulation and the global system matrix from \ref{eq:pd-global-system} needs
+a collision is detected, a new constraint needs to be added to the simulation and the global system matrix $\bm{S}$ needs
 to be refactorized. This can slow down the PD solver quite significantly and lead to unpredictable solver speeds that are infeasible in the
 context of real-time simulations.
 
@@ -892,6 +906,7 @@ $\bm{p}^i_{\bm{q}}$ with
 \noindent are considered functions of $\bm{q}$ with $\bm{p}_i(\bm{q}) = \bm{p}^i_{\bm{q}}$, then the equivalent optimization problem
 
 \begin{equation}\label{eq:pd-minimization-q}
+    \min_{\bm{q}} g(\bm{q}) = 
     \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
     - \bm{p_i}(\bm{q})}^2_F
 \end{equation}
@@ -899,11 +914,92 @@ $\bm{p}^i_{\bm{q}}$ with
 \noindent can be solved using general purpose algorithms for unconstrained optimization, including Newton's method (\cref{sss:newton-method}),
 the BFGS method (\cref{sss:quasi-newton}) or the L-BFGS method (\cref{sss:limited-memory-quasi-newton}). In fact, it can be shown that
 the PD solver applied to \cref{eq:pd-minimization} is a special case of a Quasi-Newton method with constant Hessian approximation 
-applied to \cref{eq:pd-minimization-q} \cite{liu2017}. This allows improving the performance of PD by applying insights from the unconstrained 
-optimization literature. Additionally, since Quasi-Newton methods can be applied to the variational form of implicit Euler integration
-with general conservative energy potentials (\cref{eq:variational-implicit}), this suggests a natural extension of PD to energies that
-do not fit into the original PD framework.
+applied to \cref{eq:pd-minimization-q} \cite{liu2017}. 
 
+The gradient $\nabla g$ of the objective function $g$ from \cref{eq:pd-minimization-q} needs to be computed for all the line search 
+methods mentioned above. Liu et al. \cite{liu2017} show that \textcolor{red}{(maybe put the derivation into the appendix)} $\nabla g$ 
+is given by
+
+\begin{equation}\label{eq:pd-gradient-qn}
+    \nabla g(\bm{q}) = \frac{\bm{M}}{h^2}(\bm{q} - \bm{s}_n) + \sum_i w_i \bm{G}^T_i \bm{G}_i \bm{q}
+    + \sum_i w_i \bm{G}^T_i \bm{p}_i(\bm{q}).
+\end{equation}
+
+Surprisingly, this is the same as the gradient $\nabla_{\bm{q}} \tilde{g}(\bm{q}, \bm{p}_i)$ of the global optimization problem of the original
+PD algorithm (\cref{eq:pd-gradient-q}). Thus, the gradient is unaffected by whether $\bm{p}_i$ is considered constant or a function
+$\bm{p}_i(\bm{q})$ of the positions $\bm{q}$. In Newton's method, the search direction for the current iteration $\bm{r}^N_k$ is given
+by $-(\nabla^2 g(\bm{q}))^{-1} \nabla g(\bm{q})$, which is a descent direction if $\nabla^2 g(\bm{q})$ is positive definite 
+(\cref{sss:newton-method}). In Quasi-Newton methods, the true Hessian $\nabla^2 g(\bm{q})$ is approximated by some positive definite matrix $\bm{B}_k$ 
+instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$, i.e.\ the system matrix 
+(\cref{eq:pd-global-system}) from the global optimization in PD, is used with step size $\alpha = 1$ the following update is recovered:
+
+\[
+    \bm{S}^{-1} \nabla g(\bm{q}) = 
+    \bm{q} - (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)^{-1} 
+    (\frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i(\bm{q}))
+\]
+
+\noindent Note that 
+
+\[
+    \bm{q}^* \coloneqq \bm{S}^{-1} (\frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i 
+    \bm{G}_i^T \bm{p}_i(\bm{q}))
+\]
+
+\noindent is exactly the solution of the global linear system from PD in \cref{eq:pd-global-system}. Together
+
+\[
+    \bm{q}^* = \bm{q} -\bm{S}^{-1} \nabla g(\bm{q}) 
+\]
+
+\noindent shows that performing a Quasi-Newton step with Hessian approximation $\bm{B}_k = \bm{S}$ and step size $\alpha_k$ on the 
+minimization problem in \cref{eq:pd-minimization-q} is equivalent to performing a local/global iteration of the PD solver 
+(\cref{alg:pd}).
+
+This insight that PD is a special case of Quasi-Newton methods applied to $\cref{eq:pd-minimization-q}$ can be leveraged to
+bring performance improvements to the original PD solver and to design a natural extension of PD to energies that do not fit 
+into the original PD framework. Both are discussed in \cref{s:qn-rts}.
+
+\section{Quasi-Newton methods for Physical Simulations}\label{s:qn-rts}
+In \cref{ss:pd-quasi-newton}, we discussed that the PD solver for the minimization problem \cref{eq:pd-minimization}
+can be interpreted as a special case of a Quasi-Newton method with constant Hessian approximation and step size $\alpha = 1$
+applied to the corresponding minimization problem \cref{eq:pd-minimization-q}. The minimization problem for the Quasi-Newton
+method
+
+\begin{equation}\label{eq:pd-minimization-q2}
+    \min_{\bm{q}} g(\bm{q}) = 
+    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
+    - \bm{p_i}(\bm{q})}^2_F
+\end{equation}
+
+\noindent and the global system matrix $\bm{S}$ which is used as the constant Hessian approximation
+
+\begin{equation}\label{eq:global-matrix}
+    \bm{S} \coloneqq \frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i  
+\end{equation}
+
+\noindent are stated here once more for convenience.
+
+As the Hessian matrix $\nabla^2 g(\bm{q}_k)$ generally changes between iterations, the Hessian approximations of the 
+BFGS (\cref{sss:quasi-newton}) and L-BFGS method (\cref{sss:limited-memory-quasi-newton}) do so as well. 
+This is in contrast to the constant Hessian approximation $\bm{S}$, which does not incorporate local curvature information
+at the current iterate at all. On the other hand, Quasi-Newton methods are sensitive to the initial (inverse) Hessian 
+approximation, which 
+is nontrivial to choose. It stands to reason that due to its effectiveness in PD, $\bm{S}$ is a viable choice for the 
+initial Hessian approximation of the BFGS or L-BFGS method, combining the advantages of the PD solver and line search 
+methods from unconstrained optimization \cite{liu2017}. This is elaborated on in \cref{ss:qn-pd}
+
+Since Quasi-Newton methods can be applied to the variational form of 
+implicit Euler integration with general conservative energy potentials (\cref{eq:variational-implicit}), this suggests a 
+natural extension of the approach mentioned above to energies that do not fit into the original PD framework. However,
+if general conservative energy potentials are used, it is not obvious how to construct the initial Hessian approximation
+$\bm{S}$ anymore. Liu et al.\ suggest a way to emulate the global system matrix $S$ for energies that can be written in
+the Valanis-Landel form, which includes Neo-Hookean and St.\ Venant-Kirchoff energies. This extension is covered in 
+\cref{ss:qn-valanis-landel}
+
+\subsection{Quasi-Newton Methods for PD Energy Potentials}\label{ss:qn-pd}
+
+\subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
 
 
 
