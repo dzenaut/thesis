@@ -177,15 +177,31 @@ can be shown that line search methods where $\alpha_k$ satisfies the strong Wolf
 point $\bm{x}^*$ with $\nabla f(\bm{x}^*) = 0$ if the search direction $\bm{p}_k$ is sufficiently far from orthogonal to the steepest
 descent direction $\nabla f(\bm{x}_k)$ for all $k$. Such line search algorithms are called globally convergent.
 
+The general structure of line search methods is given in \cref{alg:line-search}.
+
+\begin{algorithm}
+\caption{Line Search Methods}\label{alg:line-search}
+\begin{algorithmic}
+\State $\bm{x}_k \coloneqq \bm{x}_0, \epsilon > 0$
+\While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
+\State compute a descent direction $\bm{p}_k$
+\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
+\State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
+\EndWhile
+\State \textbf{return with result } $\bm{x}_k$
+\end{algorithmic}
+\end{algorithm}
+
 \subsubsection{Steepest Descent}\label{sss:steepest-descent}
-The most obvious choice for the search direction $\bm{p}_k$ at iteration $k$ is the steepest descent direction given by 
+The most obvious choice for the search direction $\bm{p}_k$ at iteration $k$ is the negative gradient at the current iterate given by 
 \[
     \bm{p}_k = -\nabla f(\bm{x}_k).
 \]
 
-\noindent This method is called steepest descent. While simple, steepest descent exhibits poor performance, even for simple problems \cite{nocedal2006}. 
+\noindent This search direction is called the steepest descent direction. Using the steepest descent direction in \cref{alg:line-search} 
+is called the steepest descent method. While simple, steepest descent exhibits poor performance, even for simple problems \cite{nocedal2006}. 
 Its convergence rate is only linear and depends on the eigenvalue distribution of the Hessian $\nabla^2 f(\bm{x}^*)$ at the local minimizer
-$\bm{x}^*$. If the eigenvalues distribution is wide, steepest descent often requires an unacceptably large number of iterations to find a 
+$\bm{x}^*$. If the eigenvalue distribution is wide, steepest descent often requires an unacceptably large number of iterations to find a 
 stationary point.
 
 \subsubsection{Newton Method}\label{sss:newton-method}
@@ -221,6 +237,30 @@ has satisfactory convergence properties close to the solution $\bm{x}^*$ and the
 $\alpha_k = 1$ associated with it. Since $\alpha_k = 1$ often does not satisfy the Wolfe conditions when the current iterate $\bm{x}_k$ is still 
 far away from the solution $\bm{x}^*$, line searches are still necessary in Newton's method. However, it is recommended to use $\alpha_k = 1$ as the
 initial guess as $\alpha_k = 1$ guarantees quadratic convergence once $\bm{x}_k$ gets sufficiently close to $\bm{x}^*$.
+
+A general overview over Newton's method is given in \cref{alg:newton-method}. Note that practical implementations of Newton's method might deviate
+from the outlined algorithm. As an example, it is possible to apply positive definiteness fixes to the Hessian matrix $\nabla^2 f(\bm{x}_k)$
+while computing its matrix factorization. 
+
+\begin{algorithm}
+\caption{Newton's Method}\label{alg:newton-method}
+\begin{algorithmic}
+\State $\bm{x}_k \coloneqq \bm{x}_0, \epsilon > 0$
+\While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
+\State compute $\nabla^2 f(\bm{x}_k)$
+\If{$\nabla^2 f(\bm{x}_k)$ is not positive definite}
+\State apply positive definiteness fix to $\nabla^2 f(\bm{x}_k)$
+\EndIf
+\State $\bm{p}_k = -(\nabla^2 f(\bm{x}_k))^{-1} \nabla f(\bm{x}_k)$
+\State $\alpha_k = 1$
+\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
+\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
+\EndIf
+\State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
+\EndWhile
+\State \textbf{return with result } $\bm{x}_k$
+\end{algorithmic}
+\end{algorithm}
 
 Despite its favorable convergence properties, Newton's method comes with a couple of disadvantages. Firstly, computing the Hessian matrix
 $\nabla^2 f(\bm{x}_k)$ is expensive and error prone. Additionally, a new system 
@@ -314,7 +354,27 @@ It is defined via the following update formula for $\bm{H}_k$
 \noindent where $\rho_{k-1} = 1 / (\bm{s}^T_{k-1}\bm{y}_{k-1})$. Is is possible to give a similar update formula in terms of $\bm{B}_k$.
 Generally, using the formulation in terms of the inverse matrices $\bm{H}_k$ is preferrable since the computation of the new descent 
 direction can
-be achieved by simple matrix-vector multiplication instead of solving a linear system if $\bm{B}_k$ is maintained instead.
+be achieved by simple matrix-vector multiplication instead of solving a linear system if $\bm{B}_k$ is maintained instead. An overview over the
+algorithm is given in \cref{alg:bfgs}.
+
+\begin{algorithm}
+\caption{BFGS method}\label{alg:bfgs}
+\begin{algorithmic}
+\State $\bm{x}_k, \bm{x}_{k-1} \coloneqq \bm{x}_0, \bm{H}_k \coloneqq \bm{H}_0 $, $\bm{H}_0$ symmetric positive definite, $\epsilon > 0$
+\While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
+\State $\bm{s} = \bm{x}_k - \bm{x}_{k-1}, \bm{y} = \nabla f(\bm{x}_k) - \nabla f(\bm{x}_{k-1}), \rho = 1 / (\bm{s}^T \bm{y})$
+\State $\bm{H}_k = (I - \rho \bm{s} \bm{y}^T) \bm{H}(I - \rho \bm{s} \bm{y}^T) + \rho\bm{s}\bm{s}^T$
+\State $\bm{p}_k = -\bm{H}_k \nabla f(\bm{x}_k)$
+\State $\alpha_k = 1$
+\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
+\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
+\EndIf
+\State $\bm{x}_{k-1} = \bm{x_k}$
+\State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
+\EndWhile
+\State \textbf{return with result } $\bm{x}_k$
+\end{algorithmic}
+\end{algorithm}
 
 While global convergence of the BFGS method cannot be established for general nonlinear smooth functions, it is possible to show that it converges 
 superlinearly if the initial guess $\bm{x}_0$ is close to the solution $\bm{x}^*$ and $\alpha_k = 1$ for sufficiently large $k$ \cite{nocedal2006}
@@ -358,19 +418,19 @@ It is important to note that its not the L-BFGS Hessian approximation $\bm{H}_k$
 constructing $\bm{H}_k$ using an algorithm called the L-BFGS two-loop recursion (\cref{alg:lbfgs-recursion}) \cite{nocedal2006}.
 
 \begin{algorithm}
-\caption{L-BFGS two-loop recursion}\label{alg:lbfgs-recursion}
+\caption{L-BFGS two-loop Recursion}\label{alg:lbfgs-recursion}
 \begin{algorithmic}
-\State $\bm{t} = \nabla f(\bm{x}_k)$
-\For{$i = k-1, k-2, \ldots, k-m$}
+\State $\bm{t} = -\nabla f(\bm{x}_k), m^* = \min(m, k)$
+\For{$i = k-1, k-2, \ldots, k-m^*$}
 \State $\alpha_i = \rho_i \bm{s}^T_i \bm{t}$
 \State $\bm{t} = \bm{t} - \alpha_i \bm{y}_i$
 \EndFor
 \State $\bm{r} = \bm{H}_0 \bm{t}$
-\For{$i = k-m, k-m+1, \ldots, k-1$}
+\For{$i = k-m^*, k-m^*+1, \ldots, k-1$}
 \State $\beta = \rho_i \bm{y}^T_i \bm{r}$
 \State $\bm{r} = \bm{r} + \bm{s}_i(\alpha_i - \beta)$
 \EndFor
-\State \textbf{return with result } $\bm{H}_k \nabla f(\bm{x}_k) = \bm{r}$.
+\State \textbf{return with result } -$\bm{H}_k \nabla f(\bm{x}_k) = \bm{r}$.
 \end{algorithmic}
 \end{algorithm}
 
@@ -378,7 +438,25 @@ Excluding the matrix-vector multiplication $\bm{H}_0 \bm{t}$, the two-loop recur
 if $\bm{H}_0$ is chosen to be diagonal, the entire L-BFGS iteration can be computed in $\mathcal{O}(n)$. Similarly, the space complexity
 of the L-BFGS iteration is only $\mathcal{O}(n)$ if $\bm{H}_0$ is diagonal. Even if $\bm{H}_0$ is not diagonal, but sparse, the two-loop
 recursion can be significantly faster and more space efficient than a BFGS update where matrix-vector multiplication with a dense matrix
-is required in general.
+is required in general. An overview over the entire L-BFGS algorithm is given in \cref{alg:lbfgs}, where the details of maintaining the history
+of the at most $m$ most recent $\bm{x}_k, \bm{s}_k, \bm{y}_k, \rho_k$ are omitted for the sake of clarity.
+
+\begin{algorithm}
+\caption{L-BFGS method}\label{alg:lbfgs}
+\begin{algorithmic}
+\State $\bm{x}_k \coloneqq \bm{x}_0, \bm{H}_k \coloneqq \bm{H}_0 $, $\bm{H}_0$ symmetric positive definite, $\epsilon > 0$
+\While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
+\State $\bm{s_k} = \bm{x}_k - \bm{x}_{k-1}, \bm{y}_k = \nabla f(\bm{x}_k) - \nabla f(\bm{x}_{k-1}), \rho_k = 1 / (\bm{s}^T_k \bm{y}_k)$
+\State compute $\bm{p}_k$ via the two-loop recursion algorithm (\cref{alg:lbfgs-recursion})
+\State $\alpha_k = 1$
+\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
+\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
+\EndIf
+\State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
+\EndWhile
+\State \textbf{return with result } $\bm{x}_k$
+\end{algorithmic}
+\end{algorithm}
 
 L-BFGS shares many properties with the BFGS method discussed in \cref{sss:quasi-newton}. The performance of the L-BFGS method depends 
 on the choice of the initial matrix $\bm{H}_0$, with scaled diagonal matrices being popular choices. Again, there is no generally viable
@@ -930,8 +1008,8 @@ PD algorithm (\cref{eq:pd-gradient-q}). Thus, the gradient is unaffected by whet
 $\bm{p}_i(\bm{q})$ of the positions $\bm{q}$. In Newton's method, the search direction for the current iteration $\bm{r}^N_k$ is given
 by $-(\nabla^2 g(\bm{q}))^{-1} \nabla g(\bm{q})$, which is a descent direction if $\nabla^2 g(\bm{q})$ is positive definite 
 (\cref{sss:newton-method}). In Quasi-Newton methods, the true Hessian $\nabla^2 g(\bm{q})$ is approximated by some positive definite matrix $\bm{B}_k$ 
-instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$, i.e.\ the system matrix 
-(\cref{eq:pd-global-system}) from the global optimization in PD, is used with step size $\alpha = 1$ the following update is recovered:
+instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$ -- i.e.\ the system matrix 
+(\cref{eq:pd-global-system}) from the global optimization in PD -- is used with step size $\alpha = 1$ the following update is recovered:
 
 \[
     \bm{S}^{-1} \nabla g(\bm{q}) = 
@@ -952,7 +1030,8 @@ instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$, i.e.\ the system matr
     \bm{q}^* = \bm{q} -\bm{S}^{-1} \nabla g(\bm{q}) 
 \]
 
-\noindent shows that performing a Quasi-Newton step with Hessian approximation $\bm{B}_k = \bm{S}$ and step size $\alpha_k$ on the 
+\noindent shows that performing a Quasi-Newton step with Hessian approximation $\bm{B}_k = \bm{S}$ and step size 
+$\alpha_k = 1$ on the 
 minimization problem in \cref{eq:pd-minimization-q} is equivalent to performing a local/global iteration of the PD solver 
 (\cref{alg:pd}).
 
@@ -981,13 +1060,10 @@ method
 \noindent are stated here once more for convenience.
 
 As the Hessian matrix $\nabla^2 g(\bm{q}_k)$ generally changes between iterations, the Hessian approximations of the 
-BFGS (\cref{sss:quasi-newton}) and L-BFGS method (\cref{sss:limited-memory-quasi-newton}) do so as well. 
+BFGS (\cref{sss:quasi-newton}) and L-BFGS method (\cref{sss:limited-memory-quasi-newton}) do so as well.
 This is in contrast to the constant Hessian approximation $\bm{S}$, which does not incorporate local curvature information
-at the current iterate at all. On the other hand, Quasi-Newton methods are sensitive to the initial (inverse) Hessian 
-approximation, which 
-is nontrivial to choose. It stands to reason that due to its effectiveness in PD, $\bm{S}$ is a viable choice for the 
-initial Hessian approximation of the BFGS or L-BFGS method, combining the advantages of the PD solver and line search 
-methods from unconstrained optimization \cite{liu2017}. This is elaborated on in \cref{ss:qn-pd}
+at the current iterate at all. Combining both approaches in order to accelerate convergence is discussed 
+in \cref{ss:qn-pd}.
 
 Since Quasi-Newton methods can be applied to the variational form of 
 implicit Euler integration with general conservative energy potentials (\cref{eq:variational-implicit}), this suggests a 
@@ -998,6 +1074,16 @@ the Valanis-Landel form, which includes Neo-Hookean and St.\ Venant-Kirchoff ene
 \cref{ss:qn-valanis-landel}
 
 \subsection{Quasi-Newton Methods for PD Energy Potentials}\label{ss:qn-pd}
+As discussed in \cref{sss:quasi-newton} and \cref{sss:limited-memory-quasi-newton}, 
+the choice of the initial inverse Hessian approximation $\bm{H}_0$ has a strong impact on the performance of Quasi-Newton
+methods such as the BFGS and L-BFGS method. Popular choices such as scaled versions of the identitiy matrix generally do not
+satisfy any formal optimality conditions but are picked heuristically instead. This suggests that finding more suitable 
+candidates for $\bm{H}_0$ -- or alternatively for $\bm{B}_0$ -- is an avenue towards improving the convergenve properties of 
+Quasi-Newton methods. It stands to reason that due to its effectiveness in PD, $\bm{S}$ is a viable choice for the 
+initial Hessian approximation $\bm{B}_0$ for the minimization of \cref{eq:pd-minimization-q2} \cite{liu2017}. 
+
+Due to its favorable space complexity over the BFGS method for large-scale problems (see \cref{sss:limited-memory-quasi-newton}), 
+Liu et al.\ focus on the L-BFGS method with $\bm{B}_0 = \bm{S}$ \cite{liu2017}.
 
 \subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
 
