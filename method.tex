@@ -146,7 +146,8 @@ direction along which it is possible to decrease the value of the objective func
 observation gives rise to the idea of a family of optimization algorithms called line search algorithms \cite{nocedal2006}: Given the current 
 iterate $\bm{x}_k$, pick a descent direction $\bm{p}_k$ and search along this direction for a new iterate $\bm{x}_{k+1}$ with $\bm{x}_{k+1} = 
 \bm{x}_k + \alpha_k \bm{p}_k$. This process is repeated until $\nabla f(\bm{x}_k)$ is sufficiently close to zero. It is important to note that 
-$\nabla f(\bm{x})$ does not imply that $\bm{x}$ is a local minimizer. Instead, $\bm{x}$ is only guaranteed to be a local minimizer if the second-order 
+$\nabla f(\bm{x}) = 0$ does not imply that $\bm{x}$ is a local minimizer. Instead, $\bm{x}$ is only guaranteed to be a local minimizer if 
+the second-order 
 optimality conditions are satisfied, which additionally require $\nabla^2 f(\bm{x})$ to be positive semidefinite \cite{nocedal2006}.
 
 Ideally, $\alpha_k$ is picked such that it is the minimizer of the one-dimensional optimization problem
@@ -182,13 +183,16 @@ The general structure of line search methods is given in \cref{alg:line-search}.
 \begin{algorithm}
 \caption{Line Search Methods}\label{alg:line-search}
 \begin{algorithmic}
-\State $\bm{x}_k \coloneqq \bm{x}_0, \epsilon > 0$
+\State \textbf{require } $\epsilon > 0$
+\Procedure{lineSearchMethod}{$\bm{x}_0$, $\epsilon$}
+\State $\bm{x}_k = \bm{x}_0$
 \While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
 \State compute a descent direction $\bm{p}_k$
 \State compute $\alpha_k$ that satisfies the strong Wolfe conditions
 \State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
 \EndWhile
 \State \textbf{return with result } $\bm{x}_k$
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
@@ -245,7 +249,9 @@ while computing its matrix factorization.
 \begin{algorithm}
 \caption{Newton's Method}\label{alg:newton-method}
 \begin{algorithmic}
-\State $\bm{x}_k \coloneqq \bm{x}_0, \epsilon > 0$
+\State \textbf{require } $\epsilon > 0$
+\Procedure{newtonMethod}{$\bm{x}_0$, $\epsilon$}
+\State $\bm{x}_k = \bm{x}_0$
 \While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
 \State compute $\nabla^2 f(\bm{x}_k)$
 \If{$\nabla^2 f(\bm{x}_k)$ is not positive definite}
@@ -259,6 +265,7 @@ while computing its matrix factorization.
 \State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
 \EndWhile
 \State \textbf{return with result } $\bm{x}_k$
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
@@ -360,7 +367,9 @@ algorithm is given in \cref{alg:bfgs}.
 \begin{algorithm}
 \caption{BFGS method}\label{alg:bfgs}
 \begin{algorithmic}
-\State $\bm{x}_k, \bm{x}_{k-1} \coloneqq \bm{x}_0, \bm{H}_k \coloneqq \bm{H}_0 $, $\bm{H}_0$ symmetric positive definite, $\epsilon > 0$
+\State \textbf{require } $\bm{H}_0$ symmetric positive definite, $\epsilon > 0$
+\Procedure{BFGS}{$\bm{x}_0$, $\bm{H}_0$, $\epsilon$}
+\State $\bm{x}_k, \bm{x}_{k-1} = \bm{x}_0, \bm{H}_k = \bm{H}_0 $
 \While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
 \State $\bm{s} = \bm{x}_k - \bm{x}_{k-1}, \bm{y} = \nabla f(\bm{x}_k) - \nabla f(\bm{x}_{k-1}), \rho = 1 / (\bm{s}^T \bm{y})$
 \State $\bm{H}_k = (I - \rho \bm{s} \bm{y}^T) \bm{H}(I - \rho \bm{s} \bm{y}^T) + \rho\bm{s}\bm{s}^T$
@@ -373,6 +382,7 @@ algorithm is given in \cref{alg:bfgs}.
 \State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
 \EndWhile
 \State \textbf{return with result } $\bm{x}_k$
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
@@ -399,62 +409,76 @@ As discussed in \cref{sss:quasi-newton}, the BFGS method is unsuitable for large
 typically dense inverse Hessian approximation $\bm{H}_k$. This highlights the need for effective Hessian approximations that are not only
 cheap to compute, but also cheap to store. Just like Quasi-Newton methods use approximations of the Newton direction in order to keep 
 the computational cost of a single iteration low, limited-memory Quasi-Newton methods approximate Quasi-Newton directions with 
-the goal of reducing the memory footprint of a single iteration. This comes at the prize of inferiornocedal2006 convergence properties. On the upside,
+the goal of reducing the memory footprint of a single iteration. This comes at the prize of inferior convergence properties. On the upside,
 limited-memory Quasi-Newton directions can sometimes be computed by using only a couple of vectors of size $n$, without the need to 
 explicitly form the inverse Hessian approximation $\bm{H}_k$. This can drop the space complexity of a single iteration to $\mathcal{O}(n)$ 
 compared to $\mathcal{O}(n^2)$ for the BFGS method.
 
 A popular limited-memory method called L-BFGS can be derived from the BFGS update formula for the inverse Hessian approximation 
-$\bm{H}_k$, given by \cref{eq:bfgs-update} \cite{nocedal2006}. Note that the BFGS update in iteration $k$ is specified entirely 
+$\bm{H}_k$ (\cref{eq:bfgs-update}) \cite{nocedal2006}. Note that the BFGS update in iteration $k$ is specified entirely 
 by the vector 
 pair $(\bm{s}_n, \bm{y}_n) \in \mathbb{R}^n$. Consequently, $\bm{H}_k$ can be constructed from the initial matrix $\bm{H}_0$ and the familiy 
 of vector pairs $((\bm{s}_i, \bm{y}_i))_{i \in [0, k-1]}$ by simply performing $k$ update steps according to $\cref{eq:bfgs-update}$.
-The idea of L-BFGS is to only keep track of the most recent $m$ vector pairs and generate a modified version of the Hessian approximation 
-from the BFGS method by applying the $m$ updates defined by $((\bm{s}_i, \bm{y}_i))_{i \in [k-m, k-1]}$ to the 
+The idea of L-BFGS is to only keep track of the most recent $m$ vector pairs and generate a modified version of the inverse Hessian 
+approximation from the BFGS method by applying the $m$ updates defined by $((\bm{s}_i, \bm{y}_i))_{i \in [k-m, k-1]}$ to the 
 initial matrix $\bm{H}_0$ at each iteration $k$.
 
 It is important to note that its not the L-BFGS Hessian approximation $\bm{H}_k$ itself, but the search direction $\bm{p}_k = -\bm{H}_k 
 \nabla f(\bm{x}_k)$ that is of interest. It turns out that the L-BFGS search direction $\bm{p}_k$ can be computed without explicitly 
-constructing $\bm{H}_k$ using an algorithm called the L-BFGS two-loop recursion (\cref{alg:lbfgs-recursion}) \cite{nocedal2006}.
+constructing $\bm{H}_k$ using an algorithm called the L-BFGS two-loop recursion (\cref{alg:lbfgs-recursion}) \cite{nocedal2006}. This
+algorithm can be specified in terms of the initial Hessian approximation $\bm{B}_0$ with minor changes, as indicated by line 6. To 
+simplify the notation, the entire history of $\bm{s} = (\bm{s}_i)_{i \in [0, k]}, \bm{y} = (\bm{y}_i)_{i \in [0, k]}, \rho = 
+(\rho_i)_{i \in [0, k]}$
+is passed to \textsc{twoLoopRecursion}, even though at most the $m$ most recent values are needed.
 
 \begin{algorithm}
 \caption{L-BFGS two-loop Recursion}\label{alg:lbfgs-recursion}
-\begin{algorithmic}
-\State $\bm{t} = -\nabla f(\bm{x}_k), m^* = \min(m, k)$
+\begin{algorithmic}[1]
+\State \textbf{require } $\bm{H}_0$ or $\bm{B}_0$ symmetric positive definite
+\Procedure{twoLoopRecursion}{$\bm{H}_0 \text{ or } \bm{B}_0$, $\bm{x}_k$, $\bm{s}$, $\bm{y}$, $\rho$, $m$, $k$}
+\State $m^* = \min(m, k), \bm{t} = -\nabla f(\bm{x}_k)$
 \For{$i = k-1, k-2, \ldots, k-m^*$}
 \State $\alpha_i = \rho_i \bm{s}^T_i \bm{t}$
 \State $\bm{t} = \bm{t} - \alpha_i \bm{y}_i$
 \EndFor
-\State $\bm{r} = \bm{H}_0 \bm{t}$
+\State $\bm{r} = \bm{H}_0 \bm{t}$ or solve $\bm{B}_0 \bm{r} = \bm{t}$
 \For{$i = k-m^*, k-m^*+1, \ldots, k-1$}
 \State $\beta = \rho_i \bm{y}^T_i \bm{r}$
 \State $\bm{r} = \bm{r} + \bm{s}_i(\alpha_i - \beta)$
 \EndFor
 \State \textbf{return with result } -$\bm{H}_k \nabla f(\bm{x}_k) = \bm{r}$.
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
-Excluding the matrix-vector multiplication $\bm{H}_0 \bm{t}$, the two-loop recursion scheme has time complexity $\mathcal{O}(n)$. Thus,
+Excluding the matrix-vector multiplication $\bm{H}_0 \bm{t}$, the two-loop recursion scheme has time complexity $\mathcal{O}(nm)
+= \mathcal{O}(n)$ since $m << n$. Thus,
 if $\bm{H}_0$ is chosen to be diagonal, the entire L-BFGS iteration can be computed in $\mathcal{O}(n)$. Similarly, the space complexity
-of the L-BFGS iteration is only $\mathcal{O}(n)$ if $\bm{H}_0$ is diagonal. Even if $\bm{H}_0$ is not diagonal, but sparse, the two-loop
+of the L-BFGS iteration is $\mathcal{O}(n)$ if $\bm{H}_0$ is diagonal. Even if $\bm{H}_0$ is not diagonal, but sparse, the two-loop
 recursion can be significantly faster and more space efficient than a BFGS update where matrix-vector multiplication with a dense matrix
-is required in general. An overview over the entire L-BFGS algorithm is given in \cref{alg:lbfgs}, where the details of maintaining the history
-of the at most $m$ most recent $\bm{x}_k, \bm{s}_k, \bm{y}_k, \rho_k$ are omitted for the sake of clarity.
+is required in general. Note that the same is not necessarily true if $\bm{B}_0$ is sparse, but not diagonal. In this case, a factorization
+of $\bm{B}_k$ needs to be computed which is not guaranteed to stay sparse.
+
+An overview over the entire L-BFGS algorithm is given in \cref{alg:lbfgs}, where the details of maintaining the history
+of $\bm{s}, \bm{y}, \rho$ are omitted for the sake of clarity.
 
 \begin{algorithm}
 \caption{L-BFGS method}\label{alg:lbfgs}
 \begin{algorithmic}
-\State $\bm{x}_k \coloneqq \bm{x}_0, \bm{H}_k \coloneqq \bm{H}_0 $, $\bm{H}_0$ symmetric positive definite, $\epsilon > 0$
+\State \textbf{require } $\bm{H}_0$ symmetric positive definite, $\epsilon > 0$
+\Procedure{LBFGS}{$\bm{x}_0$, $\bm{H}_0$, $m$, $\epsilon$}
+\State $\bm{x}_k = \bm{x}_0, \bm{H}_k = \bm{H}_0, k=0$
 \While{$\norm{\nabla f(\bm{x}_k)} > \epsilon$}
 \State $\bm{s_k} = \bm{x}_k - \bm{x}_{k-1}, \bm{y}_k = \nabla f(\bm{x}_k) - \nabla f(\bm{x}_{k-1}), \rho_k = 1 / (\bm{s}^T_k \bm{y}_k)$
-\State compute $\bm{p}_k$ via the two-loop recursion algorithm (\cref{alg:lbfgs-recursion})
+\State $\bm{p}_k = \text{\textsc{twoLoopRecursion}}(\bm{H}_0, \bm{x_k}, \bm{s}, \bm{y}, \bm{\rho}, m, k)$   (\cref{alg:lbfgs-recursion})
 \State $\alpha_k = 1$
 \If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
 \State compute $\alpha_k$ that satisfies the strong Wolfe conditions
 \EndIf
-\State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k$
+\State $\bm{x}_k = \bm{x}_k + \alpha_k \bm{p}_k, k = k + 1$
 \EndWhile
 \State \textbf{return with result } $\bm{x}_k$
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
@@ -914,15 +938,17 @@ iteration as the projections $\bm{p}_i$ change during the local optimization ste
 \begin{algorithm}
 \caption{Projective Implicit Euler Solver}\label{alg:pd}
 \begin{algorithmic}
-\State $\bm{s}_n \gets \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
-\State $\bm{q}_{n+1} = \bm{s}_n$
+\Procedure{solvePD}{$\bm{q}_n$, $\bm{v}_n$, $f_{\text{ext}}$, $h$}
+\State $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
+\State $\bm{q}_k = \bm{s}_n$
 \For{all iterations}
 \For{constraints $i$}
-\State $\bm{p}_i = \text{ProjectOnConstraintSet}(\bm{C}_i, \bm{q}_{n+1}) $
+\State $\bm{p}_i = \min_{\bm{p}_i} \frac{w_i}{2}\norm{\bm{G}_i\bm{q_k} - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i)$
 \EndFor
-\State $\bm{q}_{n+1} = \text{SolveLinearSystem}(\bm{s}_n, \bm{p}_1, \bm{p}_2, \ldots) $
+\State $\bm{q}_{k} \gets$ solution of $\bm{S}\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i$.
 \EndFor
-\State $\bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n) / h$
+\State \textbf{return with } $\bm{q}_{n+1} = \bm{q}_k, \bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n) / h$
+\EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
@@ -1033,7 +1059,22 @@ instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$ -- i.e.\ the system ma
 \noindent shows that performing a Quasi-Newton step with Hessian approximation $\bm{B}_k = \bm{S}$ and step size 
 $\alpha_k = 1$ on the 
 minimization problem in \cref{eq:pd-minimization-q} is equivalent to performing a local/global iteration of the PD solver 
-(\cref{alg:pd}).
+(\cref{alg:pd}). The Quasi-Newton version of PD is summarized in \cref{alg:pd-qn}.
+
+\begin{algorithm}
+\caption{Projective Dynamics as a Quasi-Newton Method}\label{alg:pd-qn}
+\begin{algorithmic}
+\Procedure{solvePDViaQN}{$\bm{q}_n$, $\bm{v}_n$, $\bm{f}_{\text{ext}}$, $h$}
+\State $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
+\State $\bm{q}_k = \bm{s}_n$
+\For{all iterations}
+\State $\bm{p}_k \gets$ solution of $\bm{S}\bm{p} = -\nabla g(\bm{q}_k)$
+\State $\bm{q}_k = \bm{q}_k + \bm{p}_k$
+\EndFor
+\State \textbf{return with result } $\bm{q}_{n+1} = \bm{q}_k, \bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n)/h$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 
 This insight that PD is a special case of Quasi-Newton methods applied to $\cref{eq:pd-minimization-q}$ can be leveraged to
 bring performance improvements to the original PD solver and to design a natural extension of PD to energies that do not fit 
@@ -1074,20 +1115,52 @@ the Valanis-Landel form, which includes Neo-Hookean and St.\ Venant-Kirchoff ene
 \cref{ss:qn-valanis-landel}
 
 \subsection{Quasi-Newton Methods for PD Energy Potentials}\label{ss:qn-pd}
-As discussed in \cref{sss:quasi-newton} and \cref{sss:limited-memory-quasi-newton}, 
+As discussed in \cref{sss:quasi-newton}, 
 the choice of the initial inverse Hessian approximation $\bm{H}_0$ has a strong impact on the performance of Quasi-Newton
-methods such as the BFGS and L-BFGS method. Popular choices such as scaled versions of the identitiy matrix generally do not
+methods such as the BFGS and L-BFGS method. Popular choices like scaled versions of the identitiy matrix generally do not
 satisfy any formal optimality conditions but are picked heuristically instead. This suggests that finding more suitable 
-candidates for $\bm{H}_0$ -- or alternatively for $\bm{B}_0$ -- is an avenue towards improving the convergenve properties of 
+candidates for $\bm{H}_0$ -- or alternatively for $\bm{B}_0$ -- is an avenue towards improving the convergence properties of 
 Quasi-Newton methods. It stands to reason that due to its effectiveness in PD, $\bm{S}$ is a viable choice for the 
-initial Hessian approximation $\bm{B}_0$ for the minimization of \cref{eq:pd-minimization-q2} \cite{liu2017}. 
+initial Hessian approximation $\bm{B}_0$ for the minimization of \cref{eq:pd-minimization-q2} \cite{liu2017}. From the lens
+of the Quasi-Newton version of the PD solver (\cref{alg:pd-qn}), benefits of incorporating local curvature information into
+the constant Hessian approximations $S$ by applying BFGS or L-BFGS updates are to be expected.
 
 Due to its favorable space complexity over the BFGS method for large-scale problems (see \cref{sss:limited-memory-quasi-newton}), 
-Liu et al.\ focus on the L-BFGS method with $\bm{B}_0 = \bm{S}$ \cite{liu2017}.
+Liu et al.\ focus on the L-BFGS method with $\bm{B}_0 = \bm{S}$ \cite{liu2017}. This leads to the algorithm that is laid out in
+\cref{alg:pd-lbfgs}. Note that the search direction at iteration $k$ is denoted $\bm{r}_k$ instead of $\bm{p}_k$ in order to avoid
+confusion with the projection point of the $k$-th constraint in the PD framework. The occurrences of $f$ 
+in the two-loop recursion (\cref{alg:lbfgs-recursion}) need to be replaced by $g$ in the appropriate 
+places. Again, the details of maintaining the history of $\bm{s}, \bm{y}, \rho$ are omitted for the sake of clarity.
+
+\begin{algorithm}
+\caption{L-BFGS method for PD energies}\label{alg:pd-lbfgs}
+\begin{algorithmic}
+\Procedure{solvePDViaLBFGS}{$\bm{q}_n$, $\bm{v}_n$, $\bm{f}_{\text{ext}}$, $m$, $h$}
+\State $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
+\State $\bm{q}_k = \bm{s}_n$
+\For{all iterations}
+\State $\bm{s_k} = \bm{q}_k - \bm{q}_{k-1}, \bm{y}_k = \nabla g(\bm{q}_k) - \nabla g(\bm{q}_{k-1}), \rho_k = 1 / (\bm{s}^T_k \bm{y}_k)$
+\State $\bm{p}_k = \text{\textsc{twoLoopRecursion}}(\bm{S}, \bm{q}_k, \bm{s}, \bm{y}, \rho, m, k)$   (\cref{alg:lbfgs-recursion})
+\State $\alpha_k = 1$
+\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
+\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
+\EndIf
+\State $\bm{q}_k = \bm{q}_k + \alpha_k \bm{p}_k$
+\EndFor
+\State \textbf{return with result } $\bm{q}_{n+1} = \bm{q}_k, \bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n)/h$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+
+Note that step-size $\alpha_k = 1$ is 
+used during each iteration of the Quasi-Newton version of the PD solver (\cref{alg:pd-qn}).
+While this works well for the constant Hessian approximation $\bm{S}$, it is not viable in L-BFGS. The step-size $\alpha_k = 1$
+is not guaranteed to satisfy the strong Wolfe conditions (\cref{eq:wolfe1}, \cref{eq:wolfe2}) if the L-BFGS update is used. However,
+the strong Wolfe conditions are required to ensure that the curvature condition (\cref{eq:curvature-condition}) is satisfied 
+and $\bm{H}_k$ stays symmetric positive definite.
 
 \subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
-
-
 
 
 
