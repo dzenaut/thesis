@@ -158,7 +158,7 @@ Ideally, $\alpha_k$ is picked such that it is the minimizer of the one-dimension
 
 \noindent In most cases, it is infeasible to compute $\alpha_k$ exactly. Instead, the idea is to compute an approximation of $\alpha_k$ such that 
 the objective function decreases sufficiently and that $\alpha_k$ is close enough to the true minimizer. Formally, these requirements
-are captured in the strong Wolfe conditions for step lenghts $\alpha_k$ \cite{nocedal2006}:
+are captured in the strong Wolfe conditions for step lengths $\alpha_k$ \cite{nocedal2006}:
 
 \begin{align}
     f(\bm{x}_k + \alpha_k \bm{p}_k) &\leq f(\bm{x}_k) + c_1 \alpha_k \nabla f(\bm{x}_k) \bm{p}_k \label{eq:wolfe1} \\
@@ -173,7 +173,8 @@ progress to be made along the search direction $\bm{p}_k$, indicated by the fact
 \bm{p}_k}$ is already rather small. 
 
 Step sizes satisfying the strong Wolfe conditions have the following properties under mild assumptions \cite{nocedal2006}. Firstly, 
-if $\bm{p}_k$ is a descent direction, it is possible to find a step size that satisfies the strong Wolfe conditions. Secondly, it 
+if $\bm{p}_k$ is a descent direction, it is possible to find a step size that satisfies the strong Wolfe conditions. In particular,
+the Armijo condition is always satisfied once $\alpha_k$ is sufficiently close to zero. Secondly, it 
 can be shown that line search methods where $\alpha_k$ satisfies the strong Wolfe conditions for all $k$ converge to a stationary
 point $\bm{x}^*$ with $\nabla f(\bm{x}^*) = 0$ if the search direction $\bm{p}_k$ is sufficiently far from orthogonal to the steepest
 descent direction $\nabla f(\bm{x}_k)$ for all $k$. Such line search algorithms are called globally convergent.
@@ -493,6 +494,46 @@ usually overshadowed by the matrix-vector multiplication. Still, larger values o
 \cite{liu2017} suggest that curvature information from vector pairs $(\bm{s}_i, \bm{y}_i)$ from iterations i with $i << k$ can become 
 out of date, making moderately large values of $m$ more beneficial. The main weakness of the L-BFGS method is its slow convergence on 
 problems where the true Hessian matrices $\nabla^2 f(\bm{x})_k$ are ill-conditioned \cite{nocedal2006}.
+
+\subsubsection{Step Length Selection Algorithms}\label{sss:step-length-selection}
+In \cref{ss:line-search}, the need for step lengths $\alpha_k$ that satisfy the strong Wolfe conditions (\cref{eq:wolfe1}, \cref{eq:wolfe2})
+for the convergence of line search methods was discussed. Appropriate step lengths are determined via step length selection algorithms. 
+These algorithms are typically
+split into two phases \cite{nocedal2006}. The bracketing phase determines an interval $[\alpha_{\text{min}}, \alpha_{\text{min}}]$ that is 
+guaranteed to contain suitable step lengths. The selection phase is an iterative process that interpolates function values and gradients 
+from previous iterations in order to shrink the interval and eventually pick the final step length. For more details, the reader is 
+referred to Chapter 3 of \cite{nocedal2006}. As step length algorithms are a common source of bugs, Nocedal and Wright \cite{nocedal2006}
+recommend using publically available implementations.
+
+To avoid the complexities of correct step length algorithms, the insight that the Armijo condition (\cref{eq:wolfe1}) is always satisfied 
+once $\alpha$ is sufficiently close to zero (\cref{ss:line-search}) can be exploited (\cite{nocedal2006}): If a good first estimate $\alpha = 
+\tilde{\alpha}$ is available,
+we check whether it satisfies the Armijo condition. Otherwise, $\alpha$ is gradually decreased until sufficient decrease is satisfied or until
+it falls below a predefined threshold. The idea is that the resulting step length will often satisfy the second Wolfe condition automatically 
+as long as the initial estimate $\tilde{\alpha}$ is a well-informed guess and step lengths are not decreased too rapidly. For Newton's method
+and Quasi-Newton methods, usually $\tilde{\alpha} = 1$ is used for the best results. This approach is known
+as backtracking and is outlined in \cref{alg:backtracking}.
+
+\begin{algorithm}
+\caption{Backtracking}\label{alg:backtracking}
+\begin{algorithmic}
+\State \textbf{require } $\tilde{\alpha} > 0, c, \rho \in (0, 1), 0 < t < \tilde{\alpha}$
+\Procedure{backtrack}{$\bm{x}_k$, $\bm{p}_k$, $\tilde{\alpha}$, $\rho$, $t$}
+\State $\alpha = \tilde{\alpha}$
+\While{$f(\bm{x}_k + \alpha \bm{p}_k) \leq f(\bm{x}_k) + c \alpha \nabla f(\bm{x}_k)^T \bm{p}_k$ and $\alpha > t$}
+\State $\alpha = \rho \alpha$
+\EndWhile
+\State \textbf{return with } $\alpha_k = \alpha$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+Backtracking is much simpler to implement than correct step length algorithms. Additionally, each iteration of the backtracking algorithm
+only requires the computation of a single function evaluation. Thus, if function evaluations are cheaper than gradient evaluations 
+backtracking is also more efficient. However, backtracking does not provide a guarantee that the final step length satisfies the curvature
+condition. If the search direction $\bm{p}_k$ is effective, e.g.\ when Newton's method is used, this tradeoff is often justifiable 
+\cite{nocedal2006}. For less effective search directions, including search directions from most Quasi-Newton methods, backtracking might
+be less suitable.
 
 \section{Dynamic Simulation}\label{s:dynamic-simulation}
 \begin{itemize}
