@@ -512,16 +512,16 @@ we check whether it satisfies the Armijo condition. Otherwise, $\alpha$ is gradu
 it falls below a predefined threshold. The idea is that the resulting step length will often satisfy the second Wolfe condition automatically 
 as long as the initial estimate $\tilde{\alpha}$ is a well-informed guess and step lengths are not decreased too rapidly. For Newton's method
 and Quasi-Newton methods, usually $\tilde{\alpha} = 1$ is used for the best results. This approach is known
-as backtracking and is outlined in \cref{alg:backtracking}.
+as backtracking and is outlined in \cref{alg:backtracking}. Here, $c_1$ is the constant factor from the Armijo condition.
 
 \begin{algorithm}
 \caption{Backtracking}\label{alg:backtracking}
 \begin{algorithmic}
-\State \textbf{require } $\tilde{\alpha} > 0, c, \rho \in (0, 1), 0 < t < \tilde{\alpha}$
-\Procedure{backtrack}{$\bm{x}_k$, $\bm{p}_k$, $\tilde{\alpha}$, $\rho$, $t$}
+\State \textbf{require } $\tilde{\alpha} > 0, c_1 \in (0, 1), \beta \in (0, 1), t \in (0, \tilde{\alpha})$
+\Procedure{backtrack}{$\bm{x}_k$, $\bm{p}_k$, $\tilde{\alpha}$, $\beta$, $t$}
 \State $\alpha = \tilde{\alpha}$
-\While{$f(\bm{x}_k + \alpha \bm{p}_k) \leq f(\bm{x}_k) + c \alpha \nabla f(\bm{x}_k)^T \bm{p}_k$ and $\alpha > t$}
-\State $\alpha = \rho \alpha$
+\While{$f(\bm{x}_k + \alpha \bm{p}_k) \leq f(\bm{x}_k) + c_1 \alpha \nabla f(\bm{x}_k)^T \bm{p}_k$ and $\alpha > t$}
+\State $\alpha = \beta \alpha$
 \EndWhile
 \State \textbf{return with } $\alpha_k = \alpha$
 \EndProcedure
@@ -917,6 +917,27 @@ energy potentials have the following form:
     \psi({\bm{q}}) = \min_{\bm{p}} \frac{w}{2} \norm{\bm{Gq} - \bm{p}}^2_F + \delta_{\bm{C}}(\bm{p}).
 \end{equation}
 
+\subsubsection{Example: Strain Energies}\label{sss:pd-strain}
+As an elucidating example, we briefly recap how to formulate strain energies in terms of PD energy potentials 
+(\cref{eq:pd-potentials}) according to Bouaziz et al.\ \cite{bouaziz2014}. Strain energies measure the change of local variation between 
+the deformed and undeformed state. If the simulated body is a 3-manifold simplicial complex, the continuous strain energy can be 
+discretized across the tetrahedra according to \textcolor{red}{(refer to appropriate section)}. The energy for a single tetrahedradron
+can be approximated in terms of PD energy potentials (\cref{eq:pd-potentials}) by setting $\bm{G} \in \mathbb{R}^{3 \times m}$ to the 
+matrix $\bm{A}_i$ that maps $\bm{q}$ to the transpose of the deformation gradient of the tetrahedron $\bm{F}^T$ and $\bm{C}$ to the 
+set of rotational matrices SO(3). Typically, the weight $w = kV$, where $V$ is the volume of the undeformed tetrahedron and $k$ is a 
+user-defined stiffness value. This yields the following energy potential, which we also call PD strain potential from now on:
+
+\begin{equation}\label{eq:pd-strain}
+    \psi({\bm{q}}) = \min_{\bm{p}} \frac{w}{2} \norm{\bm{Aq} - \bm{p}}^2_F + \delta_{\text{SO}(3)}(\bm{p})
+    = \min_{\bm{p}} \frac{w}{2} \norm{\bm{F}^T - \bm{p}}^2_F + \delta_{\text{SO}(3)}(\bm{p}).
+\end{equation}
+
+\noindent It is easy to show that this energy is zero if and only if $\bm{F}$ itself is a rotational matrix and grows as the 
+singular values of $\bm{F}$ move away from 1 \cite{bouaziz2014}. Informally, the energy increases the more the tetrahedron gets 
+stretched or squashed. The projection $\bm{p}$ can be computed 
+as $\bm{p} = \bm{UIV}^T$ where $\bm{F}^T = \bm{U \Sigma V}^T$ is the singular value decomposition of the inverse deformation 
+gradient $\bm{F}^T$.
+
 \subsection{Projective Implicit Euler Solver}\label{ss:pd-solver}
 We start by substituting the PD energy potentials (\cref{eq:pd-potentials}) into the variatonal form of implicit Euler integration
 (\cref{eq:variational-implicit}). With abuse of notation, let $\bm{p}_i$ denote the auxiliary variable of the $i$-th constraint or 
@@ -1168,14 +1189,13 @@ the constant Hessian approximations $S$ by applying BFGS or L-BFGS updates are t
 
 Due to its favorable space complexity over the BFGS method for large-scale problems (see \cref{sss:limited-memory-quasi-newton}), 
 Liu et al.\ focus on the L-BFGS method with $\bm{B}_0 = \bm{S}$ \cite{liu2017}. This leads to the algorithm that is laid out in
-\cref{alg:pd-lbfgs}. Note that the search direction at iteration $k$ is denoted $\bm{r}_k$ instead of $\bm{p}_k$ in order to avoid
-confusion with the projection point of the $k$-th constraint in the PD framework. The occurrences of $f$ 
-in the two-loop recursion (\cref{alg:lbfgs-recursion}) need to be replaced by $g$ in the appropriate 
-places. Again, the details of maintaining the history of $\bm{s}, \bm{y}, \rho$ are omitted for the sake of clarity.
+\cref{alg:pd-lbfgs}. The occurrences of $f$ in the two-loop recursion (\cref{alg:lbfgs-recursion}) need to be replaced by $g$ 
+in the appropriate places. Again, the details of maintaining the history of $\bm{s}, \bm{y}, \rho$ are omitted for the sake of clarity.
 
 \begin{algorithm}
 \caption{L-BFGS method for PD energies}\label{alg:pd-lbfgs}
-\begin{algorithmic}
+\begin{algorithmic}[1]
+\State \textbf{require } $\beta \in (0, 1)$, $t \in (0, 1)$
 \Procedure{solvePDViaLBFGS}{$\bm{q}_n$, $\bm{v}_n$, $\bm{f}_{\text{ext}}$, $m$, $h$}
 \State $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
 \State $\bm{q}_k = \bm{s}_n$
@@ -1184,7 +1204,8 @@ places. Again, the details of maintaining the history of $\bm{s}, \bm{y}, \rho$ 
 \State $\bm{p}_k = \text{\textsc{twoLoopRecursion}}(\bm{S}, \bm{q}_k, \bm{s}, \bm{y}, \rho, m, k)$   (\cref{alg:lbfgs-recursion})
 \State $\alpha_k = 1$
 \If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
-\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
+\State compute $\alpha_k$ that satisfies the strong Wolfe conditions 
+\State \textbf{or} $\alpha_k = \text{\textsc{backtrack}}(\bm{q}_k, \bm{p}_k, 1, \beta, t)$ (\cref{alg:backtracking})
 \EndIf
 \State $\bm{q}_k = \bm{q}_k + \alpha_k \bm{p}_k$
 \EndFor
@@ -1199,12 +1220,109 @@ used during each iteration of the Quasi-Newton version of the PD solver (\cref{a
 While this works well for the constant Hessian approximation $\bm{S}$, it is not viable in L-BFGS. The step-size $\alpha_k = 1$
 is not guaranteed to satisfy the strong Wolfe conditions (\cref{eq:wolfe1}, \cref{eq:wolfe2}) if the L-BFGS update is used. However,
 the strong Wolfe conditions are required to ensure that the curvature condition (\cref{eq:curvature-condition}) is satisfied 
-and $\bm{H}_k$ stays symmetric positive definite.
+and $\bm{H}_k$ stays symmetric positive definite. 
+
+While Liu et al.\ \cite{liu2017} show that always picking $\alpha_k = 1$ can lead to
+unstable simulations, they report that using backtracking (\cref{alg:backtracking}) yields satisfactory results, even though 
+the resulting step-size is not guaranteed to satisfy the second Wolfe condition. This is in contrast to Nocedal's and Wright's
+recommendation \cite{nocedal2006} to avoid backtracking in the context of  Quasi-Newton methods. One possible explanation why 
+backtracking seems to suffice could be that the inverse 
+Hessian approximations $\bm{H}_k$ that arise from the L-BFGS method with initial matrix $\bm{B}_0 = \bm{S}$ are better than
+Hessian approximations that arise when traditional initial matrices are used and make up for the inaccuracy in the step length
+algorithm.
 
 \subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
+In order to achieve satisfactory performance when applying the L-BFGS method to the general form of the implicit Euler integration 
+(\cref{eq:variational-implicit}) without the need to restrict to PD energy potentials (\cref{eq:pd-potentials}), a suitable
+candidate for the initial Hessian approximation $\bm{B}_0$ or its inverse $\bm{H}_0$ needs to be found. The choice $\bm{B}_0 = 
+\bm{S} = \frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i$ from \cref{alg:pd-lbfgs} cannot be applied to the general setting 
+without modification as the matrices $\bm{G}_i$ are taken directly from the definitions of the individual PD energy potentials.
 
+We focus on the setting of 3-manifold simplicial complexes where energy potentials are defined for each tetrahedron and the
+energy of the entire body is the sum of the individual tetrahedral energies \textcolor{red}{(refer to the appropriate section)}.
+As shown in \cref{ss:pd-potentials}, the strain energy of a single tetrahedron can be emulated with special PD strain 
+potentials (\cref{eq:pd-strain}). Here $\bm{G}_i = \bm{A}_i$, where $\bm{A}_i$ is the linear operator that maps $\bm{q}$ 
+to the tranpose of the deformation gradient $\bm{F}^T_i$, $\bm{C}_i = \text{SO}(3)$ and $w_i = k_iV_i$, where $V_i$ is the
+volume of the undeformed tetrahedron and $k_i$ is a user-defined stiffness value. 
+Liu et al.\ suggest approximating more general tetrahedral energies with PD strain potentials and using the global system
+matrix $\bm{S}$ that arises as the initial Hessian approximation $\bm{B}_0$ given by
 
+\begin{equation}\label{eq:global-matrix-strain}
+    \bm{B}_0 = \bm{S} = \frac{\bm{M}}{h^2} + \sum_i w_i \bm{A}_i^T \bm{A}_i.
+\end{equation}
 
+Instead of using user-defined stiffness values $k_i$, a procedure for setting $k_i$ from the original, more general energy
+potential is required. The discussion is restricted to isotropic and world-space rotation invariant material models that 
+can be defined in terms of the singular 
+values $\sigma_1, \sigma_2, \sigma_3$ of $\bm{F_i}$ called the principal stretches \cite{sifakis2012}. Liu et al.\ 
+\cite{liu2017} present a strategy for the subclass of these material models that can be written in Valanis-Landel form
+
+\begin{equation}\label{eq:valanis-landel}
+    \Psi(\sigma_1, \sigma_2, \sigma_3) = a(\sigma_1) + a(\sigma_2) + a(\sigma_3) + b(\sigma_1 \sigma_2) 
+    + b(\sigma_2 \sigma_3) + b(\sigma_1 \sigma_3)
+\end{equation}
+
+\noindent with $a, b, c : \mathbb{R} \to \mathbb{R}$. Many popular material models including St.\ Venant-Kirchhoff and 
+Neo-Hookean 
+can be expressed in this form \textcolor{red}{(How? I can't seem to find how to do this in detail. There is a paper that 
+might be useful called 'The Valanis–Landel Strain-Energy Function', but I am not sure it is useful \ldots)}.
+
+The approach uses the insight that for linear materials that follow Hooke's law, the stiffness $k_i$ is given as the second 
+derivative of the energy potential. Computing first and second partial derivatives in the rest configuration $\sigma_1, 
+\sigma_2, \sigma_3 = 1$ yields
+
+\begin{align}
+    \evalat[\bigg]{\frac{d \psi}{d \sigma_i}}{\sigma_j, \sigma_k = 1} 
+    &= a\prime(\sigma_i) + 2b\prime(\sigma_i) + c\prime(\sigma_i) \label{eq:valandis-landel-first} \\
+    \evalat[\bigg]{\frac{d^2 \psi}{d \sigma_i}}{\sigma_j, \sigma_k = 1} 
+    &= a\prime\prime(\sigma_i) + 2b\prime\prime(\sigma_i) + c\prime\prime(\sigma_i) \label{eq:valandis-landel-second},
+\end{align}
+
+\noindent where $i, j, k \in [1, 3], i \neq j \neq k$. Thus, first and second partial derivatives at the rest configuration are the same
+for each of the principal stretches, allowing for convenient representation of stiffness in a single scalar value. However,
+simply picking
+
+\[
+    k_i = \evalat[\bigg]{\frac{d^2 \psi}{d \sigma_i}}{\sigma_i, \sigma_j, \sigma_k = 1} 
+    &= a\prime\prime(1) + 2b\prime\prime(1) + c\prime\prime(1)
+\]
+
+\noindent runs into issues as the expression often evaluates to zero, even in common non-pathological cases. This issue arises because
+the second derivative in \cref{eq:valandis-landel-second} is not representative of the stiffness behavior of the material in the 
+entire range of principal stretches $[\sigma_{\text{min}}, \sigma_{\text{max}}]$ that is expected to be encountered during simulation.
+
+To alleviate this, Liu et al.\ \cite{liu2017} propose approximating the rate of change of the first derivative \cref{eq:valandis-landel-first}
+by computing the slope of its best linear approximation over the interval $[\sigma_{\text{min}}, \sigma_{\text{max}}]$. Formally, $k$ is 
+defined by
+
+\begin{equation}\label{eq:valani-landel-k}
+    k \coloneqq \argminB_{k} \int^{\sigma_{\text{max}}}_{\sigma_{\text{min}}} (k(\sigma - 1) - (a\prime(\sigma) + 2b\prime(\sigma) + 
+        c\prime(\sigma))^2 d\sigma
+\end{equation}
+
+\noindent Using these stiffness values in \cref{eq:global-matrix-strain} yields a suitable initial Hessian approximation $\B_0 = S$ for
+the minimization of the variational form of the implicit Euler integration with Valanis-Landel materials via \cref{alg:pd-lbfgs}. According
+to Liu et al.\ \cref{alg:pd-lbfgs} is insensitive to the size of the interval $[\sigma_{\text{min}}, \sigma_{\text{max}}]$. It is important
+to note that while PD strain energies are used to approximate the original energy potentials when constructing $\bm{B}_0$, the function
+evaluations $g(\bm{q}_k)$ and gradients $\nabla g(\bm{q}_k)$ are computed from the original potential energies in \cref{alg:pd-lbfgs}.
+
+\subsection{Properties of Quasi-Newton Methods for Physical Simulations}\label{ss:properties-qn}
+\begin{itemize}
+    \item Stability, some nice properties of PD are lost due to the L-BFGS update and step length algorithm / backtracking
+    \item Efficient structure ($\mathbb{R}^{m \times m}$ vs $\mathbb{R}^{3m \times 3m}$) that allows solving in parallel.
+    \item Gradients and function evaluations can be computed in parallel
+    \item Generally very few line searches required, but Armijo safeguard is essential
+    \item Considerations about window size
+    \item Convergence properties compared to regular PD, Newton's method, L-BFGS with classical initializations
+    \item Complexity compared to Newton's method (no second derivatives required)
+    \item Backtracking vs proper step length algorithm 
+    \item Comparison to QN methods with iterative solvers
+    \item Collisions
+    \item Numerical Damping
+    \item Issue: In Hooke's law, the derivatives are in terms of positions, but in our derivations the derivatives are in terms of the 
+        singular values!
+    \item How to write Neo-Hookean in Valanis-Landel form?
+\end{itemize}
 
 
 

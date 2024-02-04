@@ -1,5 +1,13 @@
 \documentclass{thesis}
 
+\NewDocumentCommand{\evalat}{sO{\big}mm}{%
+  \IfBooleanTF{#1}
+   {\mleft. #3 \mright|_{#4}}
+   {#3#2|_{#4}}%
+}
+
+\DeclareMathOperator*{\argminB}{argmin}
+
 \thesisTitle{Comparison of xPBD and Projective Dynamics}
 \thesisType{Master Thesis}
 \thesisAuthor{Dennis Ledwon}
