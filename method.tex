@@ -23,7 +23,8 @@ the following ODE, which will be referred to as Newton's ODE \cite{bouaziz2014, 
 \noindent where $\bm{q}(t)$, $\bm{v}(t)$, $\bm{f}(\bm{q}(t), \bm{v}(t))$ are the particle positions, particle velocities and forces acting on each particle
 at time $t$, respectively, and $\bm{M}$ is a diagonal matrix with the particle masses as diagonal entries. Depending on the context, either 
 $\bm{q}(t), \bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{m \times 3}$ and $\bm{M} \in \mathbb{R}^{m \times m}$ or $\bm{q}(t), 
-\bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{3m}$ and $\bm{M} \in \mathbb{R}^{3m \times 3m}$. $\bm{q}(t)\prime$ and $\bm{v}(t)\prime$ are short for $\bm{D_tq}(t)$ and
+\bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{3m}$ and $\bm{M} \in \mathbb{R}^{3m \times 3m}$. $\bm{q}(t)\prime$ and $\bm{v}(t)\prime$ are short 
+for $\bm{D_tq}(t)$ and
 $\bm{D_tv}(t)$, respectively. From now on, we write $\bm{q}$ and $\dot{\bm{q}}$ instead of $\bm{q}(t)$ and $\bm{q}(t)\prime$ for 
 time-dependent quantities for the sake of brevity.
 
@@ -94,9 +95,11 @@ By rewriting the first line of \cref{eq:implicit-euler} as
 
 \textcolor{red}{Possibly show that this system is often solved by linearizing the forces via first-order Taylor approximation.}
 
-We separate forces $\bm{f}(\bm{q}, \bm{v})$ into internal forces $\bm{f}_{\text{int}}(\bm{q}, \bm{p}) = \sum_i \bm{f}^i_{\text{int}}
-(\bm{q}, \bm{p})$ and external forces $\bm{f}_{\text{ext}}(\bm{q}, \bm{p}) = \sum_i \bm{f}^i_{\text{ext}}(\bm{q}, \bm{p})$. 
-We consider all external forces to be constant. Internal forces are conservative and defined in terms of scalar potential energy functions 
+We separate forces $\bm{f}(\bm{q}, \bm{v})$ into internal forces $\bm{f}_{\text{int}}(\bm{q}, \bm{p}) = \sum_{i \in \mathcal{I}_{\text{int}}} 
+\bm{f}^i_{\text{int}}
+(\bm{q}, \bm{p})$ and external forces $\bm{f}_{\text{ext}}(\bm{q}, \bm{p}) = \sum_{i \in \mathcal{I}_{\text{ext}}} \bm{f}^i_{\text{ext}}(\bm{q}, 
+\bm{p})$ with index sets $\mathcal{I}_{\text{int}}$ and $\mathcal{I}_{\text{ext}}$. We consider all external forces to be constant. Internal forces 
+are conservative and defined in terms of scalar potential energy functions 
 $\psi_i$ via $\bm{f}^i_{\text{int}}(\bm{q}) = -\nabla \psi_i(\bm{q})$. Together, we have $\bm{f}(\bm{q}, \bm{v}) = \bm{f} (\bm{q}) 
 = \bm{f}_{\text{int}} (\bm{q}) + \bm{f}_{\text{ext}} = -\sum_i \nabla \psi_i(\bm{q}) + \bm{f}_{\text{ext}}$. Plugging into 
 \cref{eq:implicit-positional}, it is
@@ -839,12 +842,244 @@ stiffness terms are exchanged for small entries in terms of inverse stiffness, w
     estimations made in that derivation. In particular the mean of a function $f$ over and interval $(a, b)$ is defined as $\frac{1}{b-a}
     \int_a^b f(x) dx$, so what they are saying does not make a lot of sense.}
 
+\section{Position Based Dynamics}\label{s:pbd}
+As discussed in \cref{s:newton-ode}, classical approaches for dynamics simulation are force-based. Forces are accumulated and resulting accelerations
+are computed based on Newton's second law. These accelerations are then integrated over time, typically using one of various numerical integration
+schemes. If successful, this strategy yields physically accurate results. However, designing integration schemes that are robust and stable,
+particularly in the presence of stiff forces, is challenging. Corresponding issues often manifest themselves in the context of contact and collision 
+handling. In real-time applications, physically accurate results are often not required. Thus, algorithms that yield visually
+plausible simulations in a robust and stable manner are preferred. Position Based Dynamics (PBD) \cite{mueller2006} addresses these needs by 
+manipulating positions directly on a per-constraint basis without integrating accelerations or velocities. This way, collisions can simply be handled 
+one-by-one by projecting particles to valid locations instead of by integrating accelerations from stiff forces, leading to improved robustness and 
+controllability. PBD is covered in \cref{ss:pbd}.
+
+The main drawback of PBD is that constraints become arbitrarily stiff when the iteration count is increased or when the timestep is decreased.
+Macklin et al.\ \cite{macklin2016} devise an extension of PBD called extended Position Based Dynamics (xPBD) that is derived from the implicit
+integration of Newton's ODE with constraint potentials based on PBD constraints. xPBD reduces the coupling of stiffness to iteration count
+and time step and relates constraints to corresponding, well-defined constraint forces. In the limit of infinitely stiff forces, xPBD and PBD are
+equivalent. We introduce xPBD in \cref{ss:xpbd}.
+
+\subsection{PBD}\label{ss:pbd}
+\textcolor{red}{Some introductory text.}
+
+\subsubsection{PBD Overview}\label{sss:pbd-overview}
+Let a dynamic object be defined by a set of $m$ vertices with inverse masses $w_i$, positions $\bm{q}_i$ and velocities $\bm{v}_i$. Additionally, the motion
+of the object is governed by constraints of the form 
+
+\[
+C \colon \mathbb{R}^{3n_j} \to \mathbb{R}, (\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}}) \mapsto C(\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}})
+\]
+
+\noindent with cardinality $n_j \in \mathbb{N}$, $i_1, \ldots, i_{n_j} \in [1, \ldots, m]$ and $j$ is the constraint index. Note how constraints 
+are defined solely in terms of particle positions. Equality and inequality constraints are satisfied if 
+$C(\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}}) = 0$ and $C(\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}}) \geq 0$, respectively. Each constraint has a stiffness 
+parameter $k_j \in [0,1]$. 
+
+An overview over PBD is given in \cref{alg:pbd} \cite{mueller2006}. PBD works by moving the particles according to their current velocities and the external forces acting 
+on them. This is achieved by performing symplectic Euler integration (lines 3-4). The resulting positions 
+are projected onto the constraint manifolds of the constraints (lines 5-7). Projecting a constraint means changing the positions of involved particles 
+such that the constraint is satisfied and linear and angular momentum are preserved. The projected positions are used to carry out an implicit 
+velocity update (line 9) and eventually passed on to the next time step (line 10) in correspondence with a Verlet integration step.
+
+\begin{algorithm}
+\caption{Position Based Dynamics}\label{alg:pbd}
+\begin{algorithmic}[1]
+\Procedure{solvePBD}{$\bm{q}_n$, $\bm{v}_n$, $f_{\text{ext}}$, $h$}
+\State $\bm{q} = \bm{q}_n, \bm{v} = \bm{v}_n$
+\State \textbf{for} all vertices $i$ \textbf{do} $\bm{v}_i = \bm{v}_i + hw_i\bm{f}_{\text{ext}}(\bm{x}_i)$
+\State \textbf{for} all vertices $i$ \textbf{do} $\bm{p}_i = \bm{q}_i + h\bm{v}_i$
+\For{all iterations}
+\State $\text{projectConstraints}(C_1, \ldots, C_r, \bm{p}_1, \ldots, \bm{p}_m)$ (\cref{alg:pbd-solver})
+\EndFor
+\For{all vertices $i$}
+\State $\bm{v}_i = (\bm{p}_i - \bm{q}_i) / h$
+\State $\bm{q}_i = \bm{p}_i$
+\EndFor
+\State \textbf{return with } $\bm{q}_{n+1} = \bm{q}, \bm{v}_{n+1} = \bm{v}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{PBD Constraint Solver}\label{sss:pbd-constraint-solver}
+For general, non-linear constraints, moving the initial estimates from the symplectic Euler integration to positions that satisfy the constraints
+requires solving a non-linear system of equations. Solving this system of equations is further complicated by the presence of inequality constraints, which
+need to be added or removed depending on whether they are satisfied during the current iteration. Thus, Müller et al.\ \cite{mueller2006} opt for a 
+non-linear adaptation of the Gauss-Seidel solver. Just like the original Gauss-Seidel algorithm, which is only suitable for linear systems of equations, 
+constraints are solved independently one after each other. During each constraint solve, only the particles that contribute to the current constraint are
+moved while all the other particle positions remain untouched. Additionally, position updates from the projection of a constraint are immediately 
+visible during the projection of the constraints following thereafter. Inequality constraints that are already satisfied are simply skipped. 
+During each solver iteration, all constraints are cycled through once.
+
+Due to the fact that PBD is a geometrical method that is not derived from Newton's laws of motion and that constraints are solved locally one after each 
+other, it is paramount that projections for internal constraints, i.e.\ constraints that are independent of rigid-body motion, preserve linear and 
+angular momentum. Otherwise, internal constraints may introduce 
+ghost forces which manifest themselves in artificial rigid-body motion \cite{mueller2006}. Of course, non-internal constraints such as collision or attachment constraints
+may have global effects on an object. For internal constraints, it is easy to show that both momenta are automatically preserved if the position update 
+is performed in the direction of the the mass-weighted constraint gradient \cite{mueller2006}.
+
+Mueller et al.\ \cite{mueller2006} derive the projection of a single constraint as follows. Let $C$ be a constraint of cardinality $n_c$ acting on 
+particles with predicted positions $\bm{p}_{i_1}, \ldots, \bm{p}_{i_{n_c}}$ and let $\bm{p} = [\bm{p}^T_{i_1}, \ldots, \bm{p}^T_{i_{n_c}}]^T$ be the
+vector that arises from concatenating these positions. Let $k_c$ be the constraint stiffness. The goal is to find a position update $\Delta \bm{p}$ 
+such that 
+
+\begin{equation}\label{eq:pbd-delta}
+    C(\bm{p} + \Delta \bm{p}) = 0.
+\end{equation}
+
+\noindent In order to preserve linear and angular momenta, $\Delta \bm{p}$ is required to be in the direction of the mass-weighted constraint 
+gradient, or formally
+
+\begin{equation}\label{eq:pbd-update-general}
+    \Delta \bm{p} = \lambda \bm{W} \nabla_{\bm{p}} C(\bm{p})
+\end{equation}
+
+\noindent for some $\lambda \in \mathbb{R}$ and $\bm{W} = diag(w_{i_1}, w_{i_1}, w_{i_1}, \ldots, w_{i_{n_c}}, w_{i_{n_c}}, w_{i_{n_c}})$. 
+Plugging into $\cref{eq:pbd-delta}$ and approximating by first-order Taylor expansion yields
+
+\[
+    C(\bm{p} + \lambda \bm{W} \nabla_{\bm{p}} C(\bm{p})) \approx C(\bm{p}) + \nabla_{\bm{p}}C(\bm{p})^T \lambda \bm{W}
+    \nabla_{\bm{p}}C(\bm{p}) = 0.
+\]
+
+\noindent Solving for $\lambda$ yields
+
+\begin{equation}\label{eq:pbd-lambda}
+    \lambda = -\frac{C(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\bm{p}_i}C(\bm{p}) \vert^2 }.
+\end{equation}
+
+\noindent Plugging $\lambda$ into \cref{eq:pbd-update-general} results in the final position update
+
+\begin{equation}\label{eq:pbd-update}
+    \Delta \bm{p} = -\frac{C(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\bm{p}_i}C(\bm{p}) \vert^2 } 
+    \bm{W}\nabla_{\bm{p}}C(\bm{p}).
+\end{equation}
+
+\noindent For the position of a single point $\bm{p}_i$, this gives the update
+
+\begin{equation}\label{eq:pbd-update-individual}
+    \Delta \bm{p}_i = -\frac{C(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\bm{p}_i}C(\bm{p}) \vert^2 } 
+    w_i \nabla_{\bm{p}_i} C(\bm{p})
+\end{equation}
+
+Finally, the stiffness $k_c$ of the constraint needs to be taken into account. The simplest way is to simply multiply the projection update
+$\Delta \bm{p}$ by $k_c$. However, after multiple iterations of the solver, the effect of the stiffness on the update is non-linear. Consider
+a distance constraint with rest length 0 acting on predictions $\bm{p}_{i_1}, \bm{p}_{i_2}$ given by
+
+\begin{equation}\label{eq:pbd-distance}
+    C_{\text{dist}}(\bm{p}_{i_1}, \bm{p}_{i_2}) = \vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert.
+\end{equation}
+
+\noindent Then, after $n_s$ solver iterations the remaning error is going to be $\vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert (1-k)^{n_s}$. Müller et al.\ 
+suggest establishing a linear relationship by multiplying corrections by $k\prime = 1 - (1-k)^{1/n_s}$. This way, the error becomes
+$\vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iterations. A summary of the constraint solver is given in \cref{alg:pbd-solver}.
+
+\begin{algorithm}
+\caption{PBD Constraint Solver}\label{alg:pbd-solver}
+\begin{algorithmic}[1]
+\Procedure{projectConstraints}{$C_1, \ldots, C_r, \bm{p}_1, \ldots, \bm{p}_m$}
+\For{all iterations $n_s$}
+\For{all constraints $C_j$ with cardinality $n_j$, particle indices $i_1, \ldots, i_{n_j}$}
+\If{$C_j$ is an equality constraint or $C_j(\bm{p}_{i_1}, \ldots, \bm{p}_{i_{n_j}}) < 0$}
+\For{all particles $i \in \{ i_1, \ldots, i_{n_j} \}$}
+\State $\Delta \bm{p}_i = -\frac{C_j(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_j} \}} w_i \vert \nabla_{\bm{p}_i}C(\bm{p}) \vert^2 } w_i \nabla_{\bm{p}_i} C_j(\bm{p})$
+\State $\bm{p}_i = k \Delta \bm{p}_i$ or $\bm{p}_i = (1-(1-k)^{1/n_s}) \Delta \bm{p}_i$
+\EndFor
+\EndIf
+\EndFor
+\EndFor
+\State \textbf{return with result } $\bm{p}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Properties of PBD}\label{sss:pbd-properties}
+Due to its simplicity and controllability, PBD is a popular choice for real-time simulations where visually plausible results are sufficient. 
+At the core of the PBD algorithm is the non-linear Gauss-Seidel type solver for constraint projections. Immediately making position
+updates from one constraint projection visible in the following constraint projections enables faster propagation of 
+constraints through the simulated body \cite{mueller2006}. However, the same property makes parallelization of the constraint projections 
+in lines 6-7 of \cref{alg:pbd-solver}
+more challenging. Synchronization is required to make sure that constraints that involve the same particle do not run into race conditions. 
+Alternatively, graph coloring algorithms where constraints of different colors are guaranteed to work on separate sets of particles can be employed
+\textcolor{red}{(citation needed!)}. Due to the fact that constraints are handled individually, the solver is incapable of finding a 
+compromise between contradicting constraints \cite{mueller2006, bouaziz2014}. In fact, oscillations can occur in over-constrainted situations. 
+The exact result depends on the order in which constraints are handled.
+
+The position update due to a single constraint $C$ in \cref{eq:pbd-update} is related to the Newton-Raphson method for finding roots of non-linear 
+functions $f \colon \mathbb{R} \to \mathbb{R}$ \cite{mueller2006}. There, the current guess $x_i \in \mathbb{R}$ for a root of $f$ is refined 
+using the following update formula \textcolor{red}{(Citation needed? Falls into the curriculum of a B.Sc.\)}
+
+\begin{equation}\label{eq:newton-raphson}
+    x_{i+1} = x_i - \frac{f(x_i)}{f\prime(x_0)}.
+\end{equation}
+
+\noindent Indeed, applying the Newton-Raphson update to 
+
+\begin{equation}\label{eq:newton-raphson-f}
+    f \colon \mathbb{R} \to \mathbb{R}, \lambda \mapsto C(\bm{p} + \lambda \bm{W} \nabla_{\bm{p}} C(\bm{p}))
+\end{equation}
+
+\noindent yields
+
+\[
+    \lambda_{i+1} = \lambda_i - \frac{C(\bm{p} + \lambda_i \bm{W} \nabla_{\bm{p}} C(\bm{p}))}
+    {\nabla_{\bm{p}}C(\bm{p} + \lambda_i \nabla_{\bm{p}}C(\bm{p}))^T \bm{W} \nabla_{\bm{p}} C(\bm{p})}.
+\]
+
+\noindent and with $\lambda_0 = 0$ we arrive at 
+
+\[
+    \lambda_1 = -\frac{C(\bm{p})}{\nabla_{\bm{p}}^T \bm{W} \nabla_{\bm{p}} C(\bm{p})}
+    = - \frac{C(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\bm{p}_i} C(\bm{p}) \vert^2}.
+\]
+
+\noindent Note that this is exactly the same as the $\lambda$ used in the constraint solver given in \cref{eq:pbd-lambda}. Thus, a single 
+constraint projection corresponds to the first iteration of the Newton-Raphson method applied to \cref{eq:newton-raphson-f} with 
+$\lambda_0 = 0$. The correspondence breaks down if $\lambda_0 \neq 0$ or if multiple position updates are performed consecutively for the 
+same constraint.
+
+Müller et al.\ \cite{mueller2006} claim that PBD is unconditionally stable since the projected positions $\bm{p}_i$ computed by the constraint 
+solver are physically valid in the sense that all constraints are satisfied and no extrapolation into the future takes place in lines 9-10 of
+\cref{alg:pbd}. They further state that the only source of instabilities is the constraint solver itself, which is based on the Newton-Raphson 
+method. The position updates in \cref{eq:pbd-update-individual} are independent of the time step and solely depend on the shape of the
+constraints. At this point, it is worth taking into consideration that the constraint solver does not always succeed at moving particles to 
+physically valid
+positions as implied. As mentioned above, oscillations can occur if there are contradictory constraints and constraint projections that are 
+performed towards the end might undo progress achieved by previous projections. Additionally, we have shown above that a single constraint 
+projection corresponds to the first iteration of a Newton-Raphson method with initial guess $\lambda_0 = 0$. For highly non-linear constraints, 
+it cannot be expected that the positions are moved onto or even close to the constraint manifold of interest after a single linearization. 
+Lastly, for general non-linear constraints, it is the shape of the constraint at the current configuration that matters for the stability of 
+the position update. Whether a Newton-Raphson iteration is effective or not cannot be answered for a function -- or in this case for a 
+constraint -- in its entirety, but in the proximity of specific values.
+
+The main disadvantage of PBD is the fact that the stiffness depends on the iteration count and the chosen timestep \cite{mueller2006}. Again, 
+we take a look at
+a distance constraint with rest length 0 (\cref{eq:pbd-distance}). As discussed in \cref{sss:pbd-constraint-solver}, the remaining error after
+$n_s$ solver iterations is simply $\vert \bm{p}_{i_1} - \bm{p}_{i-2} \vert (1-k)^{n_s}$. In the limit of infinite iterations
+
+\[
+    \lim_{n_s \to \infty} (\vert \bm{p}_{i_1} - \bm{p}_{i-2} \vert (1-k)^{n_s}) = 0,
+\]
+
+\noindent meaning that the distance constraint becomes infinitely stiff, regardless of the exact value of $k_c$. If instead $k\prime 
+= 1 - (1-k)^{1/n_s}$ is used, then the error after $n_s$ solver iterations becomes $\vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert (1-k)$. Thus,
+infinite stiffness due to large iteration counts is prevented in this setting. However, the perceived stiffness still depends on the time
+step. In the limit of infinitely short time steps, the material is going to appear infinitely stiff. 
+
+While the simulated object's global linear and angular momentums are preserved, the linear momentums of individual particles are at risk of 
+being washed out by the PBD constraint solver \cite{bouaziz2014}. This is because even though the structure of the position updates 
+preserves global momentum,
+there is no punishment for moving individual particles away from their intertial positions. Indeed, the inertial positions are merely the 
+initial guesses for the constraint solver. This becomes evident either in the limit of 
+infinite iterations while multiplying with the stiffness $k_c$ directly, or in the limit of infinitely short time steps. In both cases,
+the simulated material will appear infinitely stiff, meaning that momentums of individual particles are not necessarily preserved.
+
+\subsection{xPBD}\label{ss:xpbd}
 
 \section{Projective Dynamics}\label{s:pd}
 
 In the approaches to physical simulations via implicit time integration that we have encountered so far, a new linear system needs to be solved
 at every timestep. If the linear system is solved directly, this can quickly become prohibitively expensive for large simulations since 
-a new matrix factorization needs to be computed every time a new sytem needs to be solved. In PBD, this issue is dealt with by using an iterative 
+a new matrix factorization needs to be computed every time a new sytem needs to be solved. In xPBD, this issue is dealt with by using an iterative 
 solver. In Projective Dynamics (\emph{PD}\index{PD}), a different approach is used. Energy potentials are restricted to a specific structure which allow for 
 efficient implicit time integration via alternating steps of local and global optimization \cite{bouaziz2014}. The local optimization 
 steps are comprised of 
