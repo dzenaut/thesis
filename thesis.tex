@@ -6,7 +6,12 @@
    {#3#2|_{#4}}%
 }
 
-\DeclareMathOperator*{\argminB}{argmin}
+\makeatletter
+\newcommand{\StatexIndent}[1][3]{%
+  \setlength\@tempdima{\algorithmicindent}%
+  \Statex\hskip\dimexpr#1\@tempdima\relax}
+\algdef{S}[FOR]{ForNoDo}[1]{\algorithmicfor\ #1}%
+\makeatother
 
 \thesisTitle{Comparison of xPBD and Projective Dynamics}
 \thesisType{Master Thesis}

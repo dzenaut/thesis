@@ -1,22 +1,23 @@
 \chapter{Method}\label{ch:method}
 
 \section{Time-Integration of Physical Systems}\label{s:physical-integration}
-In most approaches for simulation of physical systems, the motion of the system is assumed to be in accordance with Newton's laws of
+In most approaches for the simulation of physical systems, the motion of the system is assumed to be in accordance with Newton's laws of
 motion. Due to Newton's second law, it is possible to derive accelerations from forces acting on the system. The motion of the system
 can then be described in terms of an ordinary differential equation (ODE) which is integrated over time in order to arrive at the 
 configuration of the system at the next time step. Usually, this is achieved via numerical integration schemes. In particular, both
-xPBD and PD are based on a numerical integration technique called implicit Euler integration. The ODE is introduced in \cref{s:newton-ode}. 
-Common approaches for numerical integration are briefly covered in \cref{s:numerical-integration}.
+xPBD (\cref{ss:xpbd-constraint-projection}) and PD (\cref{ss:pd-solver}) are based on a numerical integration technique called implicit 
+Euler integration. The ODE is introduced in \cref{s:newton-ode}. 
+Common approaches for numerical integration are briefly reviewed in \cref{s:numerical-integration}.
 
 \subsection{Newton's Ordinary Differential Equation}\label{s:newton-ode}
 
 The motion of a spatially discretized system with $m$ particles evolving in time according to Newton's laws of motion can be modeled via 
-the following ODE, which will be referred to as Newton's ODE \cite{bouaziz2014, macklin2016, bender2017}:
+the following ODE called Newton's ODE
 
 \begin{align}
     \begin{split}\label{eq:newton-ode}
         \bm{q}(t)\prime &= \bm{v}(t) \\
-        \bm{v}(t)\prime &= \bm{M}^{-1}\bm{f}(\bm{q}(t), \bm{v}(t))
+        \bm{v}(t)\prime &= \bm{M}^{-1}\bm{f}(\bm{q}(t), \bm{v}(t)),
     \end{split}
 \end{align}
 
@@ -24,36 +25,34 @@ the following ODE, which will be referred to as Newton's ODE \cite{bouaziz2014, 
 at time $t$, respectively, and $\bm{M}$ is a diagonal matrix with the particle masses as diagonal entries. Depending on the context, either 
 $\bm{q}(t), \bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{m \times 3}$ and $\bm{M} \in \mathbb{R}^{m \times m}$ or $\bm{q}(t), 
 \bm{v}(t), \bm{f}(\bm{q}(t), \bm{v}(t)) \in \mathbb{R}^{3m}$ and $\bm{M} \in \mathbb{R}^{3m \times 3m}$. $\bm{q}(t)\prime$ and $\bm{v}(t)\prime$ are short 
-for $\bm{D_tq}(t)$ and
-$\bm{D_tv}(t)$, respectively. From now on, we write $\bm{q}$ and $\dot{\bm{q}}$ instead of $\bm{q}(t)$ and $\bm{q}(t)\prime$ for 
+for $\frac{d\bm{q}}{dt}(t)$ and
+$\frac{d\bm{v}}{dt}(t)$, respectively. From now on, we write $\bm{q}$ and $\dot{\bm{q}}$ instead of $\bm{q}(t)$ and $\bm{q}(t)\prime$ for 
 time-dependent quantities for the sake of brevity.
 
 The positions $\bm{q}$ and velocities $\bm{v}$ of the system at time $t$ can be determind by solving this ODE. For general nonlinear forces,
 analytical solutions to Newton's ODE are usually not available. Thus the ODE needs to be solved numerically.
 
 \subsection{Numerical Integration of Newton's Ordinary Differential Equation}\label{s:numerical-integration}
-\textcolor{red}{Write introductory paragraph!}
-
-\subsubsection{Explicit Euler Integration}\label{ss:explicit-euler}
-The simplest approach to numerical integration is the explict Euler integration \cite{chapra2005}. Here, the positions and velocities 
-are computed at discrete timesteps via the following update formulas:
+The simplest approach to numerical integration is the explict Euler integration \cite{chapra2005}. When applied to Newton's ODE, 
+the positions and velocities are computed at discrete timesteps via the following update formulas:
 
 \begin{align*}
     \bm{q}_{n+1} &= \bm{q}_n + h\bm{v}_n\\
     \bm{v}_{n+1} &= \bm{v}_n + h\bm{M}^{-1}\bm{f}(\bm{q}_n, \bm{p}_n)
 \end{align*}
 
-\noindent Here, $h$ is the timestep. The idea is to simplify the integration of the functions $\bm{\dot{q}}, \bm{\dot{v}}$ over the timestep by 
+\noindent Here, $h$ is the time step. The idea is to simplify the integration of the functions $\bm{\dot{q}}, \bm{\dot{v}}$ over the timestep by 
 using constant approximations. 
 Then, time integration is as simple as multiplying this constant function value with the timestep. In the explicit Euler method, we 
 approximate $\bm{\dot{q}}, \bm{\dot{v}}$ by their function values $\bm{\dot{q}}(t_n), \bm{\dot{v}}(t_n)$ at the beginning of the timestep.
 While simple, the explicit Euler method is not stable for stiff systems, i.e. systems with accelerations of large magnitude 
-\cite{chapra2005}. It can be shown that the explicit Euler method does not conserve the system's energy unless the timestep is kept 
-prohibitively small. This often manifests itself in exploding simulations.
+\cite{chapra2005}. It can be shown that the explicit Euler amplifies the energy of the simulated system \cite{stern2006}. For example, the 
+amplititude of a swinging pendulum increases with time if integrated via the explicit Euler method, even if small time steps are used. 
+Using the explicit Euler method with larger time steps often manifests itself in exploding simulations. 
 
-\subsubsection{Symplectic Euler Integration}\label{ss:symplectic-euler}
-A variation of the explicit Euler method, called the symplectic Euler method, arises when the new velocities $\bm{v}_{n+1}$ instead of the
-old velocities $\bm{v}_n$ are used in the position update \textcolor{red}{(find citation)}. This leads to the following update formula:
+A variation of the explicit Euler method applied to Newton's ODE, called the symplectic Euler method, arises when the new velocities 
+$\bm{v}_{n+1}$ instead of the old velocities $\bm{v}_n$ are used in the position update \cite{stern2006}. This leads to the following 
+update formula:
 
 \begin{align}
     \begin{split}\label{eq:symplectic-euler}
@@ -62,12 +61,12 @@ old velocities $\bm{v}_n$ are used in the position update \textcolor{red}{(find 
     \end{split}
 \end{align}
 
-While this method has favorable energy conservation properties in comparison to the explicit Euler method, it still is not unconditionally
-stable \textcolor{red}{(find citation)}.
+\noindent Even though the symplectic Euler method has the same computational cost as the explicit Euler method, while it still does not conserve
+the system's energy exactly, it conserves a quadratic form that is close \cite{servin2006}. In contrast to the explicit Euler method, the 
+symplectic Euler method preserves the amplitude of a swinging pendulum with appropriate time steps \cite{stern2006}. Its main drawback 
+is that it also becomes unstable for stiff simulations unless the time step is kept prohibitively small \cite{servin2006}. 
 
-\subsubsection{Implicit Euler Integration}\label{ss:implicit-euler}
-Another popular integration scheme for tackling Newton's ODE is implicit Euler integration \cite{bouaziz2014, macklin2016, bender2017}, given
-by the update formula
+Another popular integration scheme for tackling Newton's ODE is implicit Euler integration, resulting in the update formula
 
 \begin{align}
     \begin{split}\label{eq:implicit-euler}
@@ -79,7 +78,11 @@ by the update formula
 \noindent Note how $\bm{q}_{n+1}$ and $\bm{v}_{n+1}$ appear on both sides of the equations. Consequently, performing implicit 
 Euler integration includes solving a set of nonlinear algebraic equations. Despite the added complexity compared to the explicit and
 symplectic Euler integration schemes implicit Euler integration is popular since it can be shown to be unconditionally stable and first-order
-accurate \cite{chapra2005}. However, it is also known to exhibit numerical damping \cite{servin2006, bender2017, macklin2019}.
+accurate \cite{chapra2005}. This allows dramatically increasing the size of the time steps. The additional cost of a single implicit Euler 
+step compared to the previously mentioned integration schemes is offset by the fact that fewer steps are required to drive the 
+simulation forward the same amount of time in a stable manner. However, implicit Euler integration is known to exhibit numerical 
+damping \cite{stern2006}. This manifests itself in a loss of energy in the simulated system. For example, the amplitude of a swinging 
+pendulum decreases if integrated using the implicit Euler method.
 
 By rewriting the first line of \cref{eq:implicit-euler} as
 
@@ -93,26 +96,24 @@ By rewriting the first line of \cref{eq:implicit-euler} as
     \bm{M}(\bm{q}_{n+1} - \bm{q}_n - h\bm{v}_n) = h^2(\bm{f}(\bm{q}_{n+1}, \bm{v}_{n+1})).
 \end{equation}
 
-\textcolor{red}{Possibly show that this system is often solved by linearizing the forces via first-order Taylor approximation.}
-
-We separate forces $\bm{f}(\bm{q}, \bm{v})$ into internal forces $\bm{f}_{\text{int}}(\bm{q}, \bm{p}) = \sum_{i \in \mathcal{I}_{\text{int}}} 
+\noindent We separate forces $\bm{f}(\bm{q}, \bm{v})$ into internal forces $\bm{f}_{\text{int}}(\bm{q}, \bm{p}) = \sum_{i \in \mathcal{I}_{\text{int}}} 
 \bm{f}^i_{\text{int}}
 (\bm{q}, \bm{p})$ and external forces $\bm{f}_{\text{ext}}(\bm{q}, \bm{p}) = \sum_{i \in \mathcal{I}_{\text{ext}}} \bm{f}^i_{\text{ext}}(\bm{q}, 
 \bm{p})$ with index sets $\mathcal{I}_{\text{int}}$ and $\mathcal{I}_{\text{ext}}$. We consider all external forces to be constant. Internal forces 
 are conservative and defined in terms of scalar potential energy functions 
-$\psi_i$ via $\bm{f}^i_{\text{int}}(\bm{q}) = -\nabla \psi_i(\bm{q})$. Together, we have $\bm{f}(\bm{q}, \bm{v}) = \bm{f} (\bm{q}) 
-= \bm{f}_{\text{int}} (\bm{q}) + \bm{f}_{\text{ext}} = -\sum_i \nabla \psi_i(\bm{q}) + \bm{f}_{\text{ext}}$. Plugging into 
+$\psi_j$ via $\bm{f}^j_{\text{int}}(\bm{q}) = -\nabla \psi_j(\bm{q})$. Together, we have $\bm{f}(\bm{q}, \bm{v}) = \bm{f} (\bm{q}) 
+= \bm{f}_{\text{int}} (\bm{q}) + \bm{f}_{\text{ext}} = -\sum_j \nabla \psi_j(\bm{q}) + \bm{f}_{\text{ext}}$. Plugging into 
 \cref{eq:implicit-positional}, it is
 
-\[
-    \bm{M}(\bm{q}_{n+1} - \bm{q}_n - h\bm{v}_n) = h^2(\bm{f_\text{ext}} - \sum_i \nabla \psi_i(\bm{q})).
-\]
+\begin{equation}\label{eq:implicit-positional-detailed}
+    \bm{M}(\bm{q}_{n+1} - \bm{q}_n - h\bm{v}_n) = h^2(\bm{f_\text{ext}} - \sum_j \nabla \psi_j(\bm{q}_{n+1})).
+\end{equation}
 
-By computing first-order optimality conditions, it is easily verified that the above system of equations is equivalent to the optimization 
+\noindent By computing first-order optimality conditions, it is easily verified that the above system of equations is equivalent to the optimization 
 problem
 
 \begin{equation}\label{eq:variational-implicit}
-    \min_{\bm{q}_{n+1}} \frac{1}{2h^2} \norm{\bm{q}_{n+1} - \bm{s}_n}^2_F + \sum_i \psi_i(\bm{q}_{n+1}).
+    \min_{\bm{q}_{n+1}} \frac{1}{2h^2} \norm{\bm{q}_{n+1} - \bm{s}_n}^2_F + \sum_j \psi_j(\bm{q}_{n+1}).
 \end{equation}
 
 \noindent where $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$. This minimization problem whose solution corresponds to the next
@@ -120,11 +121,15 @@ iteration of the state of the implicit Euler integration is called the variation
 The first and second term of the objective function are called the momentum potential and the elastic potential, respectively. Thus, the 
 minimization problem requires that the solution minimizes the elastic deformation as best as possible while ensuring that the solution is 
 close to following its momentum plus external forces. The weighting between the momentum potential and the elastic potential depends on the 
-particle masses $\bm{M}$, the timestep $h$ and the material stiffness of the elastic potentials $\psi_i$. According to Noether's theorem, 
+particle masses $\bm{M}$, the timestep $h$ and the material stiffness of the elastic potentials $\psi_j$. According to Noether's theorem, 
 the solution preserves linear and angular momentum as long as the elastic potentials are rigid motion invariant.
 
-\textcolor{red}{Add some words about how it is often favorable to use the variational formulation because solving an optimization problem is
-often easier than just solving a system of equations. That is because one can be guided by the objective function.}
+Approaching implicit Euler integration in its variational form can often be advantageous. That is because the objective function of 
+\cref{eq:variational-implicit} presents a natural merit function that can be employed to improve the step size along the search direction 
+that arises in common unconstrained optimization algorithms \cite{nocedal2006}. As an example, the objective function is used in many step 
+length selection algorithms to ensure that step sizes satisfy the Wolfe conditions (\cref{sss:step-length-selection}). In fact, many algorithms 
+for solving non-linear systems of equations construct approximate merit functions if the objective function from an equivalent optimization
+problem is not available \cite{nocedal2006}.
 
 \section{Unconstrained Optimization}\label{s:unconstrained-optimization}
 The goal of unconstrained optimization is to find the global minimizer of smooth, but generally nonlinear functions of the form $f \colon 
@@ -164,15 +169,15 @@ the objective function decreases sufficiently and that $\alpha_k$ is close enoug
 are captured in the strong Wolfe conditions for step lengths $\alpha_k$ \cite{nocedal2006}:
 
 \begin{align}
-    f(\bm{x}_k + \alpha_k \bm{p}_k) &\leq f(\bm{x}_k) + c_1 \alpha_k \nabla f(\bm{x}_k) \bm{p}_k \label{eq:wolfe1} \\
+    f(\bm{x}_k + \alpha_k \bm{p}_k) &\leq f(\bm{x}_k) + c_1 \alpha_k \nabla f(\bm{x}_k)^T \bm{p}_k \label{eq:wolfe1} \\
     \abs{\nabla f(\bm{x}_k + \alpha_k \bm{p}_k)^T \bm{p}_k} &\leq c_2 \abs{\nabla f(\bm{x}_k)^T \bm{p}_k} \label{eq:wolfe2}
 \end{align}
 
 \noindent for some constants $c_1 \in (0, 1), c_2 \in (c_1, 1)$. \cref{eq:wolfe1} is called the sufficient decrease or the Armijo condition 
 and states that the reduction in $f$ should be proportional to both the step length $\alpha_k$ and the directional derivative 
-$\nabla f(\bm{x}_k \bm{p}_k)$. Informally, the second condition (\cref{eq:wolfe2}), known as the curvature condition, ensures that there 
+$\nabla f(\bm{x}_k)^T \bm{p}_k$. Informally, the second condition (\cref{eq:wolfe2}), known as the curvature condition, ensures that there 
 is no more fast 
-progress to be made along the search direction $\bm{p}_k$, indicated by the fact that $\abs{\nabla f(\bm{x}_k + \alpha_k \bm{p}_k)^T 
+progress to be made along the search direction $\bm{p}_k$, indicated by the fact that $\abs{\nabla f(\bm{x}_k + \alpha_k \bm{p}_k)^T
 \bm{p}_k}$ is already rather small. 
 
 Step sizes satisfying the strong Wolfe conditions have the following properties under mild assumptions \cite{nocedal2006}. Firstly, 
@@ -548,9 +553,14 @@ be less suitable.
 \end{itemize}
 
 \subsection{Stiff Springs}\label{ss:stiff-springs}
-Simulating effects such as incompressibility, inextensibility and joints between articulated rigid bodies 
-in elasticity-based simulations can be achieved by using high stiffness values. High stiffness values lead to 
-large forces which in turn cause numerical issues in the solver. 
+Common effects in elasticity-based simulations such as attaching one body to another or maintaining fixed distance between two 
+particles can approximated via stiff springs. Consider a spring between 
+
+% TODO: First describe, then show issues. Remove as much detail as possible. Refer to section on Newton's ODE where applicable to save space.
+% Mention that explicit / sympletic Euler methods obviously won't work without tiny time steps and refer to section on integration. Show
+% how the implicit integration looks like with stiff springs. Show where the numerical issues arise.
+
+High stiffness values lead to large forces which in turn cause numerical issues in the solver. 
 
 We demonstrate these issues based on the example of maintaining a desired distance between two points using a stiff 
 spring \cite{tournier2015}. Let $\bm{x_1, x_2}$ be the positions, $\bm{v_1, v_2}$ the velocities and $\bm{a_1, a_2}$
@@ -621,32 +631,7 @@ in the paper, I am just following the trail from \cite{servin2006}. \cite{nealen
 \cite{rubin1957} would be really interesting to read for once, just to understand why strong penalty forces oscillate. Is this a
 general problem with penalty forces, or is it an issue with the solver?}
 
-\subsection{Mass Modification}\label{ss:mass-modification}
-\textcolor{red}{Might be worth removing this section. Or at the very least, make it more obvious why this is relevant to other 
-approaches.}
-
-The motion of a particle can be influenced by modifying the inverse mass matrix $\bm{M^{-1}}$ of the system. 
-For a single particle $\bm{x_i}$, it is $\ddot{\bm{x_i}} = \bm{M_i^{-1} f}$ \textcolor{red}{(make sure to introduce the notation
-with the dot first)}, where $\bm{M_i^{-1}}$ is the inverse mass matrix for particle $i$. If, for example, the first diagonal entry 
-of $\bm{M_i^{-1}}$ is zero, no acceleration in the $x$-direction is possible. It is possible to construct modified inverse mass 
-matrices $\bm{W}$ such that the accelerations in the three axes of an arbitraty orthogonal coordinate system can be restricted. 
-The modified inverse mass matrices $\bm{W}$ can be used in the LSE that results from the implicit integration above. By adding 
-simple velocity and position terms to the system equations the magnitude of the change in velocity in each direction and even the 
-exact position of each constrained particle can be controlled. This approach is called mass modification \cite{baraff1998}. In 
-\cite{baraff1998}, the authors use mass modification to model collision constraints between objects and cloth and other user 
-defined constraints. 
-
-Since the velocity and position of each constrained particle is controlled via a single velocity and position term, multiple 
-constraints that affect the same particle have to be handled together. This can lead to constraints which affect arbitrarily many
-particles. For that reason, self-collisions of cloth are not handled via mass modification in \cite{baraff1998}. Instead, penalty
-forces are used (\cref{ss:penalty-forces}). Additionally, accurately constraining particle positions is only possible for particles 
-whose velocity is constrained as well. The resulting system is unbanded, but sparse, and is solved using a modified version of the 
-conjugate gradient (CG) method. \textcolor{red}{Maybe conjugate gradient solver needs to be introduced elsewhere now. Check again
-why this formulation lends itself to a CG method and why this is better than just solving the system directly.}
-
-\subsection{Constraint-based Dynamics}\label{ss:constraint-based-dynamics}
-
-\subsubsection{Hard Constraints}\label{sss:hard-constraints}
+\subsection{Hard Constraints}\label{ss:hard-constraints}
 The problem of maintaining hard distance constraints between particles can be formulated as a Differential Algebraic Equation (DAE)
 \cite{ascher1995, baraff1996}. In this framework, Newton's ODE \textcolor{red}{(reference somewhere)} is handled together with 
 algebraic equations that model the constraints on the positions of the system. Distance constraints are typically implemented using 
@@ -762,76 +747,106 @@ the constraints $\bm{\phi(x)} = 0$ are notoriously unstable \textcolor{red}{(I n
 this means anymore)}. Additionally, instabilities in the traverse direction of the constraints occur when the tensile force with respect to 
 particle masses is large when using hard constraints \cite{tournier2015}.
 
-\subsubsection*{Compliant Constraints}
-By combining ideas from hard constraints (\cref{sss:hard-constraints}) and penalty forces (\cref{ss:penalty-forces}), it is possible to 
+\subsection{Compliant Constraints}\label{ss:compliant-constraints}
+By combining ideas from hard constraints (\cref{ss:hard-constraints}) and penalty forces (\cref{ss:penalty-forces}), it is possible to 
 formulate the system matrix for hard constraints such that constraints do not have to be enforced exactly. In this approach, called compliant 
-constraints, the constraints are combined with the Newton's ODE \textcolor{red}{(Maybe refer to Newton's ODE here and don't rewrite it
-again)} in a way that allows relaxation of constraints in a physically meaningful manner \cite{servin2006}. The key insight is that constraints 
-of the form $\bm{\phi(x)}$ are the physical limit of strong potential forces of the form $\frac{k}{2}\bm{\phi^2(x)}$ with high stiffness values 
-$k$. However, using large, but finite, stiffness values has adverse affects on the numerical properties of the system matrix 
-(\cref{ss:stiff-springs}). Thus, the equations of motion are rewritten in terms of the inverse stiffness. The potential energy for the 
-constraint $\bm{\phi}$ is then defined as:
+constraints, the constraints are combined with Newton's ODE (\cref{eq:newton-ode}) in a way that allows relaxation of constraints in a 
+physically meaningful manner \cite{servin2006}. The key insight is that constraints 
+of the form $C_j(\bm{q})$ are the physical limit of strong forces from potentials of the form $\frac{k_j}{2}C_j(\bm{q})^2$ with 
+high stiffness values $k_j$ \textcolor{red}{(Not sure whether I have to repeat again which shape all the quantities have. For now, I don't think 
+it is necessary since I refer to \cref{ss:hard-constraints} and \cref{ss:penalty-forces}, where the relevant quantities should have been 
+introduced)}. However, 
+using large, but finite, stiffness values has adverse affects on the numerical properties of the system matrix 
+(\cref{ss:stiff-springs}). Thus, the equations of motion are rewritten in terms of the inverse stiffness. Let $\bm{C} = [C_i, \ldots, C_r]^T$ be 
+the vector function whose entries consist of the individual constraint functions $C_j$. The potential energy for $\bm{C}$ is then defined as:
 
-\[
-    U(\bm{x}) = \frac{1}{2}\bm{\phi^T(x)} \alpha^{-1}\bm{\phi(x)}
-\]
+\begin{equation}\label{eq:compliant-potential}
+    \psi(\bm{q}) = \frac{1}{2}\bm{C}(\bm{q})^T \bm{\alpha}^{-1}\bm{C}(\bm{q})
+\end{equation}
 
-where $\alpha$ is a symmetric, positive definite matrix of dimension $n_c \times n_c$ \textcolor{red}{(If I recall correctly, $\alpha$ can only
+\noindent where $\bm{\alpha}$ is a symmetric, positive definite matrix of dimension $n_c \times n_c$ \textcolor{red}{(If I recall correctly, 
+$\alpha$ can only
 ever be a matrix if we are dealing with constraints that map to vectors. This will never be the case in this thesis, so the formulation should
-be adapted so that $\alpha$ is simply a scalar)}. The correspondence to the penalty terms above is the case where $\alpha^{-1}$ is a diagonal 
-matrix with diagonal entries $\frac{1}{k_i}$ for the stiffness $k_i$ of constraint $\bm{\phi(x)}$. The resulting forces $\bm{f_c} = \delta U / 
-\delta \bm{x} = -J^T\alpha^{-1} \bm{\phi}$. In order to replace the large parameters $\alpha^{-1}$ with the small $\alpha$ in the equations of 
-motion, artificial variables $\lambda = -\alpha^{-1}\bm{\phi}$ are introduced, yielding $\bm{f_c} = J^T\lambda$.
+be adapted so that $\bm{\alpha}$ is simply a scalar)}. The correspondence to the penalty terms \textcolor{red}{(refer to the appropriate equation)} 
+above is the case where $\bm{\alpha}^{-1}$ is a diagonal 
+matrix with diagonal entries $\frac{1}{k_j}$ for the stiffness $k_j$ of constraint $C_j(\bm{q})$. The resulting forces are given by 
 
-This leads to the following DAE:
+\begin{equation}\label{eq:compliant-force}
+    \bm{f_c} = \nabla \psi(\bm{q}) = -\nabla \bm{C}(\bm{q})^T\bm{\alpha}^{-1} \bm{C}(\bm{q}).
+\end{equation}
 
-\begin{align*}
-    \bm{\dot{x}} &= \bm{v} \\
-    \bm{M\dot{v}} &= \bm{f_{e} + J^T\lambda} \\
-    \alpha\lambda(\bm{x}, t) &= -\bm{\phi}(\bm{x}, t)
-\end{align*}
+\noindent In order to replace the large parameters $\bm{\alpha}^{-1}$ with the small 
+$\bm{\alpha}$ in the equations of motion, artificial variables $\bm{\lambda} = -\bm{\alpha}^{-1}\bm{C}$ are introduced, yielding 
 
-Note, that in the limit of infinite stiffness, the formulation from hard constraints is recovered. By performing backwards differentiation and 
-assuming that the constraint gradients are constant across the timestep, it is:
+\begin{equation}\label{eq:compliant-force-lambda}
+    \bm{f}_c = \nabla \bm{C}(\bm{q})^T\bm{\lambda}
+\end{equation}
+
+\noindent This leads to the following DAE:
+
+\begin{equation}\label{eq:compliant-dae}
+\begin{split}
+    \bm{\dot{q}} &= \bm{v} \\
+    \bm{M\dot{v}} &= \bm{f}_{e} + \nabla \bm{C}(\bm{q})^T\bm{\lambda} \\
+    \bm{\alpha}\bm{\lambda}(\bm{q}) &= -\bm{C}(\bm{q})
+\end{split}
+\end{equation}
+
+\noindent Note, that in the limit of infinite stiffness, the formulation from hard constraints is recovered. 
+
+Usually, the DAE is solved by employing some
+numerical integration scheme (\cref{s:numerical-integration}) which eventually requires the solution of a linear system of equations. Here, 
+the goal is to arrive at a formulation where the system matrix of the resulting LSE only contains references to the small compliance 
+$\bm{\alpha}$ 
+instead of the large stiffness $\bm{\alpha}^{-1}$, improving the condition matrix of the system matrix. This is achieved by treating 
+$\bm{\lambda} = -\bm{\alpha}^{-1}\bm{C}(\bm{q})$ as an unknown, pulling it out of the system matrix and hiding
+all occurrences of the large $\bm{\alpha}^{-1}$ in there. To this end, it is often necessary to make simplifying assumptions suitable for the problem
+at hand. As an example, if the DAE is solved via backward differentiation, making the assumption that $\nabla \bm{C}$ is constant across 
+the timestep allows pulling $\bm{\lambda}$ out of the system matrix entirely \cite{tournier2015}. The entries of the resulting system matrix 
+are small, since they do not depend on the large stiffness terms. Backwards differentiation while assuming that $\nabla \bm{C}$ is 
+constant across the time step yields
 
 \[
-    \bm{\alpha\lambda_{n+1}} = \bm{C}\frac{\bm{\mu_{n+1}}}{h} = -\bm{\phi_{n+1}} \approx -\bm{\phi} - h\bm{Jv_{n+1}}
+    -\bm{\alpha\lambda}_{n+1} = \bm{C}(\bm{q}_n)\frac{\bm{\mu}_{n+1}}{h} = -\bm{C}(\bm{q}_{n+1}) \approx -\bm{C}(\bm{q}_n) - h\nabla 
+    \bm{C}(\bm{q}_n) \bm{v}_{n+1},
 \]
 
-leading to the following LSE \cite{tournier2015}:
+\noindent leading to the following LSE \cite{tournier2015}
 
 \[
 \begin{pmatrix}
-    \bm{M} & \bm{-J^T} \\
-    \bm{J} & \frac{1}{h^2}\bm{\alpha}
+    \bm{M} & -\nabla \bm{C}(\bm{q}_n)^T \\
+    \nabla \bm{C}(\bm{q}_n) & \frac{1}{h^2}\bm{\alpha}
 \end{pmatrix}
 \begin{pmatrix}
-    \bm{v_{n+1}} \\
-    \bm{\mu_{n+1}}
+    \bm{v}_{n+1} \\
+    \bm{\mu}_{n+1}
 \end{pmatrix}
 =
 \begin{pmatrix}
-    \bm{p} + h\bm{f_e} \\
-    - \frac{1}{h}\bm{\phi}
-\end{pmatrix}
+    \bm{p} + h\bm{f}_e \\
+    - \frac{1}{h}\bm{C}(\bm{q}_n)
+\end{pmatrix},
 \]
+
+\noindent where $\bm{\mu} = h\bm{\lambda}$.
 
 \textcolor{red}{Regarding the backwards differentiation above, this does not perform the Taylor approximation again. It should be something
 like:
 \begin{align*}
-    \phi_+ \approx \phi + h\dot{\phi_+} &= \phi + hJ_+v_+ \\
-                                        &\approx \phi + h(J + h\dot{J})v_+ \\
-                                        &= \phi + h(J + h\frac{\delta J}{\delta x}\frac{\delta x}{\delta t})v_+ \\
-                                        &= \phi + h(J + h\frac{\delta J}{\delta x}v)v_+
+    C+ \approx C + h\dot{C+} &= C + hJ_+v_+ \\
+                                        &\approx C + h(J + h\dot{J})v_+ \\
+                                        &= C + h(J + h\frac{\delta J}{\delta x}\frac{\delta x}{\delta t})v_+ \\
+                                        &= C + h(J + h\frac{\delta J}{\delta x}v)v_+
 \end{align*}
 Now, we need second derivatives of the constraints. This can be seen in \cite{baraff1998} and is also mentioned in \cite{servin2006}.
 }
 
 This formulation comes with a couple of advantages. Firstly, relaxing the constraints by keeping a finite but large penalty parameter helps
-counteracting numerical problems in the presence of over defined or degenerate constraints. Secondly, in comparison to the system from hard
-constraints, introducing $\alpha$ in the lower right block of the system matrix makes the system matrix strongly positive definite, which 
-is beneficial for many solvers. Lastly, in comparison to penalty forces, entries of large magnitudes in the system matrix due to high 
-stiffness terms are exchanged for small entries in terms of inverse stiffness, which improves the condition number of the matrix. 
+counteracting numerical problems in the presence of over defined or degenerate constraints. Secondly, in the limit of $\bm{\alpha} = \bm{0}$ 
+the behavior of hard constraints is recovered in an elegant fashion. Lastly, in comparison to penalty forces, 
+entries of large magnitudes in the system matrix due to high stiffness terms are exchanged for small entries in terms of inverse stiffness, 
+which improves the condition number of the matrix. 
 
 \textcolor{red}{
     All these concepts from numerics are a bit unclear to me. I might have to go back to some textbook and do some reading to improve my understanding. 
@@ -851,46 +866,61 @@ handling. In real-time applications, physically accurate results are often not r
 plausible simulations in a robust and stable manner are preferred. Position Based Dynamics (PBD) \cite{mueller2006} addresses these needs by 
 manipulating positions directly on a per-constraint basis without integrating accelerations or velocities. This way, collisions can simply be handled 
 one-by-one by projecting particles to valid locations instead of by integrating accelerations from stiff forces, leading to improved robustness and 
-controllability. PBD is covered in \cref{ss:pbd}.
+controllability. 
 
 The main drawback of PBD is that constraints become arbitrarily stiff when the iteration count is increased or when the timestep is decreased.
 Macklin et al.\ \cite{macklin2016} devise an extension of PBD called extended Position Based Dynamics (xPBD) that is derived from the implicit
-integration of Newton's ODE with constraint potentials based on PBD constraints. xPBD reduces the coupling of stiffness to iteration count
-and time step and relates constraints to corresponding, well-defined constraint forces. In the limit of infinitely stiff forces, xPBD and PBD are
-equivalent. We introduce xPBD in \cref{ss:xpbd}.
+integration of Newton's ODE with constraint potentials based on PBD constraints. The overall structure of the PBD algorithms is preserved with 
+minor changes to the projection of individual constraints. xPBD reduces the coupling of stiffness to iteration count and time step and relates 
+constraints to corresponding, well-defined constraint forces. According to Macklin et al.\ , xPBD and PBD are equiivalent in the limit of infinite
+stiffness. 
 
-\subsection{PBD}\label{ss:pbd}
-\textcolor{red}{Some introductory text.}
+Since PBD and xPBD only differ in the way individual constraints are projected, we give a general overview over PBD-style algorithms 
+in \cref{ss:pbd-framework}. 
+The details of individual constraint projection in PBD and xPBD are covered in \cref{ss:pbd-constraint-projection} and 
+\cref{ss:xpbd-constraint-projection}, respectively.
 
-\subsubsection{PBD Overview}\label{sss:pbd-overview}
-Let a dynamic object be defined by a set of $m$ vertices with inverse masses $w_i$, positions $\bm{q}_i$ and velocities $\bm{v}_i$. Additionally, the motion
-of the object is governed by constraints of the form 
+\subsection{Overview Over the PBD Framework}\label{ss:pbd-framework}
+Both PBD and xPBD share the same algorithmic structure. Let a dynamic object be defined by a set of $m$ 
+vertices with inverse masses $w_i$, positions $\bm{q}_i$ and velocities $\bm{v}_i$. Additionally, the motion of the object is governed by 
+$r \in \mathbb{N}$ constraints of the form 
 
 \[
-C \colon \mathbb{R}^{3n_j} \to \mathbb{R}, (\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}}) \mapsto C(\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}})
+C \colon \mathbb{R}^{3m} \to \mathbb{R}, \bm{q} \mapsto C(\bm{q})
 \]
 
-\noindent with cardinality $n_j \in \mathbb{N}$, $i_1, \ldots, i_{n_j} \in [1, \ldots, m]$ and $j$ is the constraint index. Note how constraints 
-are defined solely in terms of particle positions. Equality and inequality constraints are satisfied if 
-$C(\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}}) = 0$ and $C(\bm{q}_{i_1}, \ldots, \bm{q}_{i_{n_j}}) \geq 0$, respectively. Each constraint has a stiffness 
-parameter $k_j \in [0,1]$. 
+\noindent where $j$ is the constraint index. Note how constraints are defined solely in terms of particle positions. Equality and inequality constraints 
+are satisfied if $C(\bm{q}) = 0$ and $C(\bm{q}) \geq 0$, respectively. In PBD, each constraint has an additional stiffness parameter $k_j \in [0,1]$. 
+Each constraint has a cardinality $n_j \in \mathbb{N}$ and particle indices $i_1, \ldots, i_{n_j}$ of particles that actively contribute to the 
+constraint value. In other words, for $l \in [1, \ldots, r]$ with $l \notin \{i_1, \ldots, i_{n_j}\}$ it is $\nabla_{\bm{p}_l}C_j(\bm{q}) = \bm{0}$.
 
-An overview over PBD is given in \cref{alg:pbd} \cite{mueller2006}. PBD works by moving the particles according to their current velocities and the external forces acting 
-on them. This is achieved by performing symplectic Euler integration (lines 3-4). The resulting positions 
-are projected onto the constraint manifolds of the constraints (lines 5-7). Projecting a constraint means changing the positions of involved particles 
+An overview over the PBD framework is given in \cref{alg:pbd} \cite{mueller2006}. PBD and xPBD work by moving the particles according to their current 
+velocities and the external forces acting on them and using the resulting positions as a starting point for constraint projection. This is achieved by 
+performing symplectic Euler integration (lines 3-4). The resulting positions 
+are projected onto the constraint manifolds of the constraints (line 5). Projecting a constraint means changing the positions of involved particles 
 such that the constraint is satisfied and linear and angular momentum are preserved. The projected positions are used to carry out an implicit 
-velocity update (line 9) and eventually passed on to the next time step (line 10) in correspondence with a Verlet integration step.
+velocity update (line 7) and eventually passed on to the next time step (line 8) in correspondence with a Verlet integration step. Note that the only
+difference between PBD and xPBD is the constraint projection in \textsc{projectConstraints} (line 5).
+
+For general, non-linear constraints, moving the initial estimates from the symplectic Euler integration to positions that satisfy the constraints
+requires solving a non-linear system of equations. Solving this system of equations is further complicated by the presence of inequality constraints, which
+need to be added or removed depending on whether they are satisfied during the current iteration. Thus, Müller et al.\ \cite{mueller2006} opt for a 
+non-linear adaptation of the Gauss-Seidel solver in their original PBD solver. Macklin et al.\ \cite{macklin2016} adapt this approach in xPBD. 
+Just like the original Gauss-Seidel algorithm, which is only suitable for linear systems of equations, 
+constraints are solved independently one after another. During each constraint solve, only the particles that contribute to the current constraint are
+moved while all the other particle positions remain untouched. Additionally, position updates from the projection of a constraint are immediately 
+visible during the projection of the constraints following thereafter. Inequality constraints that are already satisfied are simply skipped. 
+During each solver iteration, all constraints are cycled through once.
 
 \begin{algorithm}
-\caption{Position Based Dynamics}\label{alg:pbd}
+\caption{Position Based Dynamics Framework}\label{alg:pbd}
 \begin{algorithmic}[1]
 \Procedure{solvePBD}{$\bm{q}_n$, $\bm{v}_n$, $f_{\text{ext}}$, $h$}
 \State $\bm{q} = \bm{q}_n, \bm{v} = \bm{v}_n$
 \State \textbf{for} all vertices $i$ \textbf{do} $\bm{v}_i = \bm{v}_i + hw_i\bm{f}_{\text{ext}}(\bm{x}_i)$
 \State \textbf{for} all vertices $i$ \textbf{do} $\bm{p}_i = \bm{q}_i + h\bm{v}_i$
-\For{all iterations}
-\State $\text{projectConstraints}(C_1, \ldots, C_r, \bm{p}_1, \ldots, \bm{p}_m)$ (\cref{alg:pbd-solver})
-\EndFor
+\State $\textsc{projectConstraints}(C_1, \ldots, C_r, \bm{p}_1, \ldots, \bm{p}_m)$ (\cref{alg:pbd-solver} for PBD, 
+\StatexIndent[2] \cref{alg:xpbd-solver} for xPBD)
 \For{all vertices $i$}
 \State $\bm{v}_i = (\bm{p}_i - \bm{q}_i) / h$
 \State $\bm{q}_i = \bm{p}_i$
@@ -900,27 +930,24 @@ velocity update (line 9) and eventually passed on to the next time step (line 10
 \end{algorithmic}
 \end{algorithm}
 
-\subsubsection{PBD Constraint Solver}\label{sss:pbd-constraint-solver}
-For general, non-linear constraints, moving the initial estimates from the symplectic Euler integration to positions that satisfy the constraints
-requires solving a non-linear system of equations. Solving this system of equations is further complicated by the presence of inequality constraints, which
-need to be added or removed depending on whether they are satisfied during the current iteration. Thus, Müller et al.\ \cite{mueller2006} opt for a 
-non-linear adaptation of the Gauss-Seidel solver. Just like the original Gauss-Seidel algorithm, which is only suitable for linear systems of equations, 
-constraints are solved independently one after each other. During each constraint solve, only the particles that contribute to the current constraint are
-moved while all the other particle positions remain untouched. Additionally, position updates from the projection of a constraint are immediately 
-visible during the projection of the constraints following thereafter. Inequality constraints that are already satisfied are simply skipped. 
-During each solver iteration, all constraints are cycled through once.
+Due to the fact that PBD is a geometrical method that is not derived from Newton's laws of motion (\cref{ss:pbd-constraint-projection}) and that 
+constraints are solved locally one after each 
+other, Müller et al.\ \cite{mueller2006} take great care that projections for internal constraints, i.e.\ constraints that are independent of rigid-body 
+motion, preserve linear and angular momentum. Otherwise, internal constraints may introduce ghost forces which manifest themselves in artificial 
+rigid-body motion \cite{mueller2006}. Of course, non-internal constraints such as collision or 
+attachment constraints may have global effects on an object. For internal constraints, it is easy to show that both momenta are automatically preserved 
+if the PBD position updates are performed in the direction of the the mass-weighted constraint gradient \cite{mueller2006}. Even though xPBD -- unlike 
+PBD -- is in fact derived from Newton's second law, Macklin et al.\ \cite{macklin2016} arrive at position updates that are multiples of the mass-weighted 
+constraint gradient as well after a couple of simplifying assumptions (\cref{ss:xpbd-constraint-projection}). Thus PBD and xPBD projections 
+are performed along the same direction and only differ in their scaling factors. The update formulas for a single constraint update in PBD and xPBD are 
+derived in \cref{ss:pbd-constraint-projection} and \cref{ss:xpbd-constraint-projection} and the resulting algorithms for projecting all constraints 
+acting on simulated bodies are given in \cref{alg:pbd-solver} and \cref{alg:xpbd-solver}, respectively.
 
-Due to the fact that PBD is a geometrical method that is not derived from Newton's laws of motion and that constraints are solved locally one after each 
-other, it is paramount that projections for internal constraints, i.e.\ constraints that are independent of rigid-body motion, preserve linear and 
-angular momentum. Otherwise, internal constraints may introduce 
-ghost forces which manifest themselves in artificial rigid-body motion \cite{mueller2006}. Of course, non-internal constraints such as collision or attachment constraints
-may have global effects on an object. For internal constraints, it is easy to show that both momenta are automatically preserved if the position update 
-is performed in the direction of the the mass-weighted constraint gradient \cite{mueller2006}.
+\subsection{PBD Constraint Projection}\label{ss:pbd-constraint-projection}
 
-Mueller et al.\ \cite{mueller2006} derive the projection of a single constraint as follows. Let $C$ be a constraint of cardinality $n_c$ acting on 
-particles with predicted positions $\bm{p}_{i_1}, \ldots, \bm{p}_{i_{n_c}}$ and let $\bm{p} = [\bm{p}^T_{i_1}, \ldots, \bm{p}^T_{i_{n_c}}]^T$ be the
-vector that arises from concatenating these positions. Let $k_c$ be the constraint stiffness. The goal is to find a position update $\Delta \bm{p}$ 
-such that 
+Mueller et al.\ \cite{mueller2006} derive the projection of a single constraint in PBD as follows. Let $C$ be a constraint of cardinality $n_c$ 
+acting on particles $i_1, \ldots, i_{n_c}$ with predicted positions $\bm{p}_{i_1}, \ldots, \bm{p}_{i_{n_c}}$. Let $k_c$ be the constraint 
+stiffness. The goal is to find a position update $\Delta \bm{p}$ such that 
 
 \begin{equation}\label{eq:pbd-delta}
     C(\bm{p} + \Delta \bm{p}) = 0.
@@ -930,15 +957,15 @@ such that
 gradient, or formally
 
 \begin{equation}\label{eq:pbd-update-general}
-    \Delta \bm{p} = \lambda \bm{W} \nabla_{\bm{p}} C(\bm{p})
+    \Delta \bm{p} = \lambda \bm{W} \nabla C(\bm{p})
 \end{equation}
 
-\noindent for some $\lambda \in \mathbb{R}$ and $\bm{W} = diag(w_{i_1}, w_{i_1}, w_{i_1}, \ldots, w_{i_{n_c}}, w_{i_{n_c}}, w_{i_{n_c}})$. 
+\noindent for some $\lambda \in \mathbb{R}$ and $\bm{W} = diag(w_1, w_1, w_1, \ldots, w_m, w_m, w_m)$. 
 Plugging into $\cref{eq:pbd-delta}$ and approximating by first-order Taylor expansion yields
 
 \[
-    C(\bm{p} + \lambda \bm{W} \nabla_{\bm{p}} C(\bm{p})) \approx C(\bm{p}) + \nabla_{\bm{p}}C(\bm{p})^T \lambda \bm{W}
-    \nabla_{\bm{p}}C(\bm{p}) = 0.
+    C(\bm{p} + \lambda \bm{W} \nabla C(\bm{p})) \approx C(\bm{p}) + \nabla C(\bm{p})^T \lambda \bm{W}
+    \nabla C(\bm{p}) = 0.
 \]
 
 \noindent Solving for $\lambda$ yields
@@ -951,7 +978,7 @@ Plugging into $\cref{eq:pbd-delta}$ and approximating by first-order Taylor expa
 
 \begin{equation}\label{eq:pbd-update}
     \Delta \bm{p} = -\frac{C(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\bm{p}_i}C(\bm{p}) \vert^2 } 
-    \bm{W}\nabla_{\bm{p}}C(\bm{p}).
+    \bm{W}\nabla C(\bm{p}).
 \end{equation}
 
 \noindent For the position of a single point $\bm{p}_i$, this gives the update
@@ -966,7 +993,7 @@ $\Delta \bm{p}$ by $k_c$. However, after multiple iterations of the solver, the 
 a distance constraint with rest length 0 acting on predictions $\bm{p}_{i_1}, \bm{p}_{i_2}$ given by
 
 \begin{equation}\label{eq:pbd-distance}
-    C_{\text{dist}}(\bm{p}_{i_1}, \bm{p}_{i_2}) = \vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert.
+    C_{\text{dist}}(\bm{p}) = \vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert.
 \end{equation}
 
 \noindent Then, after $n_s$ solver iterations the remaning error is going to be $\vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert (1-k)^{n_s}$. Müller et al.\ 
@@ -978,13 +1005,16 @@ $\vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iterations. A
 \begin{algorithmic}[1]
 \Procedure{projectConstraints}{$C_1, \ldots, C_r, \bm{p}_1, \ldots, \bm{p}_m$}
 \For{all iterations $n_s$}
-\For{all constraints $C_j$ with cardinality $n_j$, particle indices $i_1, \ldots, i_{n_j}$}
-\If{$C_j$ is an equality constraint or $C_j(\bm{p}_{i_1}, \ldots, \bm{p}_{i_{n_j}}) < 0$}
-\For{all particles $i \in \{ i_1, \ldots, i_{n_j} \}$}
-\State $\Delta \bm{p}_i = -\frac{C_j(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_j} \}} w_i \vert \nabla_{\bm{p}_i}C(\bm{p}) \vert^2 } w_i \nabla_{\bm{p}_i} C_j(\bm{p})$
-\State $\bm{p}_i = k \Delta \bm{p}_i$ or $\bm{p}_i = (1-(1-k)^{1/n_s}) \Delta \bm{p}_i$
-\EndFor
+\ForNoDo{all constraints $C_j$ with cardinality $n_j$, } 
+\StatexIndent[3] particle indices $i_1, \ldots, i_{n_j}$ \algorithmicdo
+\If{$C_j$ is an inequality constraint and $C_j(\bm{p}_j) \geq 0$}
+\State \textbf{continue} to next constraint
 \EndIf
+\For{all particles $i \in \{ i_1, \ldots, i_{n_j} \}$}
+\State $\Delta \bm{p}_i = -\frac{C_j(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_j} \}} w_i \vert \nabla_{\bm{p}_i}
+C_j(\bm{p}) \vert^2 } w_i \nabla_{\bm{p}_i} C_j(\bm{p})$
+\State $\bm{p}_i = \bm{p}_i + k \Delta \bm{p}_i$ or $\bm{p}_i = \bm{p}_i + (1-(1-k)^{1/n_s}) \Delta \bm{p}_i$
+\EndFor
 \EndFor
 \EndFor
 \State \textbf{return with result } $\bm{p}$
@@ -992,12 +1022,12 @@ $\vert \bm{p}_{i_1} - \bm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iterations. A
 \end{algorithmic}
 \end{algorithm}
 
-\subsubsection{Properties of PBD}\label{sss:pbd-properties}
+\subsection{Properties of PBD}\label{ss:pbd-properties}
 Due to its simplicity and controllability, PBD is a popular choice for real-time simulations where visually plausible results are sufficient. 
 At the core of the PBD algorithm is the non-linear Gauss-Seidel type solver for constraint projections. Immediately making position
 updates from one constraint projection visible in the following constraint projections enables faster propagation of 
 constraints through the simulated body \cite{mueller2006}. However, the same property makes parallelization of the constraint projections 
-in lines 6-7 of \cref{alg:pbd-solver}
+in lines 8-9 of \cref{alg:pbd-solver}
 more challenging. Synchronization is required to make sure that constraints that involve the same particle do not run into race conditions. 
 Alternatively, graph coloring algorithms where constraints of different colors are guaranteed to work on separate sets of particles can be employed
 \textcolor{red}{(citation needed!)}. Due to the fact that constraints are handled individually, the solver is incapable of finding a 
@@ -1006,7 +1036,7 @@ The exact result depends on the order in which constraints are handled.
 
 The position update due to a single constraint $C$ in \cref{eq:pbd-update} is related to the Newton-Raphson method for finding roots of non-linear 
 functions $f \colon \mathbb{R} \to \mathbb{R}$ \cite{mueller2006}. There, the current guess $x_i \in \mathbb{R}$ for a root of $f$ is refined 
-using the following update formula \textcolor{red}{(Citation needed? Falls into the curriculum of a B.Sc.\)}
+using the following update formula \textcolor{red}{(Citation needed? Falls into the curriculum of a B.Sc.\ )}
 
 \begin{equation}\label{eq:newton-raphson}
     x_{i+1} = x_i - \frac{f(x_i)}{f\prime(x_0)}.
@@ -1015,20 +1045,20 @@ using the following update formula \textcolor{red}{(Citation needed? Falls into 
 \noindent Indeed, applying the Newton-Raphson update to 
 
 \begin{equation}\label{eq:newton-raphson-f}
-    f \colon \mathbb{R} \to \mathbb{R}, \lambda \mapsto C(\bm{p} + \lambda \bm{W} \nabla_{\bm{p}} C(\bm{p}))
+    f \colon \mathbb{R} \to \mathbb{R}, \lambda \mapsto C(\bm{p} + \lambda \bm{W} \nabla C(\bm{p}))
 \end{equation}
 
 \noindent yields
 
 \[
-    \lambda_{i+1} = \lambda_i - \frac{C(\bm{p} + \lambda_i \bm{W} \nabla_{\bm{p}} C(\bm{p}))}
-    {\nabla_{\bm{p}}C(\bm{p} + \lambda_i \nabla_{\bm{p}}C(\bm{p}))^T \bm{W} \nabla_{\bm{p}} C(\bm{p})}.
+    \lambda_{i+1} = \lambda_i - \frac{C(\bm{p} + \lambda_i \bm{W} \nabla C(\bm{p}))}
+    {\nabla C(\bm{p} + \lambda_i \nabla C(\bm{p}))^T \bm{W} \nabla C(\bm{p})}.
 \]
 
 \noindent and with $\lambda_0 = 0$ we arrive at 
 
 \[
-    \lambda_1 = -\frac{C(\bm{p})}{\nabla_{\bm{p}}^T \bm{W} \nabla_{\bm{p}} C(\bm{p})}
+    \lambda_1 = -\frac{C(\bm{p})}{\nabla^T C(\bm{p}) \bm{W} \nabla C(\bm{p})}
     = - \frac{C(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\bm{p}_i} C(\bm{p}) \vert^2}.
 \]
 
@@ -1038,7 +1068,7 @@ $\lambda_0 = 0$. The correspondence breaks down if $\lambda_0 \neq 0$ or if mult
 same constraint.
 
 Müller et al.\ \cite{mueller2006} claim that PBD is unconditionally stable since the projected positions $\bm{p}_i$ computed by the constraint 
-solver are physically valid in the sense that all constraints are satisfied and no extrapolation into the future takes place in lines 9-10 of
+solver are physically valid in the sense that all constraints are satisfied and no extrapolation into the future takes place in lines 7-8 of
 \cref{alg:pbd}. They further state that the only source of instabilities is the constraint solver itself, which is based on the Newton-Raphson 
 method. The position updates in \cref{eq:pbd-update-individual} are independent of the time step and solely depend on the shape of the
 constraints. At this point, it is worth taking into consideration that the constraint solver does not always succeed at moving particles to 
@@ -1053,7 +1083,7 @@ constraint -- in its entirety, but in the proximity of specific values.
 
 The main disadvantage of PBD is the fact that the stiffness depends on the iteration count and the chosen timestep \cite{mueller2006}. Again, 
 we take a look at
-a distance constraint with rest length 0 (\cref{eq:pbd-distance}). As discussed in \cref{sss:pbd-constraint-solver}, the remaining error after
+a distance constraint with rest length 0 (\cref{eq:pbd-distance}). As discussed in \cref{ss:pbd-constraint-projection}, the remaining error after
 $n_s$ solver iterations is simply $\vert \bm{p}_{i_1} - \bm{p}_{i-2} \vert (1-k)^{n_s}$. In the limit of infinite iterations
 
 \[
@@ -1065,15 +1095,290 @@ $n_s$ solver iterations is simply $\vert \bm{p}_{i_1} - \bm{p}_{i-2} \vert (1-k)
 infinite stiffness due to large iteration counts is prevented in this setting. However, the perceived stiffness still depends on the time
 step. In the limit of infinitely short time steps, the material is going to appear infinitely stiff. 
 
-While the simulated object's global linear and angular momentums are preserved, the linear momentums of individual particles are at risk of 
+While the simulated object's global linear and angular momentum are preserved, the linear momentums of individual particles are at risk of 
 being washed out by the PBD constraint solver \cite{bouaziz2014}. This is because even though the structure of the position updates 
-preserves global momentum,
-there is no punishment for moving individual particles away from their intertial positions. Indeed, the inertial positions are merely the 
-initial guesses for the constraint solver. This becomes evident either in the limit of 
-infinite iterations while multiplying with the stiffness $k_c$ directly, or in the limit of infinitely short time steps. In both cases,
-the simulated material will appear infinitely stiff, meaning that momentums of individual particles are not necessarily preserved.
+preserves global momentum, there is no punishment for moving individual particles away from their intertial positions. Generally, the 
+penalty for moving particles away from their inertial positions should increase with growing particle masses. However, in the PBD
+position update in \cref{eq:pbd-update-individual} it is only the ratio of the particle masses that matters. This can be seen by multiplying
+all inverse masses $w_i$ in \cref{eq:pbd-update-individual} with a constant factor $a \in \mathbb{R}^+$:
 
-\subsection{xPBD}\label{ss:xpbd}
+\begin{align*}
+    \Delta \bm{p}_i 
+    &= -\frac{C(\bm{p})}{\sum_{j \in \{ i_1, \ldots, i_{n_c} \}} aw_j \vert \nabla_{\bm{p}_j}C(\bm{p}) \vert^2 } aw_i \nabla_{\bm{p}_i} C(\bm{p}) \\
+    &= -\frac{C(\bm{p})}{\sum_{j \in \{ i_1, \ldots, i_{n_c} \}} \frac{aw_j}{aw_i} \vert \nabla_{\bm{p}_j}C(\bm{p}) \vert^2 } \nabla_{\bm{p}_i} C(\bm{p}) \\
+    &= -\frac{C(\bm{p})}{\sum_{j \in \{ i_1, \ldots, i_{n_c} \}} \frac{w_j}{w_i} \vert \nabla_{\bm{p}_j}C(\bm{p}) \vert^2 } \nabla_{\bm{p}_i} C(\bm{p})
+\end{align*}
+
+\noindent Note that the factor $a$ gets cancelled out, meaning that increasing or decreasing the weights of all particles in the simulation by a constant
+factor does not affect position updates. Washing out of individual momentums also becomes evident in the limit of infinite iterations while multiplying 
+with the stiffness $k_c$ directly, or in the limit of infinitely short time steps. In both cases, the simulated material will appear infinitely stiff, 
+meaning that momentums of individual particles are not necessarily preserved.
+
+\subsection{xPBD Constraint Projection}\label{ss:xpbd-constraint-projection}
+The derivation of xPBD \cite{macklin2016} starts from an implicit position-level time discretization of Newton's ODE 
+(\cref{eq:implicit-positional-detailed}), which is restated here again for the sake of convenience
+
+\begin{equation}\label{eq:implicit-positional-detailed-2}
+    \bm{M}(\bm{q}_{n+1} - \bm{q}_n - h\bm{v}_n) = h^2(\bm{f_\text{ext}} - \sum_j \nabla \psi_j(\bm{q}_{n+1})).
+\end{equation}
+
+\noindent Let $m$ be the number of particles in the simulated body and $r$ be the number of conservative potentials $\psi_j$ with $j \in [1, r]$.
+In the context of xPBD, $\bm{q}, \bm{v}, \bm{f}_{\text{ext}} \in \mathbb{R}^{3m}$ and $\psi_j \colon \mathbb{R}^{3m} \to \mathbb{R}$. Simple 
+manipulation of \cref{eq:implicit-positional-detailed-2} yields
+
+\begin{equation}\label{eq:implicit-positional-detailed-3}
+    \bm{M} \left( \bm{q}_{n+1} - \bm{\tilde{q}} \right) = - h^2 \sum_j \nabla \psi_j(\bm{q}_{n+1}),
+\end{equation}
+
+\noindent where $\bm{\tilde{q}} = \bm{q}_n + h\bm{v}_n + h^2 \bm{M}^{-1} \bm{f}_{\text{ext}}$ is the predicted, inertial position. XPBD builds on
+top of the compliant constraint formulation discussed in \cref{ss:compliant-constraints}. The key results relevant to the derivation are restated
+here again. In the compliant constraint framework each $\psi_j$ can be written in terms of some positional constraint function $C_j$ 
+
+\begin{equation}\label{eq:xpbd-potential-j}
+    \psi_j(\bm{q}) = \frac{1}{2} \alpha^{-1}_j C_j(\bm{q})^2,
+\end{equation}
+
+\noindent where $\alpha_j$ is the inverse stiffness of the constraint. If the constraint functions are grouped into a vector-valued function
+$\bm{C}$ with $\bm{C}(\bm{q}) = [C_1(\bm{q}), \ldots, C_r(\bm{q})]^T$ and the inverse stiffnesses are aggregrated into the diagonal matrix
+$\bm{\alpha} = \text{diag}(\alpha_1, \ldots, \alpha_r)$, then
+
+\begin{equation}\label{eq:xpbd-potential}
+    \psi(\bm{q}) \coloneq \sum_j \psi_j(\bm{q}) = \frac{1}{2}\bm{C}(\bm{q})^T \bm{\alpha}^{-1} \bm{C}(\bm{q}).
+\end{equation}
+
+\noindent where $\psi$ is the combined internal energy potential. The force from the internal potential is given by
+
+\begin{equation}\label{eq:xpbd-internal-force}
+    \bm{f}_{\text{int}} = -\nabla \psi(\bm{q}) = -\nabla \bm{C}(\bm{q})^T \bm{\alpha}^{-1} \bm{C}(\bm{q}).
+\end{equation}
+
+\noindent Plugging the internal force $\bm{f}_{\text{int}}$ into \cref{eq:implicit-positional-detailed-3} and pulling $h^2$ into the 
+compliance matrix $\bm{\alpha}$ results in
+
+\[
+    \bm{M}(\bm{q}_{n+1} - \bm{\tilde{q}}) = - \nabla C(\bm{q}_{n+1})^T \bm{\tilde{\alpha}}^{-1} \bm{C}(\bm{q}_{n+1}),
+\]
+
+\noindent where $\bm{\tilde{\alpha}} = \frac{\bm{\alpha}}{h^2}$. Now, the internal force $\bm{f}_{\text{int}}$ is split into a directional 
+and a scalar component by introducing the Lagrange multiplier
+
+\begin{equation}\label{eq:lagrange-multiplier}
+    \bm{\lambda} = -\bm{\tilde{\alpha}\bm{C}(\bm{q})}
+\end{equation}
+
+\noindent according to the compliant constraint formulation by Servin et al.\ \cite{servin2006}. This leads to the following non-linear system
+of equations in terms of $\bm{q}_{n+1}$ and $\bm{\lambda}_{n+1}$:
+
+\begin{align}
+    \bm{M}(\bm{q}_{n+1} - \bm{\tilde{q}}) - \nabla (\bm{q}_{n+1})^T \bm{\lambda}_{n+1} &= \bm{0} \label{eq:xpbd-g} \\
+    \bm{C}(\bm{q}_{n+1}) + \bm{\tilde{\alpha}}\bm{\lambda}_{n+1} &= \bm{0} \label{eq:xpbd-h}.
+\end{align}
+
+\noindent The left-hand side of \cref{eq:xpbd-g} and \cref{eq:xpbd-h} are referred to as $\bm{g}$ and $\bm{h}$, respectively. The non-linear 
+system of equations is solved using a fixed-point iteration based on Newton's method. We replace the index $(n+1)$ indicating the current
+time step by the index of the current guess in the fixed-point iteration indicated by $(i+1)$ for the sake of clarity. During each iteration, 
+guesses $\bm{q}_i, \bm{\lambda}_i$ for a solution of the non-linear system are improved by updates $\Delta \bm{q}, \Delta \bm{\lambda}$ to 
+yield new iterates $\bm{q}_{i+1}, \bm{\lambda}_{i+1}$. The updates are determined by solving the following linear system of equations, 
+which arises from the linearization of \cref{eq:xpbd-g} and \cref{eq:xpbd-h}:
+
+\begin{equation}\label{eq:xpbd-lse}
+    \begin{pmatrix}
+        \bm{K} & \bm{-\nabla\bm{C}^T(\bm{q}_i)} \\
+        \bm{\nabla \bm{C}(\bm{q}_i)} & \bm{\tilde{\alpha}}
+    \end{pmatrix}
+    \begin{pmatrix}
+        \bm{\Delta \bm{p}} \\
+        \bm{\Delta \bm{\lambda}}
+    \end{pmatrix}
+    = -
+    \begin{pmatrix}
+    \bm{g}(\bm{q}_i, \bm{\lambda}_i) \\
+    \bm{h}(\bm{q}_i, \bm{\lambda}_i)
+    \end{pmatrix},
+\end{equation}
+
+\noindent Here, $\bm{K} = \frac{\delta \bm{g}}{\delta \bm{q}}(\bm{q}_i)$. At this point, two simplifying assumptions are made.
+
+\textbf{Assumption 1:} Computing $K$ requires evaluating second derivatives of the constraint functions
+$C_j$, which is expensive and error-prone. In order to simplify and to re-establish a connection to PBD (\cref{ss:pbd-constraint-projection}), 
+Macklin et al.\ \cite{macklin2016} drop geometric stiffness and constraint Hessians by approximating $\bm{K} \approx \bm{M}$. 
+According to the authors, this
+simplification does not affect the solution that the fixed-point iteration converges to. However, altering the system matrix decreases the 
+convergence rate akin to a Quasi-Newton method for solving non-linear systems of equations.
+
+\textbf{Assumption 2:} Macklin et al.\ \cite{macklin2016} further assume that $\bm{g}(\bm{q}_i, \bm{\lambda}_i) = \bm{0}$. If initial guesses
+$\bm{q}_0 = \bm{\tilde{q}}$ and $\bm{\lambda}_0 = \bm{0}$ are used, plugging into \cref{eq:xpbd-g} shows that this assumption is trivially
+satisfied during the first iteration. To understand the justification for further iterations, it is helpful to take a look at the simplified
+version of \cref{eq:xpbd-lse} with both assumptions in place:
+
+\begin{equation}\label{eq:xpbd-simplified-lse}
+    \begin{pmatrix}
+        \bm{M} & \bm{-\nabla\bm{C}^T(\bm{q}_i)} \\
+        \bm{\nabla \bm{C}(\bm{q}_i)} & \bm{\tilde{\alpha}}
+    \end{pmatrix}
+    \begin{pmatrix}
+        \bm{\Delta \bm{p}} \\
+        \bm{\Delta \bm{\lambda}}
+    \end{pmatrix}
+    = -
+    \begin{pmatrix}
+    \bm{0} \\
+    \bm{h}(\bm{q}_i, \bm{\lambda}_i)
+    \end{pmatrix}.
+\end{equation}
+
+\noindent After the first iteration, the upper row of \cref{eq:xpbd-simplified-lse} is satisfied. Thus, after the first iteration with 
+$\bm{q}_0 = \bm{\tilde{q}}$ and $\bm{\lambda}_0 = \bm{0}$, it is
+
+\begin{equation*}
+\begin{split}
+    \bm{0} = \bm{M}\Delta\bm{q} - \nabla \bm{C}(\bm{q}_0)^T \Delta \bm{\lambda} &= \bm{M}(\bm{q}_1 - \bm{q}_0) - \nabla \bm{C}(\bm{q}_0)^T 
+    (\bm{\lambda}_1 - \bm{\lambda}_0) \\
+    &= \bm{M}(\bm{q}_1 - \bm{\tilde{q}}) - \nabla \bm{C}(\bm{q}_0)^T \bm{\lambda}_1.
+\end{split}
+\end{equation*}
+
+\noindent Note how the last term is almost identical to $\bm{g}(\bm{q}_1, \bm{\lambda}_1) = \bm{M}(\bm{q}_1 - \bm{\tilde{q}}) - \nabla 
+\bm{C}(\bm{q}_1)^T \bm{\lambda}_1$, the only difference being that $\nabla \bm{C}(\bm{q}_0)^T$ is replaced by $\nabla \bm{C}(\bm{q}_1)^T$. Thus, 
+Macklin et al.\ \cite{macklin2016} argue that $\bm{g}(\bm{q}_1, \bm{\lambda}_1) \approx \bm{0}$ as well, as long as $\nabla \bm{C}(\bm{q})$ 
+does not change too quickly.
+
+Since the mass matrix $\bm{M}$ in the upper-left block of the system matrix of \cref{eq:xpbd-simplified-lse} is invertible by design, it is possible
+to take the Schur complement with respect to $\bm{M}$ to obtain a reduced system in terms of $\Delta \bm{\lambda}$:
+
+\begin{equation}\label{eq:xpbd-schur}
+    (\nabla \bm{C}(\bm{q}_i) \bm{M}^{-1} \nabla \bm{C}(\bm{q}_i)^T + \bm{\tilde{\alpha}}) \Delta \bm{\lambda} = -\bm{C}(\bm{q}_i) - 
+    \bm{\tilde{\alpha}}\bm{\lambda}_i
+\end{equation}
+
+\noindent The position update $\Delta \bm{q}$ can be derived from $\Delta \bm{\lambda}$ via the formula
+
+\begin{equation}\label{eq:xpbd-position-update}
+    \Delta \bm{q} = \bm{M}^{-1} \nabla \bm{C}(\bm{q}_i)^T \Delta \bm{\lambda}.
+\end{equation}
+
+Up until here, all constraints were handled together during each iteration. In order to make a connection to PBD and to return to the framework of a
+non-linear Gauss-Seidel solver \cref{ss:pbd-framework}, it is necessary to specify how to solve a single constraint. To that end we rewrite 
+\cref{eq:xpbd-schur} for a single constraint $C_j$ and get the update for its scalar Lagrange multiplier $\lambda_j$ by computing
+
+\begin{equation}\label{eq:xpbd-lambda-j}
+    \Delta \lambda_j = \frac{-C_j(\bm{q}_i) - \tilde{\alpha}_j \lambda_{ji}}{\nabla C_j(\bm{q}_i) \bm{M}^{-1} \nabla C_j(\bm{q}_i)^T + \tilde{\alpha}_j}.
+\end{equation}
+
+\noindent Here, $\lambda_{ji}$ is the value of the Lagrange multiplier of the $j$-th constraint after the $i$-th solver iteration. The position update for 
+a single particle with index $l$ contributing to $C_j$ becomes
+
+\begin{equation}\label{eq:xpbd-position-update-i}
+    \Delta \bm{q}_l = w_l \nabla_{\bm{q}_l} \bm{C}_j(\bm{q}_i)^T \Delta \bm{\lambda}_j.
+\end{equation}
+
+\noindent The position update remains unchanged from \cref{eq:xpbd-position-update}, but note that $\Delta \bm{\lambda}$ is a scalar once only a single constraint 
+$C_j$ is considered. Thus, the position update is a multiple of the mass-weighted gradient, just like in PBD (\cref{eq:pbd-update-individual}).
+
+In summary, we simply compute $\Delta \lambda_j$ via \cref{eq:xpbd-lambda-j} and use it to 
+update $\lambda_{j+1} = \lambda_j + \Delta \lambda$ and to determine $\Delta \bm{q}$ via \cref{eq:xpbd-position-update} while solving the $j$-th constraint. 
+This leads to a natural extension of the PBD algorithm, where the general structure in \cref{alg:pbd} is preserved. The only changes occur in the 
+computation of the scaling factor for the 
+mass-weighted constraint gradient in \textsc{projectConstraints} in line 5. The xPBD version of \textsc{projectConstraints} is given in 
+\cref{alg:xpbd-solver}. Note that \cref{alg:xpbd-solver} is specified in terms of the projection points $\bm{p}$ or $\bm{p}_i$ instead of the 
+positions $\bm{q}$ or $\bm{q}_i$ used in \cref{eq:xpbd-position-update} and \cref{eq:xpbd-lambda-j} in order to maintain notational consistency with the
+PBD solver in \cref{alg:pbd-solver}.
+
+\begin{algorithm}
+\caption{xPBD Constraint Solver}\label{alg:xpbd-solver}
+\begin{algorithmic}[1]
+\Procedure{projectConstraints}{$C_1, \ldots, C_r, \bm{p}_1, \ldots, \bm{p}_m$}
+\State \textbf{for} all constraints $C_j$ \textbf{do} $\lambda_j = 0$
+\For{all iterations $n_s$}
+\ForNoDo{all constraints $C_j$ with cardinality $n_j$, particle indices $i_1, \ldots, i_{n_j}$,}
+\StatexIndent[3] Lagrange multiplier $\lambda_j$ \algorithmicdo
+\If{$C_j$ is an inequality constraint and $C_j(\bm{p}) \geq 0$}
+\State \textbf{continue} to next constraint
+\EndIf
+\State $\Delta \lambda_j = \frac{-C_j(\bm{p}) - \tilde{\alpha}_j \lambda_{j}}{\nabla C_j(\bm{p}) \bm{M}^{-1} \nabla C_j(\bm{p})^T + \tilde{\alpha}_j}$
+\State $\lambda_{j} = \lambda_{j} + \Delta \lambda_j$
+\For{all particles $i \in \{ i_1, \ldots, i_{n_j} \}$}
+\State $\Delta \bm{p}_i = -\frac{C_j(\bm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_j} \}} w_i \vert \nabla_{\bm{p}_i}C_j(\bm{p}) \vert^2 } w_i 
+\nabla_{\bm{p}_i} C_j(\bm{p})$
+\State $\bm{p}_i = \bm{p}_i + \Delta \bm{p}_i$
+\EndFor
+\EndFor
+\EndFor
+\State \textbf{return with result } $\bm{p}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Properties of xPBD}\label{ss:xpbd-properties}
+xPBD is a natural extension of PBD that addresses some of PBD's shortcoming while maintaining the simplicity of the original algorithm. Due to
+the similarity of both algorithms, PBD implementations can readily be extended to xPBD at the minor cost of storing an additional variable per 
+constraint. 
+
+The derivation of the xPBD constraint projection builds on the concept of compliant constraints developed by Servin et al.\ 
+\cite{servin2006}. As discussed in \cref{ss:compliant-constraints}, the compliant constraint formulation often allows handling infinite stiffness by
+setting $\bm{\alpha} = \bm{0}$. Indeed, a closer look at the PBD update formula \cref{eq:pbd-update-individual} and the xPBD update formulas
+in \cref{eq:xpbd-lambda-j}, \cref{eq:xpbd-position-update-i} reveals that xPBD and PBD are equivalent if the compliance term $\tilde{\alpha}_j$ of 
+constraint $C_j$ is zero. This matches with the observation that bodies simulated by PBD are infinitely stiff in the limit of infinite iterations 
+(\cref{ss:pbd-properties}). If $\tilde{\alpha}_j \neq 0$, the compliance terms in \cref{eq:xpbd-lambda-j} regularize the constraint in such a 
+way that the constraint force is limited and corresponds to the constraint potential \cite{macklin2016}. This addresses the issue of coupling
+between iteration count and stiffness in the original PBD algorithm (\cref{ss:pbd-properties}). Since the time step is also baked into 
+$\tilde{\alpha}_j$, coupling between time step size and stiffness is also reduced.
+
+Another advantage of the compliant constraint 
+formulation is that large stiffness values can be often be hidden inside of the Lagrange multipliers $\bm{\lambda}$ (\cref{eq:lagrange-multiplier}), 
+which are then pulled out of the system matrix of resulting LSEs by treating $\bm{\lambda}$ as an unknown. This is also exploited in the xPBD
+derivation in \cref{eq:xpbd-lse}. Note how the lower-right block of the system matrix only contains the 
+small compliance term $\bm{\tilde{\alpha}}$. Additionally, $\nabla \bm{C}(\bm{q}_i)$ in the lower-left and upper-right blocks should not have 
+any large entries since the large stiffness values are pulled out of the constraints in $\cref{eq:xpbd-potential-j}$. However, the upper-left 
+block of the system matrix $\bm{K}$ given by 
+
+\begin{equation}\label{eq:xpbd-K}
+    \bm{K} = \frac{\delta \bm{g}}{\delta \bm{q}}(\bm{q}_i) = \bm{M} - \frac{\delta \nabla \bm{C}(\bm{q_i})^T \bm{\lambda_i}}{\delta \bm{q}_i}
+\end{equation}
+
+\noindent still contains references to $\bm{\lambda}$ which contains the potentially large constraint stiffnesses. Due to the first assumption $\bm{K} 
+\approx \bm{M}$, these occurrences of $\bm{\lambda}$ are also removed and the system matrix of the simplified LSE in 
+\cref{eq:xpbd-simplified-lse} is specified in terms of small compliances only. As a result, the simplified LSE has favorable numerical properties 
+(\cref{ss:compliant-constraints}).
+
+The discussion above highlights the importance of pulling large stiffness values out of the constraints in \cref{eq:xpbd-potential-j}. The potential
+$\psi_j(\bm{q}) = \frac{1}{2} \alpha^{-1}_j C_j(\bm{q})^2$ could also be written as $\psi_j(\bm{q}) = \frac{1}{2} C^{\prime}_j(\bm{q})^2$ in terms of 
+the alternative constraint function $C^{\prime}_j$ given by
+
+\[
+    C^{\prime}_j(\bm{q}) = \alpha^{-1/2}C(\bm{q}).
+\]
+
+\noindent However, this would result in large constraint gradients $\nabla \bm{C}^{\prime}(\bm{q}_i)$, meaning that even the system matrix of the simplified LSE
+(\cref{eq:xpbd-simplified-lse}) would have large entries.
+
+\begin{itemize}
+    \item Discuss the justifications for the assumptions
+        \begin{itemize}
+            \item Convergence properties of Quasi-Newton methods for NLSE. Hessian approximation eventually needs to be close to the Hessian at the solution
+                to guarantee convergence. Whether $\bm{K} \approx \bm{M}$ is difficult to say, but it is clear that pulling out large stiffness terms helps
+                with keeping the magnitudes of the entries of $\bm{K}$ small, that the error from the first approximation is kept smaller as well. Either way,
+                these convergence properties are for Newton's method where the LSE is solved directly. 
+            \item I believe that assumption 1 simply assumes that $\nabla C$ is constant across the time step
+            \item Even though constraint gradients don't change too drastically if large stiffness values are pulled out, they appear in a product with 
+                $\lambda$, which usually end up being pretty large for constraint gradients. Thus, it is likely that the value of $\bm{g}$ is sensitive
+                even to small changes in the constraint gradients (or alternatively small constraint Hessians).
+            \item The justification of the second assumption is based on the choice $\bm{q}_0 = \bm{\tilde{q}}, \bm{\lambda} = \bm{0}$. It seems quite obvious
+                that $\bm{\lambda} = \bm{0}$ is not a particularly good initial guess if \cref{eq:lagrange-multiplier} is taken into account.
+            \item Due to the fact that we assume $\bm{g}(\bm{q}_i, \bm{\lambda}_i) = 0$, all occurrences of $\bm{\tilde{q}}$ are removed from the update
+                equations of xPBD. $\bm{\tilde{q}}$ is only used as the initial guess. Due to the compliance terms in the update formulas, the degree to
+                which individual momenta can be washed out is reduced. My notes show that increasing masses by a constant factor actually does decrease the
+                size of the position updates taken, but the effect is hard to quantify. Still, the masses only affect how mobile a particle is in general,
+                without taking directionality into account. Moving towards the initial position should be rewarded, moving away from it should be punished.
+                This is not possible if $\bm{\tilde{q}}$ does not appear in the update formulas.
+        \end{itemize}
+    \item Derivation is based on implicit Euler integration, numerical damping is introduced and depends on the chosen time step. In that sense, the 
+        stiffness does stil depend on the time step.
+    \item $\lambda$ only correspond to force magnitudes if there the constraint gradients are unit vectors. Tempted to think that if only one type of
+        constraints is used, $\lambda$ can still be picked to represent the force magnitude, but this would only be true if the norm of the constraint
+        gradients would be constant across the entire domain, which is generally not the case.
+    \item General properties of Gauss-Seidel solver apply here again.
+\end{itemize}
 
 \section{Projective Dynamics}\label{s:pd}
 
@@ -1175,47 +1480,47 @@ gradient $\bm{F}^T$.
 
 \subsection{Projective Implicit Euler Solver}\label{ss:pd-solver}
 We start by substituting the PD energy potentials (\cref{eq:pd-potentials}) into the variatonal form of implicit Euler integration
-(\cref{eq:variational-implicit}). With abuse of notation, let $\bm{p}_i$ denote the auxiliary variable of the $i$-th constraint or 
-the family of auxiliary variables $(\bm{p}_i)_{i \in \mathcal{I}}$, where $\mathcal{I}$ is the index set of the 
-constraints. This yields the following joint optimization problem over the positions $\bm{q}$ and auxiliary variables $\bm{p}_i$ 
+(\cref{eq:variational-implicit}). With abuse of notation, let $\bm{p}_j$ denote the auxiliary variable of the $j$-th constraint or 
+the family of auxiliary variables $(\bm{p}_j)_{j \in \mathcal{J}}$, where $\mathcal{J}$ is the index set of the 
+constraints. This yields the following joint optimization problem over the positions $\bm{q}$ and auxiliary variables $\bm{p}_j$ 
 
 \begin{equation}\label{eq:pd-minimization}
-    \min_{\bm{q}, \bm{p}_i} \tilde{g}(\bm{q}, \bm{p}_i) = 
-    \min_{\bm{q}, \bm{p}_i} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
-    - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i).
+    \min_{\bm{q}, \bm{p}_j} \tilde{g}(\bm{q}, \bm{p}_j) = 
+    \min_{\bm{q}, \bm{p}_j} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_j \frac{w_j}{2} \norm{\bm{G}_j\bm{q}
+    - \bm{p}_j}^2_F + \delta_{\bm{C}_j}(\bm{p}_j).
 \end{equation}
 
 \noindent This optimization problem is optimized using a local/global alternating minimization technique. Local and global steps 
 are carried out sequentially for a fixed number of iterations during each timestep. 
 
 The local step consists of minimizing the objective function \cref{eq:pd-minimization} over 
-the auxiliary variables $\bm{p}_i$ while keeping the positions $\bm{q}$ fixed. This corresponds to finding the projection points of 
+the auxiliary variables $\bm{p}_j$ while keeping the positions $\bm{q}$ fixed. This corresponds to finding the projection points of 
 the current positions onto the constraint manifolds used to define the PD energy potentials. Each constraint has its own 
 set of auxiliary variables, meaning that the projection steps can be carried out independently. For each energy potential, we solve the 
 following minimization problem
 
 \begin{equation}\label{eq:pd-local-minimization}
-    \min_{\bm{p}_i} \tilde{g}(\bm{q}, \bm{p}_i) =
-    \min_{\bm{p}_i} \frac{w_i}{2}\norm{\bm{G}_i\bm{q} - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i).
+    \min_{\bm{p}_j} \tilde{g}(\bm{q}, \bm{p}_j) =
+    \min_{\bm{p}_j} \frac{w_j}{2}\norm{\bm{G}_j\bm{q} - \bm{p}_j}^2_F + \delta_{\bm{C}_j}(\bm{p}_j).
 \end{equation}
 
 In the global step, the minimization problem \cref{eq:pd-minimization} is optimized over the positions $\bm{q}$ while keeping the auxiliary 
-variables $\bm{p}_i$ fixed.
+variables $\bm{p}_j$ fixed.
 This corresponds to moving the positions $\bm{q}$ according to their momentum and external forces while trying to maintain short distances
 to the projections points as defined by the distance measures of the PD energy potentials. The optimization problem for the global solve is 
 given by
 
 \begin{equation}\label{eq:pd-global-minimization}
-    \min_{\bm{q}} \tilde{g}(\bm{q}, \bm{p}_i) =
-    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q} - \bm{p_i}}^2_F.
+    \min_{\bm{q}} \tilde{g}(\bm{q}, \bm{p}_j) =
+    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_j \frac{w_j}{2} \norm{\bm{G}_j\bm{q} - \bm{p_j}}^2_F.
 \end{equation}
 
 \noindent The gradient of the objective function with respect to the positions $\nabla_{\bm{q}} 
-\tilde{g}(\bm{q}, \bm{p}_i)$ is given by 
+\tilde{g}(\bm{q}, \bm{p}_j)$ is given by 
 
 \begin{equation}\label{eq:pd-gradient-q}
-    \nabla_{\bm{q}}\tilde{g}(\bm{q}, \bm{p}_i) = \frac{\bm{M}}{h^2}(\bm{q} - \bm{s}_n) + \sum_i w_i \bm{G}^T_i \bm{G}_i \bm{q}
-    + \sum_i w_i \bm{G}^T_i \bm{p}_i.
+    \nabla_{\bm{q}}\tilde{g}(\bm{q}, \bm{p}_j) = \frac{\bm{M}}{h^2}(\bm{q} - \bm{s}_n) + \sum_j w_j \bm{G}^T_j \bm{G}_j \bm{q}
+    + \sum_j w_j \bm{G}^T_j \bm{p}_j.
 \end{equation}
 
 \noindent By design of the PD energy potentials, the objective function of the global optimization problem is quadratic in the positions 
@@ -1223,14 +1528,14 @@ $\bm{q}$. Consequently, the minimization can be carried out in a single step by 
 conditions are satisfied \cite{nocedal2006}. This leads to the following system of equations
 
 \begin{equation}\label{eq:pd-global-system}
-    (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i.
+    (\frac{\bm{M}}{h^2} + \sum_j w_j \bm{G}_j^T \bm{G}_j)\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_j w_j \bm{G}_j^T \bm{p}_j.
 \end{equation}
 
 \noindent In the rest of \cref{s:pd} we refer to the system matrix of the global system by 
-$\bm{S} \coloneqq \frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i$.
+$\bm{S} \coloneqq \frac{\bm{M}}{h^2} + \sum_j w_j \bm{G}_j^T \bm{G}_j$.
 
 Note that $\bm{S}$ is constant as long as the constraint set remains unchanged. The right side needs to be recomputed in every 
-iteration as the projections $\bm{p}_i$ change during the local optimization steps.  An overview over the algorithm is given in \cref{alg:pd}.
+iteration as the projections $\bm{p}_j$ change during the local optimization steps.  An overview over the algorithm is given in \cref{alg:pd}.
 
 \begin{algorithm}
 \caption{Projective Implicit Euler Solver}\label{alg:pd}
@@ -1239,10 +1544,10 @@ iteration as the projections $\bm{p}_i$ change during the local optimization ste
 \State $\bm{s}_n = \bm{q}_n + h\bm{v}_n + h^2\bm{M}^{-1}\bm{f}_{\text{ext}}$
 \State $\bm{q}_k = \bm{s}_n$
 \For{all iterations}
-\For{constraints $i$}
-\State $\bm{p}_i = \min_{\bm{p}_i} \frac{w_i}{2}\norm{\bm{G}_i\bm{q_k} - \bm{p}_i}^2_F + \delta_{\bm{C}_i}(\bm{p}_i)$
+\For{constraints $j$}
+\State $\bm{p}_j = \min_{\bm{p}_j} \frac{w_j}{2}\norm{\bm{G}_j\bm{q_k} - \bm{p}_j}^2_F + \delta_{\bm{C}_j}(\bm{p}_j)$
 \EndFor
-\State $\bm{q}_{k} \gets$ solution of $\bm{S}\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i$.
+\State $\bm{q}_{k} \gets$ solution of $\bm{S}\bm{q} = \frac{\bm{M}}{h^2}\bm{s}_n + \sum_j w_j \bm{G}_j^T \bm{p}_j$.
 \EndFor
 \State \textbf{return with } $\bm{q}_{n+1} = \bm{q}_k, \bm{v}_{n+1} = (\bm{q}_{n+1} - \bm{q}_n) / h$
 \EndProcedure
@@ -1297,19 +1602,19 @@ context of real-time simulations.
 \subsection{Projective Dynamics as a Special Case of Quasi-Newton Methods}\label{ss:pd-quasi-newton}
 In PD, the variational form of implicit Euler integration that results from restricting to PD energy potentials (\cref{eq:pd-minimization}) 
 is solved by using a specialized local/global alternating minimization technique (\cref{ss:pd-solver}). If the projection points 
-$\bm{p}^i_{\bm{q}}$ with 
+$\bm{p}^j_{\bm{q}}$ with 
 
 \[
-    \psi_i({\bm{q}}) = \min_{\bm{p}} \frac{w_i}{2} \norm{\bm{Gq} - \bm{p}}^2_F + \delta_{\bm{C}}(\bm{p})
-    = \frac{w_i}{2} \norm{\bm{Gq} - \bm{p}^i_\bm{q}}^2_F
+    \psi_j({\bm{q}}) = \min_{\bm{p}} \frac{w_j}{2} \norm{\bm{Gq} - \bm{p}}^2_F + \delta_{\bm{C}}(\bm{p})
+    = \frac{w_j}{2} \norm{\bm{Gq} - \bm{p}^i_\bm{q}}^2_F
 \]
 
-\noindent are considered functions of $\bm{q}$ with $\bm{p}_i(\bm{q}) = \bm{p}^i_{\bm{q}}$, then the equivalent optimization problem
+\noindent are considered functions of $\bm{q}$ with $\bm{p}_j(\bm{q}) = \bm{p}^j_{\bm{q}}$, then the equivalent optimization problem
 
 \begin{equation}\label{eq:pd-minimization-q}
     \min_{\bm{q}} g(\bm{q}) = 
-    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
-    - \bm{p_i}(\bm{q})}^2_F
+    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_j \frac{w_j}{2} \norm{\bm{G}_j\bm{q}
+    - \bm{p_j}(\bm{q})}^2_F
 \end{equation}
 
 \noindent can be solved using general purpose algorithms for unconstrained optimization, including Newton's method (\cref{sss:newton-method}),
@@ -1322,13 +1627,13 @@ methods mentioned above. Liu et al. \cite{liu2017} show that \textcolor{red}{(ma
 is given by
 
 \begin{equation}\label{eq:pd-gradient-qn}
-    \nabla g(\bm{q}) = \frac{\bm{M}}{h^2}(\bm{q} - \bm{s}_n) + \sum_i w_i \bm{G}^T_i \bm{G}_i \bm{q}
-    + \sum_i w_i \bm{G}^T_i \bm{p}_i(\bm{q}).
+    \nabla g(\bm{q}) = \frac{\bm{M}}{h^2}(\bm{q} - \bm{s}_n) + \sum_j w_j \bm{G}^T_j \bm{G}_j \bm{q}
+    + \sum_j w_j \bm{G}^T_j \bm{p}_j(\bm{q}).
 \end{equation}
 
-Surprisingly, this is the same as the gradient $\nabla_{\bm{q}} \tilde{g}(\bm{q}, \bm{p}_i)$ of the global optimization problem of the original
-PD algorithm (\cref{eq:pd-gradient-q}). Thus, the gradient is unaffected by whether $\bm{p}_i$ is considered constant or a function
-$\bm{p}_i(\bm{q})$ of the positions $\bm{q}$. In Newton's method, the search direction for the current iteration $\bm{r}^N_k$ is given
+Surprisingly, this is the same as the gradient $\nabla_{\bm{q}} \tilde{g}(\bm{q}, \bm{p}_j)$ of the global optimization problem of the original
+PD algorithm (\cref{eq:pd-gradient-q}). Thus, the gradient is unaffected by whether $\bm{p}_j$ is considered constant or a function
+$\bm{p}_j(\bm{q})$ of the positions $\bm{q}$. In Newton's method, the search direction for the current iteration $\bm{r}^N_k$ is given
 by $-(\nabla^2 g(\bm{q}))^{-1} \nabla g(\bm{q})$, which is a descent direction if $\nabla^2 g(\bm{q})$ is positive definite 
 (\cref{sss:newton-method}). In Quasi-Newton methods, the true Hessian $\nabla^2 g(\bm{q})$ is approximated by some positive definite matrix $\bm{B}_k$ 
 instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$ -- i.e.\ the system matrix 
@@ -1336,15 +1641,15 @@ instead (\cref{sss:quasi-newton}). If $\bm{B}_k = \bm{S}$ -- i.e.\ the system ma
 
 \[
     \bm{S}^{-1} \nabla g(\bm{q}) = 
-    \bm{q} - (\frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i)^{-1} 
-    (\frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i \bm{G}_i^T \bm{p}_i(\bm{q}))
+    \bm{q} - (\frac{\bm{M}}{h^2} + \sum_j w_j \bm{G}_j^T \bm{G}_j)^{-1} 
+    (\frac{\bm{M}}{h^2}\bm{s}_n + \sum_j w_j \bm{G}_j^T \bm{p}_j(\bm{q}))
 \]
 
 \noindent Note that 
 
 \[
-    \bm{q}^* \coloneqq \bm{S}^{-1} (\frac{\bm{M}}{h^2}\bm{s}_n + \sum_i w_i 
-    \bm{G}_i^T \bm{p}_i(\bm{q}))
+    \bm{q}^* \coloneqq \bm{S}^{-1} (\frac{\bm{M}}{h^2}\bm{s}_n + \sum_j w_j 
+    \bm{G}_j^T \bm{p}_j(\bm{q}))
 \]
 
 \noindent is exactly the solution of the global linear system from PD in \cref{eq:pd-global-system}. Together
@@ -1385,14 +1690,14 @@ method
 
 \begin{equation}\label{eq:pd-minimization-q2}
     \min_{\bm{q}} g(\bm{q}) = 
-    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_i \frac{w_i}{2} \norm{\bm{G}_i\bm{q}
-    - \bm{p_i}(\bm{q})}^2_F
+    \min_{\bm{q}} \frac{1}{2h^2} \norm{\bm{M}^{1/2}(\bm{q} - \bm{s}_n)}^2_F + \sum_j \frac{w_j}{2} \norm{\bm{G}_j\bm{q}
+    - \bm{p_j}(\bm{q})}^2_F
 \end{equation}
 
 \noindent and the global system matrix $\bm{S}$ which is used as the constant Hessian approximation
 
 \begin{equation}\label{eq:global-matrix}
-    \bm{S} \coloneqq \frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i  
+    \bm{S} \coloneqq \frac{\bm{M}}{h^2} + \sum_j w_j \bm{G}_j^T \bm{G}_j  
 \end{equation}
 
 \noindent are stated here once more for convenience.
@@ -1470,26 +1775,26 @@ algorithm.
 In order to achieve satisfactory performance when applying the L-BFGS method to the general form of the implicit Euler integration 
 (\cref{eq:variational-implicit}) without the need to restrict to PD energy potentials (\cref{eq:pd-potentials}), a suitable
 candidate for the initial Hessian approximation $\bm{B}_0$ or its inverse $\bm{H}_0$ needs to be found. The choice $\bm{B}_0 = 
-\bm{S} = \frac{\bm{M}}{h^2} + \sum_i w_i \bm{G}_i^T \bm{G}_i$ from \cref{alg:pd-lbfgs} cannot be applied to the general setting 
-without modification as the matrices $\bm{G}_i$ are taken directly from the definitions of the individual PD energy potentials.
+\bm{S} = \frac{\bm{M}}{h^2} + \sum_j w_j \bm{G}_j^T \bm{G}_j$ from \cref{alg:pd-lbfgs} cannot be applied to the general setting 
+without modification as the matrices $\bm{G}_j$ are taken directly from the definitions of the individual PD energy potentials.
 
 We focus on the setting of 3-manifold simplicial complexes where energy potentials are defined for each tetrahedron and the
 energy of the entire body is the sum of the individual tetrahedral energies \textcolor{red}{(refer to the appropriate section)}.
 As shown in \cref{ss:pd-potentials}, the strain energy of a single tetrahedron can be emulated with special PD strain 
-potentials (\cref{eq:pd-strain}). Here $\bm{G}_i = \bm{A}_i$, where $\bm{A}_i$ is the linear operator that maps $\bm{q}$ 
-to the tranpose of the deformation gradient $\bm{F}^T_i$, $\bm{C}_i = \text{SO}(3)$ and $w_i = k_iV_i$, where $V_i$ is the
-volume of the undeformed tetrahedron and $k_i$ is a user-defined stiffness value. 
+potentials (\cref{eq:pd-strain}). Here $\bm{G}_j = \bm{A}_j$, where $\bm{A}_j$ is the linear operator that maps $\bm{q}$ 
+to the tranpose of the deformation gradient $\bm{F}^T_j$, $\bm{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
+volume of the undeformed tetrahedron and $k_j$ is a user-defined stiffness value. 
 Liu et al.\ suggest approximating more general tetrahedral energies with PD strain potentials and using the global system
 matrix $\bm{S}$ that arises as the initial Hessian approximation $\bm{B}_0$ given by
 
 \begin{equation}\label{eq:global-matrix-strain}
-    \bm{B}_0 = \bm{S} = \frac{\bm{M}}{h^2} + \sum_i w_i \bm{A}_i^T \bm{A}_i.
+    \bm{B}_0 = \bm{S} = \frac{\bm{M}}{h^2} + \sum_j w_j \bm{A}_j^T \bm{A}_j.
 \end{equation}
 
-Instead of using user-defined stiffness values $k_i$, a procedure for setting $k_i$ from the original, more general energy
+Instead of using user-defined stiffness values $k_j$, a procedure for setting $k_j$ from the original, more general energy
 potential is required. The discussion is restricted to isotropic and world-space rotation invariant material models that 
 can be defined in terms of the singular 
-values $\sigma_1, \sigma_2, \sigma_3$ of $\bm{F_i}$ called the principal stretches \cite{sifakis2012}. Liu et al.\ 
+values $\sigma_1, \sigma_2, \sigma_3$ of $\bm{F_j}$ called the principal stretches \cite{sifakis2012}. Liu et al.\ 
 \cite{liu2017} present a strategy for the subclass of these material models that can be written in Valanis-Landel form
 
 \begin{equation}\label{eq:valanis-landel}
@@ -1502,7 +1807,7 @@ Neo-Hookean
 can be expressed in this form \textcolor{red}{(How? I can't seem to find how to do this in detail. There is a paper that 
 might be useful called 'The Valanis–Landel Strain-Energy Function', but I am not sure it is useful \ldots)}.
 
-The approach uses the insight that for linear materials that follow Hooke's law, the stiffness $k_i$ is given as the second 
+The approach uses the insight that for linear materials that follow Hooke's law, the stiffness $k_j$ is given as the second 
 derivative of the energy potential. Computing first and second partial derivatives in the rest configuration $\sigma_1, 
 \sigma_2, \sigma_3 = 1$ yields
 
@@ -1518,7 +1823,7 @@ for each of the principal stretches, allowing for convenient representation of s
 simply picking
 
 \[
-    k_i = \evalat[\bigg]{\frac{d^2 \psi}{d \sigma_i}}{\sigma_i, \sigma_j, \sigma_k = 1} 
+    k_j = \evalat[\bigg]{\frac{d^2 \psi}{d \sigma_i}}{\sigma_i, \sigma_j, \sigma_k = 1} 
     &= a\prime\prime(1) + 2b\prime\prime(1) + c\prime\prime(1)
 \]
 
