@@ -8,8 +8,6 @@
     volume = {34},
     number = {4},
     issn = {0730-0301},
-    url = {https://doi.org/10.1145/2766969},
-    doi = {10.1145/2766969},
     abstract = {We present a unification of the two main approaches to simulate deformable solids, namely elasticity and constraints. Elasticity accurately handles soft to moderately stiff objects, but becomes numerically hard as stiffness increases. Constraints efficiently handle high stiffness, but when integrated in time they can suffer from instabilities in the nullspace directions, generating spurious transverse vibrations when pulling hard on thin inextensible objects or articulated rigid bodies. We show that geometric stiffness, the tensor encoding the change of force directions (as opposed to intensities) in response to a change of positions, is the missing piece between the two approaches. This previously neglected stiffness term is easy to implement and dramatically improves the stability of inextensible objects and articulated chains, without adding artificial bending forces. This allows time step increases up to several orders of magnitude using standard linear solvers.},
     journal = {ACM Trans. Graph.},
     month = {jul},
@@ -26,8 +24,6 @@
     isbn = {0897919998},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/280814.280821},
-    doi = {10.1145/280814.280821},
     booktitle = {Proceedings of the 25th Annual Conference on Computer Graphics and Interactive Techniques},
     pages = {43–54},
     numpages = {12},
@@ -44,15 +40,6 @@
     pages = {135-157},
     year = {1995},
     publisher = {Taylor & Francis},
-    doi = {10.1080/08905459508905232},
-    URL = { 
-        
-            https://doi.org/10.1080/08905459508905232
-    },
-    eprint = { 
-        
-            https://doi.org/10.1080/08905459508905232
-    }
 }
 
 @inproceedings{baraff1996,
@@ -62,8 +49,6 @@
     isbn = {0897917464},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/237170.237226},
-    doi = {10.1145/237170.237226},
     booktitle = {Proceedings of the 23rd Annual Conference on Computer Graphics and Interactive Techniques},
     pages = {137–146},
     numpages = {10},
@@ -78,9 +63,6 @@
     number = {8},
     pages = {101-112},
     keywords = {CCS Concepts, • Computing methodologies → Simulation by animation, Interactive simulation, Rigid body simulation, soft body simulation, position based dynamics},
-    doi = {https://doi.org/10.1111/cgf.14105},
-    url = {https://onlinelibrary.wiley.com/doi/abs/10.1111/cgf.14105},
-    eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/cgf.14105},
     abstract = {Abstract We present a rigid body simulation method that can resolve small temporal and spatial details by using a quasi explicit integration scheme that is unconditionally stable. Traditional rigid body simulators linearize constraints because they operate on the velocity level or solve the equations of motion implicitly thereby freezing the constraint directions for multiple iterations. Our method always works with the most recent constraint directions. This allows us to trace high speed motion of objects colliding against curved geometry, to reduce the number of constraints, to increase the robustness of the simulation, and to simplify the formulation of the solver. In this paper we provide all the details to implement a fully fledged rigid body solver that handles contacts, a variety of joint types and the interaction with soft objects.},
     year = {2020}
 }
@@ -103,8 +85,6 @@
     volume = {21},
     number = {4},
     issn = {0097-8930},
-    url = {https://doi.org/10.1145/37402.37427},
-    doi = {10.1145/37402.37427},
     abstract = {The theory of elasticity describes deformable materials such as rubber, cloth, paper, and flexible metals. We employ elasticity theory to construct differential equations that model the behavior of non-rigid curves, surfaces, and solids as a function of time. Elastically deformable models are active: they respond in a natural way to applied forces, constraints, ambient media, and impenetrable obstacles. The models are fundamentally dynamic and realistic animation is created by numerically solving their underlying differential equations. Thus, the description of shape and the description of motion are unified.},
     journal = {SIGGRAPH Comput. Graph.},
     month = {aug},
@@ -120,9 +100,6 @@
     number = {4},
     pages = {809-836},
     keywords = {physically based animation, deformation, continuum elasticity, time integration, FEM, mass-spring, mesh-free methods, modal analysis, fluid animation, I.3.5 Computer Graphics: Physically based modeling, I.3.7 Computer Graphics: Animation and virtual reality},
-    doi = {https://doi.org/10.1111/j.1467-8659.2006.01000.x},
-    url = {https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1467-8659.2006.01000.x},
-    eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1111/j.1467-8659.2006.01000.x},
     abstract = {Abstract Physically based deformable models have been widely embraced by the Computer Graphics community. Many problems outlined in a previous survey by Gibson and Mirtich have been addressed, thereby making these models interesting and useful for both offline and real-time applications, such as motion pictures and video games. In this paper, we present the most significant contributions of the past decade, which produce such impressive and perceivably realistic animations and simulations: finite element/difference/volume methods, mass-spring systems, mesh-free methods, coupled particle systems and reduced deformable models-based on modal analysis. For completeness, we also make a connection to the simulation of other continua, such as fluids, gases and melting objects. Since time integration is inherent to all simulated phenomena, the general notion of time discretization is treated separately, while specifics are left to the respective models. Finally, we discuss areas of application, such as elastoplastic deformation and fracture, cloth and hair animation, virtual surgery simulation, interactive entertainment and fluid/smoke animation, and also suggest areas for future research.},
     year = {2006}
 }
@@ -134,9 +111,6 @@
     volume = {10},
     number = {1},
     pages = {65-87},
-    doi = {https://doi.org/10.1002/cpa.3160100103},
-    url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/cpa.3160100103},
-    eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/cpa.3160100103},
     year = {1957}
 }
 
@@ -150,8 +124,6 @@
     volume = {33},
     number = {4},
     issn = {0730-0301},
-    url = {https://doi.org/10.1145/2601097.2601116},
-    doi = {10.1145/2601097.2601116},
     abstract = {We present a new method for implicit time integration of physical systems. Our approach builds a bridge between nodal Finite Element methods and Position Based Dynamics, leading to a simple, efficient, robust, yet accurate solver that supports many different types of constraints. We propose specially designed energy potentials that can be solved efficiently using an alternating optimization approach. Inspired by continuum mechanics, we derive a set of continuum-based potentials that can be efficiently incorporated within our solver. We demonstrate the generality and robustness of our approach in many different applications ranging from the simulation of solids, cloths, and shells, to example-based simulation. Comparisons to Newton-based and Position Based Dynamics solvers highlight the benefits of our formulation.},
     journal = {ACM Trans. Graph.},
     month = {jul},
@@ -170,8 +142,6 @@
     volume = {32},
     number = {6},
     issn = {0730-0301},
-    url = {https://doi.org/10.1145/2508363.2508406},
-    doi = {10.1145/2508363.2508406},
     abstract = {We describe a scheme for time integration of mass-spring systems that makes use of a solver based on block coordinate descent. This scheme provides a fast solution for classical linear (Hookean) springs. We express the widely used implicit Euler method as an energy minimization problem and introduce spring directions as auxiliary unknown variables. The system is globally linear in the node positions, and the non-linear terms involving the directions are strictly local. Because the global linear system does not depend on run-time state, the matrix can be pre-factored, allowing for very fast iterations. Our method converges to the same final result as would be obtained by solving the standard form of implicit Euler using Newton's method. Although the asymptotic convergence of Newton's method is faster than ours, the initial ratio of work to error reduction with our method is much faster than Newton's. For real-time visual applications, where speed and stability are more important than precision, we obtain visually acceptable results at a total cost per timestep that is only a fraction of that required for a single Newton iteration. When higher accuracy is required, our algorithm can be used to compute a good starting point for subsequent Newton's iteration.},
     journal = {ACM Trans. Graph.},
     month = {nov},
@@ -199,7 +169,6 @@
     year = {2017},
     publisher = {The Eurographics Association},
     ISSN = {1017-4656},
-    DOI = {10.2312/egt.20171034}
 }
 
 @inproceedings{macklin2019,
@@ -209,8 +178,6 @@
     isbn = {9781450366779},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/3309486.3340247},
-    doi = {10.1145/3309486.3340247},
     abstract = {In this paper we re-examine the idea that implicit integrators with large time steps offer the best stability/performance trade-off for stiff systems. We make the surprising observation that performing a single large time step with n constraint solver iterations is less effective than computing n smaller time steps, each with a single constraint solver iteration. Based on this observation, our approach is to split every visual time step into n substeps of length Δt/n and to perform a single iteration of extended position-based dynamics (XPBD) in each such substep. When compared to a traditional implicit integrator with large time steps we find constraint error and damping are significantly reduced. When compared to an explicit integrator we find that our method is more stable and robust for a wider range of stiffness parameters. This result holds even when compared against more sophisticated implicit solvers based on Krylov methods. Our method is straightforward to implement, and is not sensitive to matrix conditioning nor is it to overconstrained problems.},
     booktitle = {Proceedings of the 18th Annual ACM SIGGRAPH/Eurographics Symposium on Computer Animation},
     articleno = {2},
@@ -227,8 +194,6 @@
     isbn = {9781450345927},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/2994258.2994272},
-    doi = {10.1145/2994258.2994272},
     abstract = {We address the long-standing problem of iteration count and time step dependent constraint stiffness in position-based dynamics (PBD). We introduce a simple extension to PBD that allows it to accurately and efficiently simulate arbitrary elastic and dissipative energy potentials in an implicit manner. In addition, our method provides constraint force estimates, making it applicable to a wider range of applications, such those requiring haptic user-feedback. We compare our algorithm to more expensive non-linear solvers and find it produces visually similar results while maintaining the simplicity and robustness of the PBD method.},
     booktitle = {Proceedings of the 9th International Conference on Motion in Games},
     pages = {49–54},
@@ -248,8 +213,6 @@
     volume = {36},
     number = {4},
     issn = {0730-0301},
-    url = {https://doi.org/10.1145/3072959.2990496},
-    doi = {10.1145/3072959.2990496},
     abstract = {We present a new method for real-time physics-based simulation supporting many different types of hyperelastic materials. Previous methods such as Position-Based or Projective Dynamics are fast but support only a limited selection of materials; even classical materials such as the Neo-Hookean elasticity are not supported. Recently, Xu et al. [2015] introduced new “spline-based materials” that can be easily controlled by artists to achieve desired animation effects. Simulation of these types of materials currently relies on Newton’s method, which is slow, even with only one iteration per timestep. In this article, we show that Projective Dynamics can be interpreted as a quasi-Newton method. This insight enables very efficient simulation of a large class of hyperelastic materials, including the Neo-Hookean, spline-based materials, and others. The quasi-Newton interpretation also allows us to leverage ideas from numerical optimization. In particular, we show that our solver can be further accelerated using L-BFGS updates (Limited-memory Broyden-Fletcher-Goldfarb-Shanno algorithm). Our final method is typically more than 10 times faster than one iteration of Newton’s method without compromising quality. In fact, our result is often more accurate than the result obtained with one iteration of Newton’s method. Our method is also easier to implement, implying reduced software development costs.},
     journal = {ACM Trans. Graph.},
     month = {jul},
@@ -274,8 +237,6 @@
     isbn = {9781450316781},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/2343483.2343501},
-    doi = {10.1145/2343483.2343501},
     abstract = {A practical guide to finite-element-method (FEM) simulation of 3D deformable solids reviews essential offline FEM simulation techniques: complex nonlinear materials, invertible treatment of elasticity, and model-reduction techniques for real-time simulation.Simulations of deformable solids are important in many applications in computer graphics, including film special effects, computer games, and virtual surgery. FEM has become a popular method in many applications. Both offline simulation and real-time techniques have matured in computer graphics literature.This course is designed for attendees familiar with numerical simulation in computer graphics who would like to obtain a cohesive picture of the various FEM simulation methods available, their strengths and weaknesses, and their applicability in various simulation scenarios. The course is also a practical implementation guide for the visual-effects developer, offering a very lean yet adequate synopsis of the underlying mathematical theory. The first section introduces FEM deformable-object simulation and its fundamental concepts, such as deformation gradient, strain, stress, and elastic energy, discusses corotational FEM models, isotropic hyperelasticity, and numerical methods such as conjugate gradients and multigrid. The second section presents the state of the art in model reduction techniques for real-time FEM solid simulation. Topics include linear modal analysis, modal warping, subspace simulation, domain decomposition, and which techniques are suitable for which application.},
     booktitle = {ACM SIGGRAPH 2012 Courses},
     articleno = {20},
@@ -292,7 +253,6 @@
     year = {2006},
     publisher = {The Eurographics Association},
     ISBN = {3-905673-61-4},
-    DOI = {10.2312/PE/vriphys/vriphys06/071-080}
 }
 
 @inproceedings{stern2006,
@@ -302,12 +262,29 @@
     isbn = {1595933646},
     publisher = {Association for Computing Machinery},
     address = {New York, NY, USA},
-    url = {https://doi.org/10.1145/1185657.1185669},
-    doi = {10.1145/1185657.1185669},
     abstract = {In this chapter, we present a geometric--instead of a traditional numerical-analytic--approach to the problem of time integration. Geometry at its most abstract is the study of symmetries and their associated invariants. Variational approaches based on such notions are commonly used in geometric modeling and discrete differential geometry. Here we will treat mechanics in a similar way. Indeed, the very essence of a mechanical system is characterized by its symmetries and invariants. Thus preserving these symmetries and invariants (e.g., certain momenta) into the discrete computational setting is of paramount importance if one wants discrete time integration to properly capture the underlying continuous motion. Motivated by the well-known variational and geometric nature of most dynamical systems, we review the use of discrete variational principles as a way to derive robust, and accurate time integrators.},
     booktitle = {ACM SIGGRAPH 2006 Courses},
     pages = {75–80},
     numpages = {6},
     location = {Boston, Massachusetts},
     series = {SIGGRAPH '06}
+}
+
+@ARTICLE{gast2015,
+  author={Gast, Theodore F. and Schroeder, Craig and Stomakhin, Alexey and Jiang, Chenfanfu and Teran, Joseph M.},
+  journal={IEEE Transactions on Visualization and Computer Graphics}, 
+  title={Optimization Integrator for Large Time Steps}, 
+  year={2015},
+  volume={21},
+  number={10},
+  pages={1103-1115},
+  keywords={Newton method;Minimization;Optimization;Robustness;Mathematical model;Digital TV;Nonlinear systems;Computer Graphics;Three-Dimensional Graphics and Realism;Animation;Computer graphics;three-dimensional graphics and realism;animation},
+}
+
+@misc{longva2023,
+    title={Pitfalls of Projection: A study of Newton-type solvers for incremental potentials}, 
+    author={Andreas Longva and Fabian Löschner and José Antonio Fernández-Fernández and Egor Larionov and Uri M. Ascher and Jan Bender},
+    year={2023},
+    archivePrefix={arXiv},
+    primaryClass={cs.GR}
 }
