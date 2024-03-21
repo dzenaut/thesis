@@ -1581,9 +1581,9 @@ $\matm{q}_j$ and its projection $\matm{p}_{\matm{q}_j}$ onto the constraint mani
 
 Plugging the energy potentials into the variational form of implicit Euler integration (\cref{eq:pd-variational-implicit}) yields
 
-\begin{equation}\label{eq:pd-variational-implicit-W}
-    \min_{\matm{q}, \matm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\matm{q} - \tilde{\matm{q}})}^2_F + \sum_j W_j(
-    \matm{S}_j \matm{q}, \matm{p}_j).
+\begin{equation}\label{eq:pd-variational-overview}
+    \min_{\matm{q}, \matm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\matm{q} - \tilde{\matm{q}})}^2_F + 
+    \sum_j d_j(\matm{S}_j \matm{q}, \matm{p}_j) + \delta_{\cman{C}_j}(\matm{p}_j)
 \end{equation}
 
 \noindent With abuse of notation, $\vecm{p}_j$ denotes either the auxiliary variable of the $j$-th constraint or 
@@ -1601,7 +1601,7 @@ linear step.
 
 These insights suggest a local/global structure for the PD solver. In the local step, the projection points $\matm{p}_{\matm{q}_j}$
 are computed for each constraint. Finding the projection points $\matm{p}_{\matm{q}_j}$ corresponds to minimizing 
-\autoref{eq:pd-variational-implicit-W} over the projection variables $\matm{p}_j$ while keeping the positions $\matm{q}$ fixed, yielding
+\autoref{eq:pd-variational-overview} over the projection variables $\matm{p}_j$ while keeping the positions $\matm{q}$ fixed, yielding
 the following optimization problem
 
 \begin{equation}\label{eq:pd-local-d}
@@ -1610,7 +1610,7 @@ the following optimization problem
 
 \noindent Since each constraint has its own auxiliary projection variables, this minimization can be carried out independently 
 for each constraint. In the global step, \autoref{eq:pd-global-d} is minimized, which is equivalent to minimizing 
-\autoref{eq:pd-variational-implicit-W} over the positions $\matm{q}$ while keeping the projection variables $\matm{p}_j$ 
+\autoref{eq:pd-variational-overview} over the positions $\matm{q}$ while keeping the projection variables $\matm{p}_j$ 
 fixed. Local and global steps are repeated for a fixed number of iterations during each time step. Finally, the 
 resulting positions are used as the positions of the next time step.
 
@@ -1667,38 +1667,44 @@ as $\vecm{p} = \matm{UIV}^T$ where $\vecm{f}^T = \matm{U \Sigma V}^T$ is the sin
 gradient $\vecm{f}^T$.
 
 \subsection{Projective Implicit Euler Solver}\label{ss:pd-solver}
+The PD solver can be derived by plugging the distance functions from \autoref{eq:pd-distance} into the variational form of implicit
+Euler integration for PD energy potentials (\cref{eq:pd-variational-overview}). This yields the optimization problem given by 
 
+\begin{equation}\label{eq:pd-variational}
+    \min_{\matm{q}, \matm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\matm{q} - \tilde{\matm{q}})}^2_F + 
+    \sum_j \frac{w_j}{2} \norm{\matm{A}_j\matm{S}_j\matm{q} - \matm{B}_j\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j)
+\end{equation}
 
-\subsection{Projective Implicit Euler Solver}\label{ss:pd-solver1}
-We start by substituting the PD energy potentials (\cref{eq:pd-potentials}) into the variatonal form of implicit Euler integration
-(\cref{eq:variational-implicit}). With abuse of notation, let $\vecm{p}_j$ denote the auxiliary variable of the $j$-th constraint or 
-the family of auxiliary variables $(\vecm{p}_j)_{j \in \mathcal{J}}$, where $\mathcal{J}$ is the index set of the 
-constraints. This yields the following joint optimization problem over the positions $\vecm{q}$ and auxiliary variables $\vecm{p}_j$ 
+\noindent In order to make the relation between the projection variables $\matm{p}_j$ and the relevant particle positions 
+$\matm{q}_j$ more apparent, we required $\text{dim}(\matm{S}_j\matm{q}) = \text{dim}(\matm{p}_j)$ so far. However, the 
+notation can be simplified by introducing the alternative constraint manifold $\cman{C}^\prime_j = \{ \matm{B}_j\matm{p} 
+\mid \matm{p} \in \cman{C}_j \}$. Of course, this requires changing the shape of the projection variables. If 
+$\matm{B}_j \in \mathbb{R}^{r \times n_j}$, then $\matm{p}_j \in \mathbb{R}^{r \times 3}$. Consider the energy 
+potentials for strain energies introduced in \cref{eq:pd-potentials}. There, $\cman{C}^\prime_j = \text{SO}(3)$ 
+and $\matm{p}_j \in \mathbb{R}^{3 \times 3}$, meaning that the projection variables now correspond to the transpose 
+of the deformation gradient 
+instead of the configuration of the projected tetrahedron. If further $\matm{A}_j\matm{S}_j$ are combined into a single 
+matrix $\matm{G}_j$, an equivalent optimization problem given by 
 
 \begin{equation}\label{eq:pd-minimization}
     \min_{\vecm{q}, \vecm{p}_j} \tilde{g}(\vecm{q}, \vecm{p}_j) = 
     \min_{\vecm{q}, \vecm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\vecm{q}
-    - \vecm{p}_j}^2_F + \delta_{\cman{C}_j}(\vecm{p}_j).
+    - \vecm{p}_j}^2_F + \delta_{\cman{C}^\prime_j}(\vecm{p}_j)
 \end{equation}
 
-\noindent This optimization problem is optimized using a local/global alternating minimization technique. Local and global steps 
-are carried out sequentially for a fixed number of iterations during each timestep. 
+\noindent can be derived. From now on, we simply write $\cman{C}_j$ instead of $\cman{C}^\prime_j$.
 
-The local step consists of minimizing the objective function \autoref{eq:pd-minimization} over 
-the auxiliary variables $\vecm{p}_j$ while keeping the positions $\vecm{q}$ fixed. This corresponds to finding the projection points of 
-the current positions onto the constraint manifolds used to define the PD energy potentials. Each constraint has its own 
-set of auxiliary variables, meaning that the projection steps can be carried out independently. For each energy potential, we solve the 
-following minimization problem
+As discussed in \cref{ss:pd-overview}, the local step consists of minimizing the objective function 
+\autoref{eq:pd-minimization} over the auxiliary variables $\vecm{p}_j$ while keeping the positions $\vecm{q}$ fixed. For each 
+energy potential, we solve the following minimization problem
 
 \begin{equation}\label{eq:pd-local-minimization}
     \min_{\vecm{p}_j} \tilde{g}(\vecm{q}, \vecm{p}_j) =
     \min_{\vecm{p}_j} \frac{w_j}{2}\norm{\matm{G}_j\vecm{q} - \vecm{p}_j}^2_F + \delta_{\cman{C}_j}(\vecm{p}_j).
 \end{equation}
 
-In the global step, the minimization problem \autoref{eq:pd-minimization} is optimized over the positions $\vecm{q}$ while keeping the auxiliary 
-variables $\vecm{p}_j$ fixed.
-This corresponds to moving the positions $\vecm{q}$ according to their momentum and external forces while trying to maintain short distances
-to the projections points as defined by the distance measures of the PD energy potentials. The optimization problem for the global solve is 
+\noindent In the global step, the minimization problem \autoref{eq:pd-minimization} is optimized over the positions $\vecm{q}$ 
+while keeping the auxiliary variables $\vecm{p}_j$ fixed. The optimization problem for the global solve is 
 given by
 
 \begin{equation}\label{eq:pd-global-minimization}
