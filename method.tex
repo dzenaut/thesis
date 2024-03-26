@@ -1,9 +1,11 @@
 \chapter{Method}\label{ch:method}
 
-\textcolor{red}{Method is probably not the right title here, it's more "Foundations" or something like that.
-Maybe give some introduction to this chapter that your goal is to present the basics necessary for XPBD and 
-PD and maybe a teaser how optimization is need etc., a bit of an outline of the chapter
-}
+\begin{itemize}
+    \item Method is probably not the right title here, it's more "Foundations" or something like that.
+        Maybe give some introduction to this chapter that your goal is to present the basics necessary for XPBD and 
+        PD and maybe a teaser how optimization is need etc., a bit of an outline of the chapter.
+    \item While citing books, put chapters into the citations.
+\end{itemize}
 
 \section{Time-Integration of Physical Systems}\label{s:physical-integration}
 \textcolor{red}{Fabian recommends citing \cite{gast2015}.}
@@ -1281,9 +1283,22 @@ is satisfied. Thus, after the first iteration with $\vecm{q}_0 = \tilde{\vecm{q}
 \end{split}
 \end{equation}
 
-\noindent Note how the last term is almost identical to $\vecm{g}(\vecm{q}_1, \vecm{\lambda}_1) = \matm{M}(\vecm{q}_1 - \tilde{\vecm{q}}) - \nabla 
-\vecm{C}(\vecm{q}_1)^T \vecm{\lambda}_1$, the only difference being that $\nabla \vecm{C}(\vecm{q}_0)^T$ is replaced by $\nabla \vecm{C}(\vecm{q}_1)^T$. Thus, 
-Macklin et al.\ \cite{macklin2016} argue that $\vecm{g}(\vecm{q}_1, \vecm{\lambda}_1) \approx \vecm{0}$ as well, as long as $\nabla \vecm{C}(\vecm{q})$ 
+\noindent Using \autoref{eq:xpbd-assumption-2-detail}, $\vecm{g}(\vecm{q}_1, \vecm{\lambda}_1)$ can be rewritten as
+
+\begin{equation}
+\begin{split}
+    &\vecm{g}(\vecm{q}_1, \vecm{\lambda}_1) = \vecm{g}(\vecm{q}_1, \vecm{\lambda}_1) - \vecm{0} \\
+    &= \matm{M}(\vecm{q}_1 - \tilde{\vecm{q}}) - \nabla \vecm{C}(\vecm{q}_1)^T \vecm{\lambda}_1 - \vecm{0} \\
+    &= \matm{M}(\vecm{q}_1 - \tilde{\vecm{q}}) - \nabla \vecm{C}(\vecm{q}_1)^T \vecm{\lambda}_1 
+    - \matm{M}(\vecm{q}_1 - \tilde{\vecm{q}}) - \nabla \vecm{C}(\vecm{q}_0)^T \vecm{\lambda}_1 \\
+    &= \nabla \vecm{C}(\vecm{q}_0)^T \vecm{\lambda}_1 - \nabla \vecm{C}(\vecm{q}_1)^T \vecm{\lambda}_1 \\
+    &= (\nabla \vecm{C}(\vecm{q}_0)^T - \nabla \vecm{C}(\vecm{q}_1)^T) \vecm{\lambda}_1
+\end{split}
+\end{equation}
+
+\noindent Note that if $\nabla \vecm{C}(\vecm{q}_0)^T = \nabla \vecm{C}(\vecm{q}_1)^T$, then 
+$\vecm{g}(\vecm{q}_1, \vecm{\lambda}_1) = \vecm{0}$. Thus, Macklin et al.\ \cite{macklin2016} argue that 
+$\vecm{g}(\vecm{q}_1, \vecm{\lambda}_1) \approx \vecm{0}$, as long as $\nabla \vecm{C}(\vecm{q})$ 
 does not change too quickly.
 
 Since the mass matrix $\matm{M}$ in the upper-left block of $\matm{H}_{\text{simp}}$ is invertible by design, it is possible
@@ -1987,7 +2002,6 @@ in the appropriate places. Again, the details of maintaining the history of $\ma
 \end{algorithmic}
 \end{algorithm}
 
-
 Note that step-size $\alpha_k = 1$ is 
 used during each iteration of the Quasi-Newton version of the PD solver (\cref{alg:pd-qn}).
 While this works well for the constant Hessian approximation $\matm{S}$, it is not viable in L-BFGS. The step-size $\alpha_k = 1$
@@ -2006,7 +2020,7 @@ algorithm.
 
 \subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
 In order to achieve satisfactory performance when applying the L-BFGS method to the general form of the implicit Euler integration 
-(\cref{eq:variational-implicit}) without the need to restrict to PD energy potentials (\cref{eq:pd-potentials}), a suitable
+(\cref{eq:variational-implicit}) without the need to restrict energy potentials to the PD framework (\cref{eq:pd-potentials}), a suitable
 candidate for the initial Hessian approximation $\matm{B}_0$ or its inverse $\matm{H}_0$ needs to be found. The choice $\matm{B}_0 = 
 \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j$ from Algorithm \ref{alg:pd-lbfgs} cannot be applied to the general setting 
 without modification as the matrices $\matm{G}_j$ are taken directly from the definitions of the individual PD energy potentials.
