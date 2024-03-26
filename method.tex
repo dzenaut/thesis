@@ -1514,15 +1514,17 @@ which is restated here again for the sake of convenience
     \min_{\matm{q}_{n+1}} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\matm{q}_{n+1} - \tilde{\matm{q}})}^2_F + \sum_j \psi_j(\matm{q}_{n+1}).
 \end{equation}
 
-\noindent In this section, we simply write $\matm{q}$ instead of $\matm{q}_{n+1}$ to improve legibility. The solution of this unconstrained 
+\noindent Recall that in the context of PD, the particle positions are stored in matrices, i.e.\ $\matm{q}_{n+1}, \tilde{\matm{q}} \in 
+\mathbb{R}^{m \times 3}$ and $\matm{M} \in \mathbb{R}^{m \times m}$, where $m \in \mathbb{N}$ is the number of particles in the simulated
+body. In this section, we simply write $\matm{q}$ instead of $\matm{q}_{n+1}$ to improve legibility. The solution of this unconstrained 
 optimization problem corresponds to the particle positions of the simulated body at the next time
 step (\cref{s:numerical-integration}) and can be determined using one of the line search algorithms introduced in \cref{ss:line-search}.
 Naive application of line search methods can often lead to unfeasibly high runtimes for real-time applications. The core idea of PD
 is to speed up the optimization by restricting the energy potentials $\psi_j$ to a structure that allows for efficient minimization.
-This allows substituting the line search methods -- which are designed for general nonlinear objective functions -- with a specialized 
-solver that exploits the structure of PD energy potentials. 
+This allows substituting the line search methods -- which are designed for the minimization of general nonlinear objective functions 
+-- with a specialized solver that exploits the structure of PD energy potentials. 
 
-Consider the restriction of energy potentials $\psi_j$ to quadratic functions of $\matm{q}$. As the sum of the momentum potential 
+Consider the restriction of energy potentials $\psi_j$ to quadratic functions of $\matm{q}$. Then, as the sum of the momentum potential 
 (always quadratic) and the elastic potential (quadratic by assumption) the entire objective function of \autoref{eq:pd-variational-implicit} 
 is quadratic in $\matm{q}$. Thus, the solution to the minimization problem can be found in a single linear solve \cite{nocedal2006}. 
 While this choice
@@ -1531,9 +1533,14 @@ In particular, quadratic energy potentials always yield linear forces. Linear fo
 elastic behavior \cite{wang2011}. Now, the challenge lies in enhancing quadratic energy potentials to allow expressing some degree
 of nonlinearity while still keeping the minimization efficient. 
 
-In PD, Bouaziz et al.\ \cite{bouaziz2014} achieve this by introducing energy potentials that roughly correspond to a quadratic distance 
-measure of the current particle positions to their projections onto some constraint manifold. In this setting, the energy potential $\psi_j$
-is defined entirely by a quadratic distance function $d_j$ and a constraint manifold $\cman{C}_j$. Assume that the constraint has cardinality
+In PD, Bouaziz et al.\ \cite{bouaziz2014} achieve this by introducing energy potentials that roughly measure the square of the
+distance of the current particle positions to their projections onto some -- potentially nonlinear -- constraint manifold $\cman{C}_j$. 
+In this setting, the energy potential $\psi_j$ is defined entirely by the squared distance function $d_j$ and the corresponding constraint 
+manifold $\cman{C}_j$. By picking an appropriate distance measure, the squared distance $d_j$ can be made quadratic in $\matm{q}$ 
+(see \cref{ss:pd-potentials}). Since the constraint manifold $\cman{C}_j$ is potentially nonlinear, the energy potential 
+$\psi_j$ can produce nonlinear forces as well. 
+
+Assume that the constraint has cardinality 
 $n_j \in \mathbb{N}$ and acts on the particles with indices $i_1, \ldots, i_{n_j}$ and let $\matm{q}_j \in \mathbb{R}^{n_j \times 3}$ be
 
 \[
@@ -1557,7 +1564,7 @@ and define the energy potential in terms of the function $W_j$ given by
 \delta_{\cman{C}_j}(\matm{p}_j)= 
 \begin{cases}
 0,& \text{if } \matm{p}_j \text{ lies on the constraint manifold } \cman{C}_j \\
-\infty,& \text{otherwise}
+\infty,& \text{otherwise.}
 \end{cases}
 \]
 
@@ -1568,22 +1575,31 @@ for all other
 $\matm{p}^* \in \mathbb{R}^{n_j \times 3}$ with $\delta_{\cman{C}_j}(\matm{p}^*) = 0$ it is $d_j(\matm{q}_j, \matm{p}_{\matm{q}_j}) 
 \leq
 d_j(\matm{q}_j, \matm{p}^*)$. Together, $\matm{p}_{\matm{q}_j}$ is the configuration on the constraint manifold that is the closest to 
-the configuration specified by positions $\matm{q}_j$ in terms of the distance function $d_j$. Thus, $\matm{p}_{\matm{q}_j}$ can be 
-interpreted as the projection of $\matm{q}_j$ onto the constraint manifold $\cman{C}_j$. Bouaziz et al.\ define the energy potential 
-$\psi_j$ as 
+the configuration specified by positions $\matm{q}_j$ in terms of $d_j$. Thus, $\matm{p}_{\matm{q}_j}$ can be 
+interpreted as the projection of $\matm{q}_j$ onto the constraint manifold $\cman{C}_j$. Note that $d_j$ itself is not a distance 
+function, but $\sqrt{d_j}$ is (see \cref{ss:pd-potentials}). Still, we follow the example of Bouaziz et al.\ \cite{bouaziz2014} 
+and define closeness between pairs of configurations in terms of $d_j$ instead of $\sqrt{d_j}$. This is justified since for two pairs
+of configurations $\cmat{q}, \cmat{p}$ and $\cmat{q}^\prime, \cmat{p}^\prime$ it is 
+
+\[
+    d_j(\cmat{q}, \cmat{p}) < d_j(\cmat{q}^\prime, \cmat{p}^\prime) \iff \sqrt{d_j}(\cmat{q}, \cmat{p}) < \sqrt{d_j}(\cmat{q}^\prime, 
+    \cmat{p}^\prime).
+\]
+
+Bouaziz et al.\ \cite{bouaziz2014} define the energy potential $\psi_j$ as 
 
 \begin{equation}\label{eq:pd-min-W}
-    \psi(\matm{q}) = \min_{\matm{p}_j} W(\matm{S}_j\matm{q}, \matm{p}_j),
+    \psi(\matm{q}) = \min_{\matm{p}_j} W(\matm{S}_j\matm{q}, \matm{p}_j) 
+    = \min_{\matm{p}_j} d_j(\matm{q}_j, \matm{p}_j) + \delta_{\cman{C}_j}(\matm{p}_j),
 \end{equation}
 
-\noindent where $\matm{S}_j$ is the matrix that maps $\matm{q}$ to $\matm{q}_j$. This is exactly the distance between configuration 
-$\matm{q}_j$ and its projection $\matm{p}_{\matm{q}_j}$ onto the constraint manifold $\cman{C}_j$.
-
+\noindent where $\matm{S}_j$ is the matrix that maps $\matm{q}$ to $\matm{q}_j$. This is exactly the squared distance as measured by 
+$d_j$ between configuration $\matm{q}_j$ and its projection $\matm{p}_{\matm{q}_j}$ onto the constraint manifold $\cman{C}_j$. 
 Plugging the energy potentials into the variational form of implicit Euler integration (\cref{eq:pd-variational-implicit}) yields
 
 \begin{equation}\label{eq:pd-variational-overview}
     \min_{\matm{q}, \matm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\matm{q} - \tilde{\matm{q}})}^2_F + 
-    \sum_j d_j(\matm{S}_j \matm{q}, \matm{p}_j) + \delta_{\cman{C}_j}(\matm{p}_j)
+    \sum_j d_j(\matm{S}_j \matm{q}, \matm{p}_j) + \delta_{\cman{C}_j}(\matm{p}_j).
 \end{equation}
 
 \noindent With abuse of notation, $\vecm{p}_j$ denotes either the auxiliary variable of the $j$-th constraint or 
@@ -1615,16 +1631,26 @@ fixed. Local and global steps are repeated for a fixed number of iterations duri
 resulting positions are used as the positions of the next time step.
 
 \subsection{PD Energy Potentials}\label{ss:pd-potentials}
-In order to arrive at a working implementation of the PD solver outlined in \cref{ss:pd-overview}, a quadratic distance function 
-$d_j$ and a projection operator need to be provided for each constraint manifold $\cman{C}_j$. While the projection operators
-vary significantly between different types of constraints, Bouaziz et al.\ \cite{bouaziz2014} always use distance functions of the form
+In order to arrive at a working implementation of the PD solver outlined in \cref{ss:pd-overview}, a squared distance function 
+$d_j$ and a projection operator onto some constraint manifold $\cman{C}_j$ need to be provided for each energy potential $\psi_j$. 
+While the projection operators vary significantly between different types of constraints, Bouaziz et al.\ \cite{bouaziz2014} 
+always use squared distance functions $d_j$ of the form
 
 \begin{equation}\label{eq:pd-distance}
     d_j(\matm{q}_j, \matm{p}_j) = \frac{w_j}{2} \norm{\matm{A}_j\matm{q}_j - \matm{B}_j\matm{p}_j}^2_F,
 \end{equation}
 
 \noindent where $\matm{A}_j, \matm{B}_j$ are matrices of appropriate dimensions and $w_j \in \mathbb{R}$ is the weight assigned to the
-$j$-th constraint. This yields energy potentials of the form
+$j$-th constraint. Note that $\sqrt{d_j}$ is the distance function that is induced by a Frobenius norm with weights $\matm{A}_j, 
+\matm{B}_j$ in the standard manner. Formally, $d_j$ itself cannot be considered a distance function since it violates the absolute
+homogeneity property, i.e. 
+
+\[
+    d_j(a\matm{q}_j, a\matm{p}_j) = a^2d_j(\matm{q}_j, \matm{p}_j) \neq ad_j(\matm{q}_j, \matm{p}_j). 
+\]
+
+
+Plugging the definition of $d_j$ in \autoref{eq:pd-distance} into the PD energy potentials in \autoref{eq:pd-min-W} yields
 
 \begin{equation}\label{eq:pd-potentials}
     \psi_j(\matm{q}) = \min_{\matm{p}_j} \frac{w_j}{2} \norm{\matm{A}_j\matm{q}_j - \matm{B}_j\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j).
@@ -1658,16 +1684,16 @@ stiffness value. Together, it is
     \end{split}
 \end{align}
 
-\noindent Essentially, $\psi_j(\matm{q})$ computes the distance of $\matm{q}_j$ to the closest undeformed tetrahedral configuration, 
-where the distance is defined in terms of the squared Frobenius norm of the difference of their deformation gradients. It is easy to 
-show that this energy is zero if and only if $\vecm{f}$ itself is a rotational matrix and grows as the 
-singular values of $\vecm{f}$ move away from 1 \cite{bouaziz2014}. Informally, the energy increases the more the tetrahedron gets 
-stretched or squashed. The projection $\vecm{p}$ can be computed 
-as $\vecm{p} = \matm{UIV}^T$ where $\vecm{f}^T = \matm{U \Sigma V}^T$ is the singular value decomposition of the inverse deformation 
-gradient $\vecm{f}^T$.
+\noindent Essentially, $\psi_j(\matm{q})$ computes the squared distance of $\matm{q}_j$ to the closest undeformed tetrahedral configuration, 
+where the distance is defined in terms of the Frobenius norm of the difference of their deformation gradients. It is easy to 
+show that this energy is zero if and only if $\matm{F}_{\matm{q}_j}$ itself is a rotational matrix and grows as the 
+singular values of $\matm{F}_{\matm{q}_j}$ move away from 1 \cite{bouaziz2014}. Informally, the energy increases the more the tetrahedron gets 
+stretched or squashed. The projection $\matm{p}_j$ can be computed as $\matm{p}_j = \matm{UIV}^T$ where $\matm{F}^T_{\matm{q}_j} = 
+\matm{U \Sigma V}^T$ is the singular value decomposition of the inverse deformation gradient $\matm{F}^T_{\matm{q}_j}$.
 
 \subsection{Projective Implicit Euler Solver}\label{ss:pd-solver}
-The PD solver can be derived by plugging the distance functions from \autoref{eq:pd-distance} into the variational form of implicit
+The PD solver can be derived by plugging the squared distance functions from \autoref{eq:pd-distance} into the variational 
+form of implicit
 Euler integration for PD energy potentials (\cref{eq:pd-variational-overview}). This yields the optimization problem given by 
 
 \begin{equation}\label{eq:pd-variational}
@@ -1687,97 +1713,98 @@ instead of the configuration of the projected tetrahedron. If further $\matm{A}_
 matrix $\matm{G}_j$, an equivalent optimization problem given by 
 
 \begin{equation}\label{eq:pd-minimization}
-    \min_{\vecm{q}, \vecm{p}_j} \tilde{g}(\vecm{q}, \vecm{p}_j) = 
-    \min_{\vecm{q}, \vecm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\vecm{q}
-    - \vecm{p}_j}^2_F + \delta_{\cman{C}^\prime_j}(\vecm{p}_j)
+    \min_{\matm{q}, \matm{p}_j} \tilde{g}(\matm{q}, \matm{p}_j) = 
+    \min_{\matm{q}, \matm{p}_j} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\matm{q} - \tilde{\matm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\matm{q}
+    - \matm{p}_j}^2_F + \delta_{\cman{C}^\prime_j}(\matm{p}_j)
 \end{equation}
 
 \noindent can be derived. From now on, we simply write $\cman{C}_j$ instead of $\cman{C}^\prime_j$.
 
 As discussed in \cref{ss:pd-overview}, the local step consists of minimizing the objective function 
-\autoref{eq:pd-minimization} over the auxiliary variables $\vecm{p}_j$ while keeping the positions $\vecm{q}$ fixed. For each 
+\autoref{eq:pd-minimization} over the auxiliary variables $\matm{p}_j$ while keeping the positions $\matm{q}$ fixed. For each 
 energy potential, we solve the following minimization problem
 
 \begin{equation}\label{eq:pd-local-minimization}
-    \min_{\vecm{p}_j} \tilde{g}(\vecm{q}, \vecm{p}_j) =
-    \min_{\vecm{p}_j} \frac{w_j}{2}\norm{\matm{G}_j\vecm{q} - \vecm{p}_j}^2_F + \delta_{\cman{C}_j}(\vecm{p}_j).
+    \min_{\matm{p}_j} \tilde{g}(\matm{q}, \matm{p}_j) =
+    \min_{\matm{p}_j} \frac{w_j}{2}\norm{\matm{G}_j\matm{q} - \matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j).
 \end{equation}
 
-\noindent In the global step, the minimization problem \autoref{eq:pd-minimization} is optimized over the positions $\vecm{q}$ 
-while keeping the auxiliary variables $\vecm{p}_j$ fixed. The optimization problem for the global solve is 
+\noindent In the global step, the minimization problem \autoref{eq:pd-minimization} is optimized over the positions $\matm{q}$ 
+while keeping the auxiliary variables $\matm{p}_j$ fixed. The optimization problem for the global solve is 
 given by
 
 \begin{equation}\label{eq:pd-global-minimization}
-    \min_{\vecm{q}} \tilde{g}(\vecm{q}, \vecm{p}_j) =
-    \min_{\vecm{q}} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\vecm{q} - \vecm{p_j}}^2_F.
+    \min_{\matm{q}} \tilde{g}(\matm{q}, \matm{p}_j) =
+    \min_{\matm{q}} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\matm{q} - \tilde{\matm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\matm{q} - \matm{p_j}}^2_F.
 \end{equation}
 
-\noindent The gradient of the objective function with respect to the positions $\nabla_{\vecm{q}} 
-\tilde{g}(\vecm{q}, \vecm{p}_j)$ is given by 
+\noindent The gradient of the objective function with respect to the positions $\nabla_{\matm{q}} 
+\tilde{g}(\matm{q}, \matm{p}_j)$ is given by 
 
 \begin{equation}\label{eq:pd-gradient-q}
-    \nabla_{\vecm{q}}\tilde{g}(\vecm{q}, \vecm{p}_j) = \frac{1}{h^2}\matm{M}(\vecm{q} - \tilde{\vecm{q}}) + \sum_j w_j \matm{G}^T_j \matm{G}_j \vecm{q}
-    + \sum_j w_j \matm{G}^T_j \vecm{p}_j.
+    \nabla_{\matm{q}}\tilde{g}(\matm{q}, \matm{p}_j) = \frac{1}{h^2}\matm{M}(\matm{q} - \tilde{\matm{q}}) + \sum_j w_j \matm{G}^T_j \matm{G}_j \matm{q}
+    + \sum_j w_j \matm{G}^T_j \matm{p}_j.
 \end{equation}
 
 \noindent By design of the PD energy potentials, the objective function of the global optimization problem is quadratic in the positions 
-$\vecm{q}$. Consequently, the minimization can be carried out in a single step by picking $\vecm{q}$ such that the first-order optimality 
+$\matm{q}$. Consequently, the minimization can be carried out in a single step by picking $\matm{q}$ such that the first-order optimality 
 conditions are satisfied \cite{nocedal2006}. This leads to the following system of equations
 
 \begin{equation}\label{eq:pd-global-system}
-    (\frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j)\vecm{q} = \frac{1}{h^2}\matm{M}\tilde{\vecm{q}} + \sum_j w_j \matm{G}_j^T \vecm{p}_j.
+    (\frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j)\matm{q} = \frac{1}{h^2}\matm{M}\tilde{\vecm{q}} + \sum_j w_j \matm{G}_j^T \matm{p}_j.
 \end{equation}
 
 \noindent In the rest of \cref{s:pd} we refer to the system matrix of the global system by 
 $\matm{S} \coloneqq \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j$.
 
 Note that $\matm{S}$ is constant as long as the constraint set remains unchanged. The right side needs to be recomputed in every 
-iteration as the projections $\vecm{p}_j$ change during the local optimization steps.  An overview over the algorithm is given in 
+iteration as the projections $\matm{p}_j$ change during the local optimization steps.  An overview over the algorithm is given in 
 Algorithm \ref{alg:pd}.
 
 \begin{algorithm}
 \caption{Projective Implicit Euler Solver}\label{alg:pd}
 \begin{algorithmic}
-\Procedure{solvePD}{$\vecm{q}_n$, $\vecm{v}_n$, $f_{\text{ext}}$, $h$}
-\State $\tilde{\vecm{q}} = \vecm{q}_n + h\vecm{v}_n + h^2\matm{M}^{-1}\vecm{f}_{\text{ext}}$
-\State $\vecm{q}_k = \tilde{\vecm{q}}$
+\Procedure{solvePD}{$\matm{q}_n$, $\matm{v}_n$, $\matm{f}_{\text{ext}}$, $h$}
+\State $\tilde{\matm{q}} = \matm{q}_n + h\matm{v}_n + h^2\matm{M}^{-1}\matm{f}_{\text{ext}}$
+\State $\matm{q}_k = \tilde{\matm{q}}$
 \For{all iterations}
 \For{constraints $j$}
-\State $\vecm{p}_j = \min_{\vecm{p}_j} \frac{w_j}{2}\norm{\matm{G}_j\vecm{q}_k - \vecm{p}_j}^2_F + \delta_{\cman{C}_j}(\vecm{p}_j)$
+\State $\matm{p}_j = \min_{\matm{p}_j} \frac{w_j}{2}\norm{\matm{G}_j\matm{q}_k - \matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j)$
 \EndFor
-\State $\vecm{q}_{k} \gets$ solution of $\matm{S}\vecm{q} = \frac{1}{h^2}\matm{M}\tilde{\vecm{q}} + \sum_j w_j \matm{G}_j^T \vecm{p}_j$.
+\State $\matm{q}_{k} \gets$ solution of $\matm{S}\matm{q} = \frac{1}{h^2}\matm{M}\tilde{\matm{q}} + \sum_j w_j \matm{G}_j^T \matm{p}_j$.
 \EndFor
-\State \textbf{return with } $\vecm{q}_{n+1} = \vecm{q}_k, \vecm{v}_{n+1} = (\vecm{q}_{n+1} - \vecm{q}_n) / h$
+\State \textbf{return with } $\matm{q}_{n+1} = \matm{q}_k, \matm{v}_{n+1} = (\matm{q}_{n+1} - \matm{q}_n) / h$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
 
 \subsection{Properties of Projective Dynamics}\label{ss:pd-properties}
 \begin{itemize}
-    \item Make sure to mention the analytical stability of Projective Dynamics. Both global and local steps decrease the value of the 
-        objective function and the objective function is bounded from below.
-    \item The authors claim that since the constraint manifolds already capture nonlinearities the need for complicated distance functions $d$
+    \item The authors claim that since the constraint manifolds already capture nonlinearities the need for complicated squared distance functions $d$
         can be relaxed while still achieving visually plausible simulations \cite{bouaziz2014}. This belongs into the discussion.
+    \item Talk about how handling everything implicitly can also cause dampening of rigid body motion. I believe this is mentioned in \cite{servin2006}.
 \end{itemize}   
 
 The structure of the PD energy potentials allows for Algorithm \ref{alg:pd} to be implemented efficiently. Since the constraint projections
 in \autoref{eq:pd-local-minimization} can be carried out independently, the local optimization step lends itself to massive parallelization. 
-Further, because the system matrix $\matm{S}$ is constant its prefactorization can be computed at initialization, enabling
-efficient solves of the linear system in the global optimization step. Note that since $\vecm{q} \in \mathbb{R}^{m \times 3}$ in \autoref{eq:pd-global-system}, 
+Further, because the system matrix $\matm{S}$ is constant, its prefactorization can be computed at initialization, enabling
+efficient solves of the linear system in the global optimization step. Note that since $\matm{q} \in \mathbb{R}^{m \times 3}$ in \autoref{eq:pd-global-system}, 
 the global system can be solved independently and in parallel for each coordinate.
 
-The last property follows from the fact that the distance measure $d$ in \autoref{eq:pd-distance} has no dependencies between 
+The last property follows from the fact that the squared distance functions $d_j$ in \autoref{eq:pd-distance} have no dependencies between 
 $x$-, $y$- and $z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: 
 Many arbitrary nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
-in terms of PD elastic potentials. Additionally, many classical energies like the Neo-Hookean and St.\ Venant-Kirchoff energies do not fit 
-into the PD framework \cite{liu2017}. On the other hand, the authors show that various different types of constraints, including strain constraints, 
-bending constraints, collisions and positional constraints can be expressed in terms of PD potentials and handled by the PD solver in a 
-unified manner \cite{bouaziz2014}. Where applicable, the constraints are derived from continuous energies, leaving them reasonably independent 
-to the underlying meshing.
+in terms of PD elastic potentials. Further, since PD energy potentials $\psi_j$ are defined in terms of squared distance function $\d_j$, the 
+resulting forces are always proportional to the distance from the constraint manifold $\cman{C}_j$ \cite{overby2017}. Many classical energies 
+like the Neo-Hookean 
+and St.\ Venant-Kirchoff energies do not fit into the PD framework \cite{liu2017}. On the other hand, the authors show that various different 
+types of constraints, including strain constraints, bending constraints, collisions and positional constraints can be expressed in terms of PD 
+potentials and handled by the PD solver in a unified manner \cite{bouaziz2014}. Where applicable, the constraints are derived from continuous 
+energies, leaving them reasonably independent to the underlying meshing.
 
 It is also important to note that it is impossible to implement hard constraints via energy potentials. Increasing
 the weights of constraints allows approximating hard constraints. However, this comes with adverse effects to the numerical properties of the 
-system matrix $\matm{S}$.
+system matrix $\matm{S}$ \textcolor{red}{(Elaborate on this!!)}.
 
 While a simplified minimization problem is constructed by restricting to PD energy potentials, the solver does converge to a 
 true solution of \autoref{eq:pd-minimization}. That means that the solution strikes a balance between preserving 
@@ -1807,24 +1834,24 @@ context of real-time simulations.
 \subsection{Projective Dynamics as a Special Case of Quasi-Newton Methods}\label{ss:pd-quasi-newton}
 In PD, the variational form of implicit Euler integration that results from restricting to PD energy potentials (\cref{eq:pd-minimization}) 
 is solved by using a specialized local/global alternating minimization technique (\cref{ss:pd-solver}). If the projection points 
-$\vecm{p}^j_{\vecm{q}}$ with 
+$\matm{p}^j_{\matm{q}}$ with 
 
 \[
-    \psi_j({\vecm{q}}) = \min_{\vecm{p}} \frac{w_j}{2} \norm{\vecm{gq} - \vecm{p}}^2_F + \delta_{\cman{C}}(\vecm{p})
-    = \frac{w_j}{2} \norm{\vecm{gq} - \vecm{p}^i_\vecm{q}}^2_F
+    \psi_j({\matm{q}}) = \min_{\matm{p}} \frac{w_j}{2} \norm{\matm{gq} - \matm{p}}^2_F + \delta_{\cman{C}}(\matm{p})
+    = \frac{w_j}{2} \norm{\matm{gq} - \matm{p}^i_\matm{q}}^2_F
 \]
 
-\noindent are considered functions of $\vecm{q}$ with $\vecm{p}_j(\vecm{q}) = \vecm{p}^j_{\vecm{q}}$, then the equivalent optimization problem
+\noindent are considered functions of $\matm{q}$ with $\matm{p}_j(\matm{q}) = \matm{p}^j_{\matm{q}}$, then the equivalent optimization problem
 
 \begin{equation}\label{eq:pd-minimization-q}
-    \min_{\vecm{q}} g(\vecm{q}) = 
-    \min_{\vecm{q}} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\vecm{q}
-    - \vecm{p_j}(\vecm{q})}^2_F
+    \min_{\matm{q}} g(\matm{q}) = 
+    \min_{\matm{q}} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\matm{q} - \tilde{\matm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\matm{q}
+    - \matm{p_j}(\matm{q})}^2_F
 \end{equation}
 
 \noindent can be solved using general purpose algorithms for unconstrained optimization, including Newton's method (\cref{sss:newton-method}),
 the BFGS method (\cref{sss:quasi-newton}) or the L-BFGS method (\cref{sss:limited-memory-quasi-newton}) \textcolor{red}{It is better to use the
-argmin notation here again, possibly even $W(\vecm{p}, \vecm{q})$}. In fact, it can be shown that
+argmin notation here again, possibly even $W(\vecm{p}, \matm{q})$}. In fact, it can be shown that
 the PD solver applied to \autoref{eq:pd-minimization} is a special case of a Quasi-Newton method with constant Hessian approximation 
 applied to \autoref{eq:pd-minimization-q} \cite{liu2017}. 
 
@@ -1833,35 +1860,35 @@ methods mentioned above. Liu et al. \cite{liu2017} show that \textcolor{red}{(ma
 is given by
 
 \begin{equation}\label{eq:pd-gradient-qn}
-    \nabla g(\vecm{q}) = \frac{1}{h^2}\matm{M}(\vecm{q} - \tilde{\vecm{q}}) + \sum_j w_j \matm{G}^T_j \matm{G}_j \vecm{q}
-    + \sum_j w_j \matm{G}^T_j \vecm{p}_j(\vecm{q}).
+    \nabla g(\matm{q}) = \frac{1}{h^2}\matm{M}(\matm{q} - \tilde{\matm{q}}) + \sum_j w_j \matm{G}^T_j \matm{G}_j \matm{q}
+    + \sum_j w_j \matm{G}^T_j \matm{p}_j(\matm{q}).
 \end{equation}
 
-Surprisingly, this is the same as the gradient $\nabla_{\vecm{q}} \tilde{g}(\vecm{q}, \vecm{p}_j)$ of the global optimization problem of the original
-PD algorithm (\cref{eq:pd-gradient-q}). Thus, the gradient is unaffected by whether $\vecm{p}_j$ is considered constant or a function
-$\vecm{p}_j(\vecm{q})$ of the positions $\vecm{q}$. In Newton's method, the search direction for the current iteration $\vecm{r}^N_k$ is given
-by $-(\nabla^2 g(\vecm{q}))^{-1} \nabla g(\vecm{q})$, which is a descent direction if $\nabla^2 g(\vecm{q})$ is positive definite 
-(\cref{sss:newton-method}). In Quasi-Newton methods, the true Hessian $\nabla^2 g(\vecm{q})$ is approximated by some positive definite matrix $\matm{B}_k$ 
+Surprisingly, this is the same as the gradient $\nabla_{\matm{q}} \tilde{g}(\matm{q}, \matm{p}_j)$ of the global optimization problem of the original
+PD algorithm (\cref{eq:pd-gradient-q}). Thus, the gradient is unaffected by whether $\matm{p}_j$ is considered constant or a function
+$\matm{p}_j(\matm{q})$ of the positions $\matm{q}$. In Newton's method, the search direction for the current iteration $\matm{r}^N_k$ is given
+by $-(\nabla^2 g(\matm{q}))^{-1} \nabla g(\matm{q})$, which is a descent direction if $\nabla^2 g(\matm{q})$ is positive definite 
+(\cref{sss:newton-method}). In Quasi-Newton methods, the true Hessian $\nabla^2 g(\matm{q})$ is approximated by some positive definite matrix $\matm{B}_k$ 
 instead (\cref{sss:quasi-newton}). If $\matm{B}_k = \matm{S}$ -- i.e.\ the system matrix 
 (\cref{eq:pd-global-system}) from the global optimization in PD -- is used with step size $\alpha = 1$ the following update is recovered:
 
 \[
-    \matm{S}^{-1} \nabla g(\vecm{q}) = 
-    \vecm{q} - (\frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j)^{-1} 
-    (\frac{1}{h^2}\matm{M}\tilde{\vecm{q}} + \sum_j w_j \matm{G}_j^T \vecm{p}_j(\vecm{q}))
+    \matm{S}^{-1} \nabla g(\matm{q}) = 
+    \matm{q} - (\frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j)^{-1} 
+    (\frac{1}{h^2}\matm{M}\tilde{\matm{q}} + \sum_j w_j \matm{G}_j^T \matm{p}_j(\matm{q}))
 \]
 
 \noindent Note that 
 
 \[
-    \vecm{q}^* \coloneqq \matm{S}^{-1} (\frac{1}{h^2}\matm{M}\tilde{\vecm{s}} + \sum_j w_j 
-    \matm{G}_j^T \vecm{p}_j(\vecm{q}))
+    \matm{q}^* \coloneqq \matm{S}^{-1} (\frac{1}{h^2}\matm{M}\tilde{\matm{s}} + \sum_j w_j 
+    \matm{G}_j^T \matm{p}_j(\matm{q}))
 \]
 
 \noindent is exactly the solution of the global linear system from PD in \autoref{eq:pd-global-system}. Together
 
 \[
-    \vecm{q}^* = \vecm{q} -\matm{S}^{-1} \nabla g(\vecm{q}) 
+    \matm{q}^* = \matm{q} -\matm{S}^{-1} \nabla g(\matm{q}) 
 \]
 
 \noindent shows that performing a Quasi-Newton step with Hessian approximation $\matm{B}_k = \matm{S}$ and step size 
@@ -1872,14 +1899,14 @@ minimization problem in \autoref{eq:pd-minimization-q} is equivalent to performi
 \begin{algorithm}
 \caption{Projective Dynamics as a Quasi-Newton Method}\label{alg:pd-qn}
 \begin{algorithmic}
-\Procedure{solvePDViaQN}{$\vecm{q}_n$, $\vecm{v}_n$, $\vecm{f}_{\text{ext}}$, $h$}
-\State $\tilde{\vecm{q}} = \vecm{q}_n + h\vecm{v}_n + h^2\matm{M}^{-1}\vecm{f}_{\text{ext}}$
-\State $\vecm{q}_k = \tilde{\vecm{q}}$
+\Procedure{solvePDViaQN}{$\matm{q}_n$, $\matm{v}_n$, $\matm{f}_{\text{ext}}$, $h$}
+\State $\tilde{\matm{q}} = \matm{q}_n + h\matm{v}_n + h^2\matm{M}^{-1}\matm{f}_{\text{ext}}$
+\State $\matm{q}_k = \tilde{\matm{q}}$
 \For{all iterations}
-\State $\vecm{p}_k \gets$ solution of $\matm{S}\vecm{p} = -\nabla g(\vecm{q}_k)$
-\State $\vecm{q}_k = \vecm{q}_k + \vecm{p}_k$
+\State $\matm{p}_k \gets$ solution of $\matm{S}\matm{p} = -\nabla g(\matm{q}_k)$
+\State $\matm{q}_k = \matm{q}_k + \matm{p}_k$
 \EndFor
-\State \textbf{return with result } $\vecm{q}_{n+1} = \vecm{q}_k, \vecm{v}_{n+1} = (\vecm{q}_{n+1} - \vecm{q}_n)/h$
+\State \textbf{return with result } $\matm{q}_{n+1} = \matm{q}_k, \matm{v}_{n+1} = (\matm{q}_{n+1} - \matm{q}_n)/h$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
@@ -1895,9 +1922,9 @@ applied to the corresponding minimization problem \autoref{eq:pd-minimization-q}
 method
 
 \begin{equation}\label{eq:pd-minimization-q2}
-    \min_{\vecm{q}} g(\vecm{q}) = 
-    \min_{\vecm{q}} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\vecm{q}
-    - \vecm{p_j}(\vecm{q})}^2_F
+    \min_{\matm{q}} g(\matm{q}) = 
+    \min_{\matm{q}} \frac{1}{2h^2} \norm{\matm{M}^{1/2}(\matm{q} - \tilde{\matm{q}})}^2_F + \sum_j \frac{w_j}{2} \norm{\matm{G}_j\matm{q}
+    - \matm{p_j}(\matm{q})}^2_F
 \end{equation}
 
 \noindent and the global system matrix $\matm{S}$ which is used as the constant Hessian approximation
@@ -1908,7 +1935,7 @@ method
 
 \noindent are stated here once more for convenience.
 
-As the Hessian matrix $\nabla^2 g(\vecm{q}_k)$ generally changes between iterations, the Hessian approximations of the 
+As the Hessian matrix $\nabla^2 g(\matm{q}_k)$ generally changes between iterations, the Hessian approximations of the 
 BFGS (\cref{sss:quasi-newton}) and L-BFGS method (\cref{sss:limited-memory-quasi-newton}) do so as well.
 This is in contrast to the constant Hessian approximation $\matm{S}$, which does not incorporate local curvature information
 at the current iterate at all. Combining both approaches in order to accelerate convergence is discussed 
@@ -1936,26 +1963,26 @@ the constant Hessian approximations $S$ by applying BFGS or L-BFGS updates are t
 Due to its favorable space complexity over the BFGS method for large-scale problems (see \cref{sss:limited-memory-quasi-newton}), 
 Liu et al.\ focus on the L-BFGS method with $\matm{B}_0 = \matm{S}$ \cite{liu2017}. This leads to the algorithm that is laid out in
 Algorithm \ref{alg:pd-lbfgs}. The occurrences of $f$ in the two-loop recursion (\cref{alg:lbfgs-recursion}) need to be replaced by $g$ 
-in the appropriate places. Again, the details of maintaining the history of $\vecm{s}, \vecm{y}, \rho$ are omitted for the sake of clarity.
+in the appropriate places. Again, the details of maintaining the history of $\matm{s}, \matm{y}, \rho$ are omitted for the sake of clarity.
 
 \begin{algorithm}
 \caption{L-BFGS method for PD energies}\label{alg:pd-lbfgs}
 \begin{algorithmic}[1]
 \State \textbf{require } $\beta \in (0, 1)$, $t \in (0, 1)$
-\Procedure{solvePDViaLBFGS}{$\vecm{q}_n$, $\vecm{v}_n$, $\vecm{f}_{\text{ext}}$, $m$, $h$}
-\State $\tilde{\vecm{q}} = \vecm{q}_n + h\vecm{v}_n + h^2\matm{M}^{-1}\vecm{f}_{\text{ext}}$
-\State $\vecm{q}_k = \tilde{vecm{q}}$
+\Procedure{solvePDViaLBFGS}{$\matm{q}_n$, $\matm{v}_n$, $\matm{f}_{\text{ext}}$, $m$, $h$}
+\State $\tilde{\matm{q}} = \matm{q}_n + h\matm{v}_n + h^2\matm{M}^{-1}\matm{f}_{\text{ext}}$
+\State $\matm{q}_k = \tilde{matm{q}}$
 \For{all iterations}
-\State $\vecm{s_k} = \vecm{q}_k - \vecm{q}_{k-1}, \vecm{y}_k = \nabla g(\vecm{q}_k) - \nabla g(\vecm{q}_{k-1}), \rho_k = 1 / (\vecm{s}^T_k \vecm{y}_k)$
-\State $\vecm{p}_k = \text{\textsc{twoLoopRecursion}}(\matm{S}, \vecm{q}_k, \vecm{s}, \vecm{y}, \rho, m, k)$   (\cref{alg:lbfgs-recursion})
+\State $\matm{s_k} = \matm{q}_k - \matm{q}_{k-1}, \matm{y}_k = \nabla g(\matm{q}_k) - \nabla g(\matm{q}_{k-1}), \rho_k = 1 / (\matm{s}^T_k \matm{y}_k)$
+\State $\matm{p}_k = \text{\textsc{twoLoopRecursion}}(\matm{S}, \matm{q}_k, \matm{s}, \matm{y}, \rho, m, k)$   (\cref{alg:lbfgs-recursion})
 \State $\alpha_k = 1$
 \If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
 \State compute $\alpha_k$ that satisfies the strong Wolfe conditions 
-\State \textbf{or} $\alpha_k = \text{\textsc{backtrack}}(\vecm{q}_k, \vecm{p}_k, 1, \beta, t)$ (\cref{alg:backtracking})
+\State \textbf{or} $\alpha_k = \text{\textsc{backtrack}}(\matm{q}_k, \matm{p}_k, 1, \beta, t)$ (\cref{alg:backtracking})
 \EndIf
-\State $\vecm{q}_k = \vecm{q}_k + \alpha_k \vecm{p}_k$
+\State $\matm{q}_k = \matm{q}_k + \alpha_k \matm{p}_k$
 \EndFor
-\State \textbf{return with result } $\vecm{q}_{n+1} = \vecm{q}_k, \vecm{v}_{n+1} = (\vecm{q}_{n+1} - \vecm{q}_n)/h$
+\State \textbf{return with result } $\matm{q}_{n+1} = \matm{q}_k, \matm{v}_{n+1} = (\matm{q}_{n+1} - \matm{q}_n)/h$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
@@ -1987,14 +2014,14 @@ without modification as the matrices $\matm{G}_j$ are taken directly from the de
 We focus on the setting of 3-manifold simplicial complexes where energy potentials are defined for each tetrahedron and the
 energy of the entire body is the sum of the individual tetrahedral energies \textcolor{red}{(refer to the appropriate section)}.
 As shown in \cref{ss:pd-potentials}, the strain energy of a single tetrahedron can be emulated with special PD strain 
-potentials (\cref{eq:pd-strain}). Here $\matm{G}_j = \vecm{a}_j$, where $\vecm{a}_j$ is the linear operator that maps $\vecm{q}$ 
-to the tranpose of the deformation gradient $\vecm{f}^T_j$, $\cman{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
+potentials (\cref{eq:pd-strain}). Here $\matm{G}_j = \matm{A}_j$, where $\matm{A}_j$ is the linear operator that maps $\matm{q}$ 
+to the tranpose of the deformation gradient $\matm{F}^T_j$, $\cman{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
 volume of the undeformed tetrahedron and $k_j$ is a user-defined stiffness value. 
 Liu et al.\ suggest approximating more general tetrahedral energies with PD strain potentials and using the global system
 matrix $\matm{S}$ that arises as the initial Hessian approximation $\matm{B}_0$ given by
 
 \begin{equation}\label{eq:global-matrix-strain}
-    \matm{B}_0 = \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \vecm{a}_j^T \vecm{a}_j.
+    \matm{B}_0 = \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{M}_j^T \matm{A}_j.
 \end{equation}
 
 Instead of using user-defined stiffness values $k_j$, a procedure for setting $k_j$ from the original, more general energy
@@ -2050,7 +2077,7 @@ defined by
 the minimization of the variational form of the implicit Euler integration with Valanis-Landel materials via Algorithm \ref{alg:pd-lbfgs}. According
 to Liu et al.\ Algorithm \ref{alg:pd-lbfgs} is insensitive to the size of the interval $[\sigma_{\text{min}}, \sigma_{\text{max}}]$. It is important
 to note that while PD strain energies are used to approximate the original energy potentials when constructing $\matm{B}_0$, the function
-evaluations $g(\vecm{q}_k)$ and gradients $\nabla g(\vecm{q}_k)$ are computed from the original potential energies in Algorithm \ref{alg:pd-lbfgs}.
+evaluations $g(\matm{q}_k)$ and gradients $\nabla g(\matm{q}_k)$ are computed from the original potential energies in Algorithm \ref{alg:pd-lbfgs}.
 
 \subsection{Properties of Quasi-Newton Methods for Physical Simulations}\label{ss:properties-qn}
 \begin{itemize}
