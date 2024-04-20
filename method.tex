@@ -21,12 +21,13 @@ don't want to spend too much time on contact.} Due to Newton's second law
 \noindent it is possible to relate the force $\vecm{f}$ acting on a particle and the resulting acceleration $\vecm{a}$ via the particle
 mass $m$. The motion of a particle system can then be described in terms of a system of ordinary differential equations (ODEs). This
 system of ODEs is commonly referred to as the equations of motion. The equations of motion are integrated over time in order to arrive 
-at the configuration of the system at the next time step. Usually, this is achieved via numerical integration schemes. In particular, both
-XPBD (\cref{ss:xpbd-constraint-projection}) and PD (\cref{ss:pd-solver}) are based on a numerical integration technique called implicit 
-Euler integration \cite{macklin2016, bouaziz2014}. The equations of motions due to Newton's second law are reviewed in 
-\cref{s:equations-of-motion}. Common approaches for numerical integration are briefly reviewed in \cref{s:numerical-integration}. 
+at the configuration of the system at the next time step. For general forces, finding an analytical solution to the equations of motion
+is impossible and numerical integration schemes must be employed instead. In particular, both XPBD (\cref{ss:xpbd-constraint-projection}) 
+and PD (\cref{ss:pd-solver}) are based on a numerical 
+integration technique called implicit Euler integration \cite{macklin2016, bouaziz2014}. The equations of motions due to Newton's second 
+law are reviewed in \cref{s:equations-of-motion}. Common approaches for numerical integration are introduced in \cref{s:numerical-integration}. 
 
-\subsection{Newton's Ordinary Differential Equation}\label{s:equations-of-motion}
+\subsection{The Equations of Motion}\label{s:equations-of-motion}
 
 The motion of a spatially discretized system with $m$ particles evolving in time according to Newton's laws of motion can be modeled via 
 the equations of motion
@@ -48,26 +49,63 @@ In the context of position based dynamics (\cref{s:pbd}), it is $\vecm{q}(t), \v
 $\frac{d\vecm{v}}{dt}(t)$, respectively. From now on, we write $\vecm{q}$ and $\dot{\vecm{q}}$ instead of $\vecm{q}(t)$ and $\dot{\vecm{q}}(t)$ for 
 time-dependent quantities for the sake of brevity.
 
-The positions $\vecm{q}$ and velocities $\vecm{v}$ of the system at time $t$ can be determind by solving the equations of motion. For general 
-nonlinear forces, analytical solutions are usually not available. Thus, the equations of motion need to be solved numerically.
+The positions $\vecm{q}(t)$ and velocities $\vecm{v}(t)$ at time $t$ can be determined by solving the equations of motion given some initial conditions
+$\vecm{q}(0) = \vecm{q}_0$ and $\vecm{v}(0) = \vecm{v}_0$. Here, $\vecm{q}_0$ and $\vecm{v}_0$ are the initial positions and velocitities, respectively. 
+A function $\vecm{s}$ is a solution of the equations of motion if 
 
-\subsection{Numerical Integration of Newton's Ordinary Differential Equation}\label{s:numerical-integration}
-The simplest approach to numerical integration is the explict Euler integration. When applied to \autoref{eq:equations-of-motion}, 
-the positions and velocities are computed at discrete timesteps via the update formula
+\[
+    \vecm{s}(0) = 
+    \begin{pmatrix}
+        \vecm{q}(0)\\
+        \vecm{v}(0)
+    \end{pmatrix} 
+    \text{ and } 
+    \dot{\vecm{s}} = 
+    \begin{pmatrix}
+        \dot{\vecm{q}}\\
+        \dot{\vecm{v}}
+    \end{pmatrix}.
+\]
+
+\noindent Given an analytical solution $\vecm{s}$, the positions and velocities of the simulated system at time $t$ can be determined by computing 
+$\vecm{s}(t)$. For general nonlinear forces, analytical solutions of the equations of motion are usually not available. Thus, the equations of motion 
+need to be solved numerically.
+
+\subsection{Numerical Integration of The Equations of Motion}\label{s:numerical-integration}
+Numerical integration schemes for the equations of motion aim at approximating the true positions $\vecm{q}(t_n)$ and velocities $\vecm{v}(t_n)$ 
+at discrete points in time $t_n, n \in \mathbb{N}$ without computing the analytical solution $\vecm{s}$ directly. In the context of this 
+thesis, $t_n = nh$ for some time step $h \in \mathbb{R}$. Note that the time step is constant. The approximations of $\vecm{q}(t_n)$ 
+and $\vecm{v}(t_n)$ produced by the integration scheme are referred to as $\vecm{q}_n$ and $\vecm{v}_n$, respectively. 
+
+The simplest approach to numerical integration is explict Euler integration. 
+When applied to \autoref{eq:equations-of-motion}, the next position and velocity estimates $\vecm{q}_{n+1}$ and $\vecm{v}_{n+1}$ are derived 
+from the current estimates $\vecm{q}_n$ and $\vecm{v}_n$ via the update formula
 
 \begin{align*}
     \vecm{q}_{n+1} &= \vecm{q}_n + h\vecm{v}_n\\
     \vecm{v}_{n+1} &= \vecm{v}_n + h\matm{M}^{-1}\vecm{f}(\vecm{q}_n, \vecm{v}_n).
 \end{align*}
 
-\noindent Here, $h$ is the time step. The idea is to simplify the integration of the functions $\dot{\vecm{q}}, \dot{\vecm{v}}$ over the timestep by 
-using constant approximations. 
-Then, time integration is as simple as multiplying this constant function value with the timestep. In the explicit Euler method, we 
-approximate $\dot{\vecm{q}}, \dot{\vecm{v}}$ by their function values $\dot{\vecm{q}}(t_n), \dot{\vecm{v}}(t_n)$ at the beginning of the timestep.
-While simple, the explicit Euler method is not stable for stiff systems, i.e. systems with accelerations of large magnitude 
-\cite{chapra2005}. It can be shown that the explicit Euler amplifies the energy of the simulated system without additional damping terms
-\cite{stern2006}. For example, the amplititude of a swinging pendulum increases with time if integrated via the explicit Euler method, 
-even if small time steps are used. Using the explicit Euler method with larger time steps often manifests itself in exploding simulations. 
+\noindent The idea is to simplify the integration of the functions $\dot{\vecm{q}}, \dot{\vecm{v}}$ over the time step $h$ by using constant 
+approximations. Then, time integration is as simple as multiplying the constant function values 
+with the time step $h$. In the explicit Euler method, we approximate $\dot{\vecm{q}}, \dot{\vecm{v}}$ by their current estimates $\vecm{q}_n , 
+\vecm{v}_n$.
+
+One main criterion for evaluating numerical integration schemes is the global trunction error \cite{chapra2005}, which is the error between 
+$(\vecm{q}^T_n, \vecm{v}^T_n)^T$ and $(\vecm{q}(t_n)^T, \vecm{v}(t_n)^T)^T$ incurred during $n$ applications of the update formula. The global 
+trunction error is the sum 
+of the local trunction error (the error that results in the application of the method over a single time step $h$) and the propagated truncation 
+error (the
+error resulting from the approximations produced during the previous steps). It can be shown that the global truncation error of explicit Euler 
+integration over $n$ iterations is $\mathcal{O}(nh)$. Thus, explicit Euler integration is a first-order method. 
+
+The main drawback of explicit Euler integration is that its estimates $\vecm{q}_n$ and $\vecm{v}_n$ can often diverge with growing $n$ unless 
+prohibitely small time steps are used, even if the true functions $\vecm{q}$ and $\vecm{v}$ are bounded \cite{chapra2005}. Such integration schemes 
+are called unstable. In the context of phyiscal simulations, it is also desirable that numerical integration schemes preserve important physical 
+invariants of the equations of motion such as the conservation of momentum and energy. However, in the absence of artificial damping, explicit
+Euler integration amplifies the energy of the simulated system. For example, it fails unconditionally on the undampened harmonic oscillator 
+\cite{servin2006}. Using the explicit Euler method with larger time steps often manifests itself in exploding
+simulations. These issues are particularly pronounced during the simulation of stiff systems, i.e. systems with large accelerations.
 
 A variation of the explicit Euler method applied to the equations of motion, called the symplectic Euler method, arises when the new 
 velocities $\vecm{v}_{n+1}$ instead of the old velocities $\vecm{v}_n$ are used in the position update \cite{stern2006}. This leads to 
@@ -80,12 +118,13 @@ the following update formula:
     \end{split}
 \end{align}
 
-\noindent Even though the symplectic Euler method has the same computational cost as the explicit Euler method, while it still does not conserve
-the system's energy exactly, it conserves a quadratic form that is close \cite{servin2006}. In contrast to the explicit Euler method, the 
-symplectic Euler method preserves the amplitude of a swinging pendulum with appropriate time steps \cite{stern2006}. Its main drawback 
-is that it also becomes unstable for stiff simulations unless the time step is kept prohibitively small \cite{servin2006}. 
+\noindent The symplectic Euler method has the same computational cost as the explicit Euler method. Just like explicit Euler integration, it 
+is a first-order method. However, while it still does not conserve the system's energy exactly, it conserves a quadratic form that is close 
+\cite{servin2006}. In contrast to the explicit Euler method, the symplectic Euler method preserves the amplitude of a swinging pendulum with 
+appropriate time steps \cite{stern2006}. Its main drawback is that it also becomes unstable for stiff simulations unless the time step is 
+kept prohibitively small \cite{servin2006}. 
 
-Another popular integration scheme for tackling the equations of motion is implicit Euler integration, resulting in the update formula
+Another popular integration scheme for tackling the equations of motion is implicit Euler integration, defined by the update formula
 
 \begin{align}
     \begin{split}\label{eq:implicit-euler}
@@ -96,13 +135,15 @@ Another popular integration scheme for tackling the equations of motion is impli
 
 \noindent Note how $\vecm{q}_{n+1}$ and $\vecm{v}_{n+1}$ appear on both sides of the equations. Consequently, performing implicit 
 Euler integration includes solving a system of algebraic equations. For general nonlinear forces, the entire system of equations is nonlinear.
-Despite the added complexity compared to the explicit and
-symplectic Euler integration schemes implicit Euler integration is popular since it can be shown to be unconditionally stable and first-order
-accurate \cite{chapra2005}. This allows dramatically increasing the size of the time steps. The additional cost of a single implicit Euler 
+Thus, implicit Euler integration is more computationally expensive than both explicit and symplectic Euler integration. Despite the added 
+complexity, implicit Euler integration is still only first-order accurate. However, implicit Euler integration remains a popular choice for 
+physical simulation since it can be shown to be unconditionally stable \cite{chapra2005}. This allows dramatically increasing the size 
+of the time steps. The additional cost of a single implicit Euler 
 step compared to the previously mentioned integration schemes is offset by the fact that fewer steps are required to drive the 
 simulation forward the same amount of time in a stable manner. However, implicit Euler integration is known to exhibit numerical 
 damping \cite{stern2006}. This manifests itself in a loss of energy in the simulated system. For example, the amplitude of a swinging 
-pendulum decreases if integrated using the implicit Euler method.
+pendulum decreases if integrated using the implicit Euler method. It is important to note that the extent of the observed numerical damping
+depends on the time step $h$, making it difficult to control.
 
 Instead of solving the system of equations in \autoref{eq:implicit-euler} directly, it is possible to approach implicit
 Euler integration via an equivalent unconstrained minimization problem over the particle positions at the next time step. This formulation
@@ -145,7 +186,7 @@ problem
 The first and second term of the objective function are called the momentum potential and the elastic potential, respectively \cite{bouaziz2014}. 
 Thus, the minimization problem requires that the solution minimizes the elastic deformation as best as possible while ensuring that the solution is 
 close to following its momentum plus external forces. The weighting between the momentum potential and the elastic potential depends on the 
-particle masses $\matm{M}$, the timestep $h$ and the material stiffness of the elastic potentials $\psi_j$. The solution preserves linear and 
+particle masses $\matm{M}$, the time step $h$ and the material stiffness of the elastic potentials $\psi_j$. The solution preserves linear and 
 angular momentum as long as the elastic potentials are rigid motion invariant \cite{bouaziz2014}.
 
 Approaching implicit Euler integration in its variational form can often be advantageous. That is because the objective function of 
@@ -583,8 +624,35 @@ condition. If the search direction $\vecm{p}_k$ is effective, e.g.\ when Newton'
 For less effective search directions, including search directions from most Quasi-Newton methods, backtracking might be less suitable.
 
 \section{Dynamic Simulation}\label{s:dynamic-simulation}
+In \cref{ss:numerical-integration}, we have introduced various 
+
 \begin{itemize}
-    \item Write a paragraph that gives an overview
+    \item Describe the challenge: We have already outlined numerical integration schemes for the equations of motion, so what exactly
+        is left to do?
+    \begin{itemize}
+        \item Stability for stiff systems. Sources of stiffness can be the material model itself (e.g. high values for Youngs modulus 
+            order Poisson ratio) or constraints between bodies that are modeled via stiff forces (attaching bodies to each other / 
+            fixing particle positions / implementing joints / contact handling). Usually, stability issues are due to the inherent 
+            analytical properties of the underlying scheme for numerical integration (e.g. explicit Euler integration with large time steps 
+            will eventually lead to instabilities, even 
+            in the absence of numerical issues) or due to numerical issues (e.g. poor conditioning of the system matrix that arises 
+            during implicit Euler integration). Especially in the real-time setting, stability is hard requirement. There is only one chance 
+            to get the computation of the positions at the next time step right! 
+        \item Avoid excessive damping. Excessive damping leads to visually implausible simulations and is particular noticable for stiff 
+            systems. This issue mostly arises in the context of implicit Euler integration. The root cause is that the implicit Euler solver
+            does not maintain physical invariants such as the preservation of energy and momentum. 
+        \item Effiency, particularly for real-time simulations. Even a single solve of the linear system of equations from the implicit Euler
+            integration can be infeasible if work from previous time steps cannot be reused. This is aggravated when the set of forces / 
+            constraints changes from time step to time step. The more dense the sampling of the simulated bodies, the bigger this issue 
+            becomes.
+        \item Generality. It is convenient to handle different effects in a unified manner. For example, it should be possible to handle 
+            the elasticity of the simulated body due to its material model, constraints between bodies and contact in roughly the same way.
+        \item Simplicity. Prevents bugs, easy to model new effects, etc. This is mostly a practical consideration, but still relevant.
+        \item How to model constraints? Issues above with stiff systems might suggest that handling via constraints might be favorable.
+    \end{itemize}
+\end{itemize}
+
+\begin{itemize}
     \item Use $\vecm{q}$ instead of $\vecm{x}$ everywhere
     \item Rewrite this entire section from scratch. Make sure that the notation is unified. At the end of each method,
         point out what its issues are. When the next method is introduced that solves some of these issues, highlight
@@ -593,7 +661,7 @@ For less effective search directions, including search directions from most Quas
 
 \subsection{Stiff Springs}\label{ss:stiff-springs}
 Common effects in elasticity-based simulations such as attaching one body to another or maintaining fixed distance between two 
-particles can approximated via stiff springs. Consider a spring between 
+particles can be approximated via stiff springs. Consider a spring between 
 
 % TODO: First describe, then show issues. Remove as much detail as possible. Refer to section on Newton's ODE where applicable to save space.
 % Mention that explicit / sympletic Euler methods obviously won't work without tiny time steps and refer to section on integration. Show
@@ -622,7 +690,7 @@ the section on numerical integration...)}:
 \end{align*}
 
 As the stiffness $k$ of the spring increases, so does the magnitude of the acceleration $\vecm{a}$. Consequently, the integration
-diverges unless the timestep is prohibitively small. The stability issues are often addressed by switching to an implicit 
+diverges unless the time step is prohibitively small. The stability issues are often addressed by switching to an implicit 
 integration scheme, such as the backward Euler method \cite{baraff1998} \textcolor{red}{(refer to the section on numerical 
 integration here)}. Replacing current accelerations with future accelerations requires the solution of the following linear 
 system of equations (LSE):
@@ -663,7 +731,7 @@ shearing of triangles can be controlled via the corresponding quadratic energy p
 functions with the desired effect are often intuitive and simple to define. However, as the corresponding energy potentials are not physically 
 derived, choosing stiffness parameters that correspond to measurable physical properties of the simulated material and orchestrating 
 multiple constraints becomes challenging \cite{servin2006, nealen2006}. Additionally, the generated penalty forces do not converge in the 
-limit of infinite stiffess, leading to oscillations unless the timestep is reduced significantly \cite{rubin1957}.
+limit of infinite stiffess, leading to oscillations unless the time step is reduced significantly \cite{rubin1957}.
 
 \textcolor{blue}{Maybe explain the challenges with penalty forces a bit better! Also read \cite{terz1987, nealen2006, rubin1957}. 
 I just skimmed over \cite{terz1987} for now, but want to make sure that I am citing this correctly. The term penalty forces is not used
@@ -748,7 +816,7 @@ following Karush-Kuhn-Tucker (KKT) equation system:
 \end{pmatrix}
 \]
 
-Here, the external forces $\vecm{f}_{\text{ext}}$ and the constraint gradients $\matm{J}$ are considered constant across the timestep 
+Here, the external forces $\vecm{f}_{\text{ext}}$ and the constraint gradients $\matm{J}$ are considered constant across the time step 
 and $\matm{J}(x_{n+1})$ 
 is not approximated using the Taylor expansion like it is in \cite{baraff1998}. If internal forces are taken into account, the upper-left 
 matrix $\matm{M}$ is replaced by the matrix $\matm{H}$ from \autoref{eq:system-H}.
@@ -835,7 +903,7 @@ side of the resulting LSE do not contain references to the large stiffness value
 $\matm{\alpha}^{-1}$. This is achieved by treating $\vecm{\lambda} = -\matm{\alpha}^{-1}\vecm{C}(\vecm{q})$ as an unknown, 
 pulling it out of the system matrix and hiding all occurrences of the large $\matm{\alpha}^{-1}$ in there. To this end, it is often 
 necessary to make simplifying assumptions suitable for the problem at hand. As an example, if the DAE is solved via backward 
-differentiation, making the assumption that $\nabla \vecm{C}$ is constant across the timestep allows pulling $\vecm{\lambda}$ out of 
+differentiation, making the assumption that $\nabla \vecm{C}$ is constant across the time step allows pulling $\vecm{\lambda}$ out of 
 the system matrix entirely \cite{tournier2015}. The entries of the resulting system matrix and the corresponding right side
 are small, since they do not depend on the large stiffness terms. Backwards differentiation while assuming that $\nabla \vecm{C}$ is 
 constant across the time step yields
@@ -893,7 +961,7 @@ positions directly on a per-constraint basis without integrating accelerations o
 This way, collisions can simply be handled one-by-one by projecting particles to valid locations instead of by integrating accelerations from 
 stiff forces, leading to improved robustness and controllability. 
 
-The main drawback of PBD is that constraints become arbitrarily stiff when the iteration count is increased or when the timestep is decreased.
+The main drawback of PBD is that constraints become arbitrarily stiff when the iteration count is increased or when the time step is decreased.
 Macklin et al.\ \cite{macklin2016} devise an extension of PBD called extended Position Based Dynamics (XPBD) that is derived from the implicit
 integration of the equations of motion (\cref{eq:equations-of-motion}) with constraint potentials based on PBD constraints. The overall structure 
 of the PBD algorithms is preserved with 
@@ -1108,7 +1176,7 @@ Lastly, for general non-linear constraints, it is the shape of the constraint at
 the position update. Whether a Newton-Raphson iteration is effective or not cannot be answered for a function -- or in this case for a 
 constraint -- in its entirety, but in the proximity of specific values.
 
-The main disadvantage of PBD is the fact that the stiffness depends on the iteration count and the chosen timestep \cite{mueller2006}. Again, 
+The main disadvantage of PBD is the fact that the stiffness depends on the iteration count and the chosen time step \cite{mueller2006}. Again, 
 we take a look at
 a distance constraint with rest length 0 (\cref{eq:pbd-distance}). As discussed in \cref{ss:pbd-constraint-projection}, the remaining error after
 $n_s$ solver iterations is simply $\vert \vecm{p}_{i_1} - \vecm{p}_{i-2} \vert (1-k)^{n_s}$. In the limit of infinite iterations
@@ -1508,14 +1576,14 @@ Finally, it is worth pointing out that the implications of using a Gauss-Seidel 
 \section{Projective Dynamics}\label{s:pd}
 
 In the approaches to physical simulations via implicit time integration that we have encountered so far, a new linear system needs to be solved
-at every timestep. If the linear system is solved directly, this can quickly become prohibitively expensive for large simulations since 
+at every time step. If the linear system is solved directly, this can quickly become prohibitively expensive for large simulations since 
 a new matrix factorization needs to be computed every time a new sytem needs to be solved. In XPBD, this issue is dealt with by using an iterative 
 solver. In Projective Dynamics (PD\index{PD}), Bouaziz et al.\ \cite{bouaziz2014} instead restrict energy potentials to a specific structure 
 which allows for efficient implicit time integration via alternating steps of local and global optimization \cite{bouaziz2014}. The local 
 optimization steps are comprised of per-constraint projections of particle positions onto constraint manifolds. The global optimization 
 step combines the results from the individual 
 local projection steps while taking into consideration global effects including inertia and external forces. This is achieved by solving a 
-linear system of equations whose system matrix is constant across timesteps. Since the local steps can be carried out in parallel and the 
+linear system of equations whose system matrix is constant across time steps. Since the local steps can be carried out in parallel and the 
 factorization for the system matrix of the global step can be precomputed and reused, physical simulations that are restricted to energy 
 potentials from the PD framework can be solved efficienty.
 
