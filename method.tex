@@ -687,113 +687,83 @@ For less effective search directions, including search directions from most Quas
 \section{Constrained Dynamic Simulation}\label{s:dynamic-simulation}
 Visually pleasing and physically accurate simulations of dynamical systems require modeling a wide range of materials and 
 interactions between participating bodies. Common requirements that prove challenging are the ability to simulate stiff materials
-and to enforce hard constraints on the positions of the simulated bodies. Among others, hard constraints involve attaching bodies
+and to enforce hard constraints on the positions of the simulated bodies. Among others, hard constraints involve attaching particles
 to a fixed point in space or to each other, implementing joints and resolving interpenetrations between bodies. Unfortunately, in their 
 naive form, the numerical integration schemes from \cref{ss:numerical-integration} are unsuitable for application to simulations 
 including these effects. The main difficulty lies in the fact that stiff materials and hard constraints introduce stiffness into 
 the simulated system, causing stability issues and numerical problems. This is obvious for stiff materials, where even small 
 deformations can cause large restorative forces. For hard constraints, note that in order to fit into the equations of motion in 
-\cref{eq:equations-of-motion}, corresponding forces that ensure that the constraints stay satisfied at all times need to be defined. 
+\autoref{eq:equations-of-motion}, corresponding forces that ensure that the constraints stay satisfied at all times need to be defined. 
 It is possible to show that hard constraints are the physical limit of strong potential forces \cite{servin2006}, increasing the 
 stiffness of the equations of motion. 
 
 In this section, we focus on different strategies for modelling hard constraints in physical real-time simulations and discuss 
 their properties. Heavily inspired by Tournier et al.\ \cite{tournier2015}, the approaches covered in this section are analyzed 
-in the context of the linear implicit Euler stepper introduced in \cref{ss:numerical-integration-rt}. While both XPBD 
-(\cref{ss:xpbd-constraint-projection}) and PD (\cref{s:pd}) differ significantly from the linear implicit Euler stepper, the challenges
-encountered in modelling hard constraints are largely transferrable. Handling hard constraints via stiff spring forces as outlined 
-above is covered in more detail in \cref{ss:stiff-springs}. Combining the
-system of ODEs from the equations of motion with hard constraints into a Differential Algebraic Equation (DAE) without introducing stiff 
-constraint forces is explored in \cref{ss:hard-constraints}. Finally, adding regularization to the resulting DAE in a physcially 
-meaningful manner yields a method called compliant constraints. Compliant constraints are introduced in \cref{ss:compliant-constraints}.
+in the context of real-time adaptions of implicit Euler integration that only perform a single linear solve per time step 
+(see \cref{ss:numerical-integration-rt}). While both XPBD (\cref{ss:xpbd-constraint-projection}) and PD (\cref{s:pd}) differ significantly 
+from these methods, the challenges encountered in modelling hard constraints are largely transferrable. Handling hard constraints 
+via stiff penalty forces as outlined above is covered in more detail in \cref{ss:penalty-forces}. Adding hard constraints to the equations
+of motion without introducing stiff constraint forces via a Differential Algebraic Equation (DAE) is explored in \cref{ss:hard-constraints}.
+Finally, adding regularization to the resulting DAE in a physcially meaningful manner yields a method called compliant constraints. 
+Compliant constraints are introduced in \cref{ss:compliant-constraints}.
 
-\begin{itemize}
-    \item \textcolor{red}{Probably best to skip this here. Make sure this is mentioned in the discussion of XPBD, PD, etc.}
-    \item generality. it is convenient to handle different effects in a unified manner. for example, it should be possible to handle 
-        the elasticity of the simulated body due to its material model, constraints between bodies and contact in roughly the same way.
-    \item simplicity. prevents bugs, easy to model new effects, etc. this is mostly a practical consideration, but still relevant.
-\end{itemize}
+\textcolor{red}{Probably best to skip generality and simplicitiy here. Don't distract from hard constraints. Make sure this is 
+mentioned in the discussion of XPBD, PD, etc.}
 
-\begin{itemize}
-    \item Use $\vecm{q}$ instead of $\vecm{x}$ everywhere
-    \item Rewrite this entire section from scratch. Make sure that the notation is unified. At the end of each method,
-        point out what its issues are. When the next method is introduced that solves some of these issues, highlight
-        how with a couple of sentences.
-\end{itemize}
+\subsection{Penalty Forces}\label{ss:penalty-forces}
+As discussed in \cref{s:dynamic-simulation}, it is possible to show that hard constraints are the physical limit of strong potential 
+forces \cite{servin2006}. Thus, the simplest approach to modelling hard constraints is to introduce strong forces that enforce 
+that the constraints are satisfied at all times to the equations of motion and to perform integration via the linear implicit Euler
+stepper from \cref{ss:numerical-integration-rt}. We demonstrate the challenges of this method using the example of 
+a distance constraint.
 
-\subsection{Stiff Springs}\label{ss:stiff-springs}
-Common effects in elasticity-based simulations such as attaching one body to another or maintaining fixed distance between two 
-particles can be approximated via stiff springs. Consider a spring between 
+Consider a distance constraint $C_{\text{dist}}$ that 
+fixes the distance $l = \vert \vert \vecm{q}_i - \vecm{q}_j \vert \vert$ between two particles $\vecm{q}_i$ and $\vecm{q}_j$ to 
+some distance $d \in \mathbb{R}^+$. If $C_{\text{dist}}(\vecm{q}) = l - d$, then the constraint is satisfied if 
+$C_{\text{dist}}(\vecm{q}) = 0$. Next, we define the energy potential $\psi_\text{dist}(\vecm{q}) = \frac{k}{2}C_\text{dist}(\vecm{q})^2$,
+where $k \in \mathbb{R}^+$ is some large stiffness value. Since the energy potential is zero if $C_\text{dist}$ is satisfied
+and grows as the distance between $\vecm{q}_i$ and $\vecm{q}_j$ increases, the resulting force will drive the distance towards $d$.
+Upon closer inspection, $\psi_\text{dist}$ is exactly the potential energy of a Hookean spring with stiffness $k$. The forces 
+$\vecm{f}_i$ and $\vecm{f}_j$ applied to the particles $\vecm{q}_i$ and $\vecm{q}_j$ by the spring are given by 
+$\vecm{f}_i = -\vecm{f}_j = \beta (\vecm{q}_i - \vecm{q}_j) / l$, where $\beta = -\partial\psi_\text{dist}/\partial l = 
+kC_\text{dist}(\vecm{q})$. Since $\vert \vert \vecm{f}_i \vert \vert = \vert \vert \vecm{f}_j \vert \vert = \beta$,
+the restorative spring forces have infinite magnitude in the limit of infinite stiffness $k$ if $C_\text{dist}(\vecm{q}) \neq 0$. 
 
-% TODO: First describe, then show issues. Remove as much detail as possible. Refer to section on Newton's ODE where applicable to save space.
-% Mention that explicit / sympletic Euler methods obviously won't work without tiny time steps and refer to section on integration. Show
-% how the implicit integration looks like with stiff springs. Show where the numerical issues arise.
-
-High stiffness values lead to large forces which in turn cause numerical issues in the solver. 
-
-We demonstrate these issues based on the example of maintaining a desired distance between two points using a stiff 
-spring \cite{tournier2015}. Let $\vecm{x_1, x_2}$ be the positions, $\vecm{v}_1, \vecm{v}_2$ the velocities and $\vecm{a}_1, \vecm{a}_2$
-be the accelerations of the two particles. Let $\overline{l}$ be the rest length and $l = \lVert \vecm{x_1} - \vecm{x_2} \rVert$ 
-be the current length of the spring with stiffness $k$. It can be shown that the force that the spring applies at each particle
-is equal to $\vecm{f_1} = -\vecm{f_2} = \lambda\vecm{u}$, where $\vecm{u} = (\vecm{x_1} - \vecm{x_2}) / l$
-and $\lambda = -\frac{\delta V}{\delta l} = k(\overline{l} - l)$. 
-
-Once the forces, accelerations, velocities and positions are combined into vectors $\vecm{f}, \vecm{a}, \vecm{v}, \vecm{x}$, 
-respectively, the motions of the system can be modeled via Newton's Ordinary Differential Equation (ODE) $\vecm{f} = \matm{M}\vecm{a}$,
-where $\matm{M}$ is a $n_d \times n_d$ diagonal matrix and $n_d$ is the total number of independent degrees of freedom for the 
-particles.
-
-This system can be integrated via the symplectic Euler method as follows \textcolor{red}{(I believe this should be moved into
-the section on numerical integration...)}:
-
-\begin{align*}
-    \vecm{v}_{n+1} &= \vecm{v}_n + h\vecm{a}_n \\
-    \vecm{x}_{n+1} &= \vecm{x}_n + h\vecm{v}_{n+1}
-\end{align*}
-
-As the stiffness $k$ of the spring increases, so does the magnitude of the acceleration $\vecm{a}$. Consequently, the integration
-diverges unless the time step is prohibitively small. The stability issues are often addressed by switching to an implicit 
-integration scheme, such as the backward Euler method \cite{baraff1998} \textcolor{red}{(refer to the section on numerical 
-integration here)}. Replacing current accelerations with future accelerations requires the solution of the following linear 
-system of equations (LSE):
+Integration using the linear implicit Euler stepper is achieved by plugging the spring forces into 
+\autoref{eq:linear-implicit-stepper} and solving for the new velocities $\vecm{v}_{n+1}$. For the sake of convenience, we restate
+\autoref{eq:linear-implicit-stepper} below
 
 \[
-    (\matm{M} - h^2\matm{K})\vecm{v_{n+1}} = \vecm{p} + h\vecm{f}
+    (\matm{M} - h^2\matm{K})\vecm{v}_{n+1} = \matm{M}\vecm{v}_n + h\vecm{f}(\vecm{q}_n).
 \]
 
-where $\vecm{p} = \matm{M}\vecm{v}_n$ is the momentum, and $\matm{K} = \frac{\partial \vecm{f}}{\partial \vecm{x}}$ is the 
-stiffness matrix. Note that 
-$\matm{K}$ is typically non-singular since elastic forces are invariant under rigid body transforms. When using large stiffness 
-$k$ for springs, the entries of $\matm{K}$ are large (due to large restorative forces for stiff springs) and dominate the entries 
-of the system matrix 
+\noindent Note that $\matm{K}$ is typically non-singular since elastic forces are invariant under rigid body transforms. When using 
+large stiffness values $k$, the entries of $\matm{K}$ are large (due to large restorative forces) and dominate the entries of the 
+system matrix 
 
 \begin{equation}\label{eq:system-H}
     \matm{H} = \matm{M} - h^2\matm{K}.
 \end{equation}
 
-In these cases, $\matm{H}$ will be almost non-singular as well, leading to numerical issues and poor convergence for many solvers. 
-Additionally, implicit integration introduces noticable numerical damping \cite{servin2006}.
+\noindent In these cases, $\matm{H}$ is almost non-singular as well, leading to numerical issues and poor convergence for many solvers. 
 
-\textcolor{blue}{This system results from performing the implicit integration and solving the non-linear system via linearization
-using the Taylor expansion. Positions can be expressed in terms of velocities and eliminated from the system.}
+In the example above, the potential energy $\psi_\text{dist}$ is defined in terms of the constraint function $C_\text{dist}$ via 
+$\psi_\text{spring}(\vecm{q}) = \frac{k}{2} C_\text{dist}(\vecm{q})^2$. However, it is possible to generalize this approach to other 
+geometric constraints $C$ yielding energy potentials of the form
 
-\subsection{Penalty Forces}\label{ss:penalty-forces}
-In \cref{ss:stiff-springs}, the energy was derived from Hooke's Law for springs. However, it is also possible to derive energies from 
-geometric displacement functions $\vecm{\phi(x)}$ which vanish in the rest configuration. From the displacement functions, quadratic 
-potential energies of the form $U(\vecm{x}) = \Sigma_i (k / 2) \vecm{\phi}^2(x)$, where $k$ is a positive stiffness parameter, are 
-constructed \cite{terz1987}. The potential energy $U(\vecm{x})$ is zero if the displacement function is satisfied, and greater than 
-zero otherwise. The resulting forces are called penalty forces. \textcolor{red}{Make sure to be consistent with naming of potentials
-across the thesis.}
+\begin{equation}\label{eq:penalty-forces}
+    \psi(\vecm{q}) = \frac{k}{2} C(\vecm{q})^2.
+\end{equation}
 
-Using the geometric displacement function $\vecm{\phi_{\text{spring}}(x)} = (\lVert \vecm{x_i} - \vecm{x_j} \rVert) - l$ with $k_{\text{spring}}$ 
-recovers the behavior of a spring with stiffness $k_{\text{spring}}$ (\cref{ss:stiff-springs}). Its displacement function 
-$\vecm{\phi_{\text{spring}}(x)}$ is satisfied when the distance of the particles $\vecm{x_i}, \vecm{x_j}$ is equal to a desired rest length $l$. 
+\noindent The resulting forces are called penalty forces.
+
 By constructing different geometric displacement functions, various properties such as the bending angle between triangles and in-plane 
 shearing of triangles can be controlled via the corresponding quadratic energy potentials \cite{baraff1998}. Geometric displacement 
 functions with the desired effect are often intuitive and simple to define. However, as the corresponding energy potentials are not physically 
 derived, choosing stiffness parameters that correspond to measurable physical properties of the simulated material and orchestrating 
 multiple constraints becomes challenging \cite{servin2006, nealen2006}. Additionally, the generated penalty forces do not converge in the 
-limit of infinite stiffess, leading to oscillations unless the time step is reduced significantly \cite{rubin1957}.
+limit of infinite stiffess, leading to oscillations unless the time step is reduced significantly \cite{rubin1957}. Finally, the numerical
+issues outlined for distance constraints generally apply to penalty forces derived from other geometric constraints as well.
 
 \textcolor{blue}{Maybe explain the challenges with penalty forces a bit better! Also read \cite{terz1987, nealen2006, rubin1957}. 
 I just skimmed over \cite{terz1987} for now, but want to make sure that I am citing this correctly. The term penalty forces is not used
@@ -1724,11 +1694,11 @@ the configuration specified by positions $\matm{q}_j$ in terms of $d_j$. Thus, $
 interpreted as the projection of $\matm{q}_j$ onto the constraint manifold $\cman{C}_j$. Note that $d_j$ itself is not a distance 
 function, but $\sqrt{d_j}$ is (see \cref{ss:pd-potentials}). Still, we follow the example of Bouaziz et al.\ \cite{bouaziz2014} 
 and define closeness between pairs of configurations in terms of $d_j$ instead of $\sqrt{d_j}$. This is justified since for two pairs
-of configurations $\cmat{q}, \cmat{p}$ and $\cmat{q}^\prime, \cmat{p}^\prime$ it is 
+of configurations $\matm{q}, \matm{p}$ and $\matm{q}^\prime, \matm{p}^\prime$ it is 
 
 \[
-    d_j(\cmat{q}, \cmat{p}) < d_j(\cmat{q}^\prime, \cmat{p}^\prime) \iff \sqrt{d_j}(\cmat{q}, \cmat{p}) < \sqrt{d_j}(\cmat{q}^\prime, 
-    \cmat{p}^\prime).
+    d_j(\matm{q}, \matm{p}) < d_j(\matm{q}^\prime, \matm{p}^\prime) \iff \sqrt{d_j}(\matm{q}, \matm{p}) < \sqrt{d_j}(\matm{q}^\prime, 
+    \matm{p}^\prime).
 \]
 
 Bouaziz et al.\ \cite{bouaziz2014} define the energy potential $\psi_j$ as 
