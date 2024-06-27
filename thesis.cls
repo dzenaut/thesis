@@ -43,6 +43,9 @@
 \RequirePackage{thesis-hyphenation}
 \RequirePackage{appendix}
 \RequirePackage{times}
+\RequirePackage{siunitx}
+\RequirePackage{caption} 
+\RequirePackage{subcaption} 
 
 \usetikzlibrary{calc,arrows.meta}
 

@@ -297,3 +297,21 @@
   pages={2222-2234},
   keywords={Heuristic algorithms;Convex functions;Optimization;Dynamics;Skin;Robustness;Convergence;Computer graphics;animation;computer simulation;optimization methods;dynamics},
 }
+
+@inproceedings{macklin2021,
+author = {Macklin, Miles and Muller, Matthias},
+title = {A Constraint-based Formulation of Stable Neo-Hookean Materials},
+year = {2021},
+isbn = {9781450391313},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3487983.3488289},
+doi = {10.1145/3487983.3488289},
+abstract = {In computer graphics, soft body simulation is often used to animate soft tissue on characters or rubber like objects. Both are highly incompressible, however commonly used models such as co-rotational FEM, show significant volume loss, even under moderate strain. The Neo-Hookean model has recently become popular in graphics. It has superior volume conservation, recovers from inverted states, and does not require a polar decomposition. However, solvers for Neo-Hookean finite-element problems are typically based on Newton methods, which require energy Hessians, their Eigen-decomposition, and sophisticated linear solvers. In addition, minimizing the energy directly in this way does not accommodate modeling incompressible materials since it would require infinitely stiff forces. In this paper we present a constraint-based model of the Neo-Hookean energy. By decomposing the energy into deviatoric (distortional), and hydrostatic (volume preserving) constraints, we can apply iterative constrained-optimization methods that require only first-order gradients. We compare our constraint-based formulation to state-of-the-art force-based solvers and show that our method is often an order of magnitude more efficient for stiff volume preserving materials.},
+booktitle = {Proceedings of the 14th ACM SIGGRAPH Conference on Motion, Interaction and Games},
+articleno = {12},
+numpages = {7},
+keywords = {real-time physics, physically-based animation, finite element method, elasticity},
+location = {Virtual Event, Switzerland},
+series = {MIG '21}
+}
