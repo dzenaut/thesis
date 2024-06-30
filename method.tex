@@ -20,7 +20,7 @@ don't want to spend too much time on contact.} Due to Newton's second law
 
 \noindent it is possible to relate the force $\vecm{f}$ acting on a particle and the resulting acceleration $\vecm{a}$ via the particle
 mass $m$. The motion of a particle system can then be described in terms of a system of ordinary differential equations (ODEs). This
-system of ODEs is commonly referred to as the equations of motion. The equations of motion are integrated over time in order to arrive 
+system of ODEs is commonly referred to as the equations of motion. The equations of motion are integrated over time to arrive 
 at the configuration of the system at the next time step. For general forces, finding an analytical solution to the equations of motion
 is impossible and numerical integration schemes must be employed instead. In particular, both XPBD (\cref{ss:xpbd-constraint-projection}) 
 and PD (\cref{ss:pd-solver}) are based on a numerical 
@@ -223,7 +223,7 @@ is unconditionally stable, even though numerical instabilities might still occur
 recovered from in the real-time setting, stability is of utmost importance. For that reason, physical simulations for real-time applications
 are commonly based on implicit Euler integration. However, this comes at the cost of artificial numerical damping and significant computational
 overhead. According to Tournier et al.\ \cite{tournier2015}, it is common that the time budget allotted for integration over one time step is 
-barely enough to perform a single linearization of the NLSE in \cref{eq:implicit-euler}. Thus, additional measures are required in order to make
+barely enough to perform a single linearization of the NLSE in \cref{eq:implicit-euler}. Thus, additional measures are required to make
 implicit Euler integration viable for real-time applications. 
 
 There are two main strategies for speeding up the integration step. The first one is to simply approximate the solution of the NLSE in
@@ -257,6 +257,37 @@ allows speeding up the process of solving the NLSE. As an example, note that \au
 are linear. In this case, $\vecm{q}_{n+1}, \vecm{v}_{n+1}$ can be determined in a single linear solve. A similar approach, but with a less 
 restrictive subset of forces that allows modelling nonlinearities, is used in PD (\cref{s:pd}). The second method is particularly appealing 
 in settings where visual plausibility is prioritized over physical accuracy.
+
+\subsection{Simulation of Deformable Bodies}\label{ss:deformable-bodies}
+To be able to perform physically accurate simulations of deformable bodies using the numerical integration schemes for the equations of motion 
+introduced in \autoref{ss:numerical-integration}, we need to be able to compute elastic forces $\vecm{f}(\vecm{q})$ from the discretized 
+positions $\vecm{q}$ of a potentially deformed body. In the following exposition, we lean heavily on the SIGGRAPH course by Sifakis et al.\ 
+\cite{sifakis2012}, but restrict to the parts that are most relevant in the context of this thesis. 
+
+We start by introducing the deformation function 
+$\vecm{\phi} \colon \Sigma \mapsto \mathbb{R}^3$, where $\Sigma \subseteq \mathbb{R}^3$ is the volumetric domain by the undeformed occupied by the 
+undeformed body. This domain $\Sigma$ is called the reference configuration. The deformation function maps every point in the reference configuration 
+to its respective deformed position $\vecm{Q} = \vecm{\phi}(\vecm{q})$. Note that positions in the reference configuration are denoted using small 
+letters while the deformed positions are referred to via capital letters. As an example, the deformation function given by 
+
+\[
+    \vecm{\phi}(\vecm{q}) = 2\matm{I}\vecm{q}
+\]
+
+\noindent describes the deformed configuration that is achieved by stretching the reference domain by a factor of 2 in each direction. 
+
+\begin{itemize}
+    \item In order to simulate deformable bodies numerical integration of the equations of motion, we need to be able to compute forces from the 
+        positions of the deformed body. How? Refer to \cite{sifakis2012} and cover only the most important steps. Start with this. Otherwise, it is not 
+        clear why the deformation gradient is relevant.
+    \item Introduce energy density. Explain that the energy density can be expressed in terms of $\matm{F}$ since the energy density only needs to reflect
+        the deformation behavior in an infitisemal neighborhood of the position of interest.
+    \item Introduce the deformation gradient $\matm{F}$. If the deformation gradient is a rotation matrix, the body is only affected by a rigid body transform.
+    \item Give one example to aid understanding. Introduce strain material, neohookean and simplified neohookean model.
+    \item Show that the energy of a body can be computed by integrating the potential over the domain of the deformed body. 
+    \item Show that the force acting on the body at a certain position can be computed by taking the derivative of the energy with respect to that position. 
+    \item Show how the discretization works.
+\end{itemize}
 
 \section{Unconstrained Optimization}\label{s:unconstrained-optimization}
 \begin{itemize}
@@ -430,7 +461,7 @@ applications. Concomitantly, the memory required to store the Hessian matrix of 
 \subsubsection{Quasi-Newton Methods}\label{sss:quasi-newton}
 Due to the shortcomings of Newton's method mentioned in \cref{sss:quasi-newton}, it can be favorable to simply approximate the Newton 
 direction
-in order to find an effective search direction while keeping the cost of a single iteration low. Effective Newton approximations can be 
+to find an effective search direction while keeping the cost of a single iteration low. Effective Newton approximations can be 
 computed without the need to compute the Hessian $\nabla^2 f(\vecm{x}_k)$ during each iteration. Often, multiple Quasi-Newton 
 iterations fit into the same time budget as a single Newton iteration. As a result, Quasi-Newton methods can sometimes converge to a 
 solution in a shorter amount of time than Newton's method, even though their search directions are not as effective as the exact 
@@ -559,7 +590,7 @@ the details of course)}
 
 As discussed in \cref{sss:quasi-newton}, the BFGS method is unsuitable for large-scale problems due to the storage requirements of the 
 typically dense inverse Hessian approximation $\matm{H}_k$. This highlights the need for effective Hessian approximations that are not only
-cheap to compute, but also cheap to store. Just like Quasi-Newton methods use approximations of the Newton direction in order to keep 
+cheap to compute, but also cheap to store. Just like Quasi-Newton methods use approximations of the Newton direction to keep 
 the computational cost of a single iteration low, limited-memory Quasi-Newton methods approximate Quasi-Newton directions with 
 the goal of reducing the memory footprint of a single iteration. This comes at the prize of inferior convergence properties. On the upside,
 limited-memory Quasi-Newton directions can sometimes be computed by using only a couple of vectors of size $n$, without the need to 
@@ -652,7 +683,7 @@ for the convergence of line search methods was discussed. Appropriate step lengt
 These algorithms are typically
 split into two phases. The bracketing phase determines an interval $[\alpha_{\text{min}}, \alpha_{\text{min}}]$ that is 
 guaranteed to contain suitable step lengths. The selection phase is an iterative process that interpolates function values and gradients 
-from previous iterations in order to shrink the interval and eventually pick the final step length. For more details, the reader is 
+from previous iterations to shrink the interval and eventually pick the final step length. For more details, the reader is 
 referred to Chapter 3 of. As step length algorithms are a common source of bugs, Nocedal and Wright recommend using publically 
 available implementations.
 
@@ -693,7 +724,7 @@ to a fixed point in space or to each other, implementing joints and resolving in
 naive form, the numerical integration schemes from \cref{ss:numerical-integration} are unsuitable for application to simulations 
 including these effects. The main difficulty lies in the fact that stiff materials and hard constraints introduce stiffness into 
 the simulated system, causing stability issues and numerical problems. This is obvious for stiff materials, where even small 
-deformations can cause large restorative forces. For hard constraints, note that in order to fit into the equations of motion in 
+deformations can cause large restorative forces. For hard constraints, note that to fit into the equations of motion in 
 \autoref{eq:equations-of-motion}, corresponding forces that ensure that the constraints stay satisfied at all times need to be defined. 
 It is possible to show that hard constraints are the physical limit of strong potential forces \cite{servin2006}, increasing the 
 stiffness of the equations of motion. 
@@ -796,8 +827,8 @@ formulations:
 for some $\vecm{c}(\vecm{v})$. \textcolor{red}{If you check \cite{ascher1995}, see that $c(v)$ also depends on the positions $q$. That should 
 be indicated!} 
 Additionally, constraint forces \textcolor{red}{(use internal forces, more general and will be used throughout the thesis)} are 
-required in order to link the algebraic constraint equations with the ODE describing the motion of 
-the system. It can be shown that the constraint forces $\vecm{f_c}$ applied to the particles have to be in the following form in order to 
+required to link the algebraic constraint equations with the ODE describing the motion of 
+the system. It can be shown that the constraint forces $\vecm{f_c}$ applied to the particles have to be in the following form to 
 avoid adding linear and angular momentum to the system \cite{baraff1996}:
 
 \begin{equation}\label{eq:constraint-forces}
@@ -875,7 +906,7 @@ authors mean when they say that the constraints are effectively linearized durin
 of \cite{mueller2020}? Technically, speaking, even if the Taylor expansion is performed, the constraints are linearized, if I 
 understand correctly.}
 
-Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers in order to solve the system efficiently
+Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers to solve the system efficiently
 \cite{baraff1996}. Alternatively, the Schur complement can be constructed since the mass matrix in the upper left block is invertible.
 This leads to a smaller, albeit less sparse system \cite{tournier2015}:
 
@@ -1080,7 +1111,7 @@ stiffness. The goal is to find a position update $\Delta \vecm{p}$ such that
     C(\vecm{p} + \Delta \vecm{p}) = 0.
 \end{equation}
 
-\noindent In order to preserve linear and angular momenta, $\Delta \vecm{p}$ is required to be in the direction of the mass-weighted constraint 
+\noindent To preserve linear and angular momenta, $\Delta \vecm{p}$ is required to be in the direction of the mass-weighted constraint 
 gradient, or formally
 
 \begin{equation}\label{eq:pbd-update-general}
@@ -1244,6 +1275,10 @@ factor does not affect position updates. Washing out of individual momenta also 
 with the stiffness $k_c$ directly, or in the limit of infinitely short time steps. In both cases, the simulated material will appear infinitely stiff, 
 meaning that momenta of individual particles are not necessarily preserved.
 
+\subsection{Simulating Physically-Based Materials with PBD}\label{ss:pbd-physical}
+\textcolor{red}{Write about the Bender paper here. Also mention somewhere that PBD technically implements hard constraints, but that they are only satisfied 
+after a large number of iterations. At least position constraints can be truly hard by setting inverse massses to zero. Same thing is true for XPBD of course.}
+
 \subsection{XPBD Constraint Projection}\label{ss:xpbd-constraint-projection}
 The derivation of XPBD \cite{macklin2016} starts from the position-level implicit Euler update formula for the equations of motion 
 (\cref{eq:implicit-positional-detailed}), which is restated here again for the sake of convenience
@@ -1336,7 +1371,7 @@ which arises from the linearization of \autoref{eq:xpbd-g} and \autoref{eq:xpbd-
 We refer to the system matrix of \autoref{eq:xpbd-lse} as $\matm{H}$. At this point, two simplifying assumptions are made.
 
 \textbf{Assumption 1:} Computing the geometric stiffness in $\matm{K}$ requires evaluating second derivatives of the constraint functions
-$C_j$. This is expensive and error-prone. In order to avoid the challenges of computing second derivatives and to re-establish a connection 
+$C_j$. This is expensive and error-prone. To avoid the challenges of computing second derivatives and to re-establish a connection 
 to PBD (\cref{ss:pbd-constraint-projection}), Macklin et al.\ \cite{macklin2016} drop the geometric stiffness by approximating 
 
 \begin{equation}\label{eq:xpbd-assumption-1}
@@ -1416,7 +1451,7 @@ to take the Schur complement with respect to $\matm{M}$ to obtain a reduced syst
     \Delta \vecm{q} = \matm{M}^{-1} \nabla \vecm{C}(\vecm{q}_i)^T \Delta \vecm{\lambda}.
 \end{equation}
 
-Up until here, all constraints were handled together during each iteration. In order to make a connection to PBD and to return to the framework of a
+Up until here, all constraints were handled together during each iteration. To make a connection to PBD and to return to the framework of a
 non-linear Gauss-Seidel solver \cref{ss:pbd-framework}, it is necessary to specify how to solve a single constraint. To that end we rewrite 
 \autoref{eq:xpbd-schur} for a single constraint $C_j$ and get the update for its scalar Lagrange multiplier $\lambda_j$ by computing
 
@@ -1440,7 +1475,7 @@ This leads to a natural extension of the PBD algorithm, where the general struct
 computation of the scaling factor for the 
 mass-weighted constraint gradient in \textsc{projectConstraints} in line 5. The XPBD version of \textsc{projectConstraints} is given in 
 Algorithm \ref{alg:xpbd-solver}. Note that Algorithm \ref{alg:xpbd-solver} is specified in terms of the projection points $\vecm{p}$ or $\vecm{p}_i$ instead of the 
-positions $\vecm{q}$ or $\vecm{q}_i$ used in \autoref{eq:xpbd-position-update} and \autoref{eq:xpbd-lambda-j} in order to maintain notational consistency with the
+positions $\vecm{q}$ or $\vecm{q}_i$ used in \autoref{eq:xpbd-position-update} and \autoref{eq:xpbd-lambda-j} to maintain notational consistency with the
 PBD solver in Algorithm \ref{alg:pbd-solver}.
 
 \begin{algorithm}
@@ -1647,7 +1682,7 @@ Consider the restriction of energy potentials $\psi_j$ to quadratic functions of
 is quadratic in $\matm{q}$. Thus, the solution to the minimization problem can be found in a single linear solve \cite{nocedal2006}. 
 While this choice
 of energy potentials does enable efficient implicit Euler integration of the equations of motion, it comes at the sacrifice of generality.
-In particular, quadratic energy potentials always yield linear forces. Linear forces generally do not suffice in order to model realistic
+In particular, quadratic energy potentials always yield linear forces. Linear forces generally do not suffice to model realistic
 elastic behavior \cite{wang2011}. Now, the challenge lies in enhancing quadratic energy potentials to allow expressing some degree
 of nonlinearity while still keeping the minimization efficient. 
 
@@ -1750,7 +1785,7 @@ fixed. Local and global steps are repeated for a fixed number of iterations duri
 resulting positions are used as the positions of the next time step.
 
 \subsection{PD Energy Potentials}\label{ss:pd-potentials}
-In order to arrive at a working implementation of the PD solver outlined in \cref{ss:pd-overview}, a squared distance function 
+To arrive at a working implementation of the PD solver outlined in \cref{ss:pd-overview}, a squared distance function 
 $d_j$ and a projection operator onto some constraint manifold $\cman{C}_j$ need to be provided for each energy potential $\psi_j$. 
 While the projection operators vary significantly between different types of constraints, Bouaziz et al.\ \cite{bouaziz2014} 
 always use squared distance functions $d_j$ of the form
@@ -1820,7 +1855,7 @@ Euler integration for PD energy potentials (\cref{eq:pd-variational-overview}). 
     \sum_j \frac{w_j}{2} \norm{\matm{A}_j\matm{S}_j\matm{q} - \matm{B}_j\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j)
 \end{equation}
 
-\noindent In order to make the relation between the projection variables $\matm{p}_j$ and the relevant particle positions 
+\noindent To make the relation between the projection variables $\matm{p}_j$ and the relevant particle positions 
 $\matm{q}_j$ more apparent, we required $\text{dim}(\matm{S}_j\matm{q}) = \text{dim}(\matm{p}_j)$ so far. However, the 
 notation can be simplified by introducing the alternative constraint manifold $\cman{C}^\prime_j = \{ \matm{B}_j\matm{p} 
 \mid \matm{p} \in \cman{C}_j \}$. Of course, this requires changing the shape of the projection variables. If 
@@ -2036,7 +2071,7 @@ method
 As the Hessian matrix $\nabla^2 g(\matm{q}_k)$ generally changes between iterations, the Hessian approximations of the 
 BFGS (\cref{sss:quasi-newton}) and L-BFGS method (\cref{sss:limited-memory-quasi-newton}) do so as well.
 This is in contrast to the constant Hessian approximation $\matm{S}$, which does not incorporate local curvature information
-at the current iterate at all. Combining both approaches in order to accelerate convergence is discussed 
+at the current iterate at all. Combining both approaches to accelerate convergence is discussed 
 in \cref{ss:qn-pd}.
 
 Since Quasi-Newton methods can be applied to the variational form of 
@@ -2102,7 +2137,7 @@ Hessian approximations that arise when traditional initial matrices are used and
 algorithm.
 
 \subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
-In order to achieve satisfactory performance when applying the L-BFGS method to the general form of the implicit Euler integration 
+To achieve satisfactory performance when applying the L-BFGS method to the general form of the implicit Euler integration 
 (\cref{eq:variational-implicit}) without the need to restrict energy potentials to the PD framework (\cref{eq:pd-potentials}), a suitable
 candidate for the initial Hessian approximation $\matm{B}_0$ or its inverse $\matm{H}_0$ needs to be found. The choice $\matm{B}_0 = 
 \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j$ from Algorithm \ref{alg:pd-lbfgs} cannot be applied to the general setting 
@@ -2227,7 +2262,7 @@ position constraints acting on particles at the ends of the beam. Starting from 
 solvers during the next time step in two settings: In the first, the position constraints at the ends of the beam are released, causing the 
 beam to untwist (\cref{fig:twisting-beam-setup}, top right). In the second, the beam is twisted further in accordance with a fixed angular
 velocity as described above (\cref{fig:twisting-beam-setup}, bottom right). In both settings, the initial positions of the twisted beam 
-need to be updated in order to adapt to the changes to 
+need to be updated to adapt to the changes to 
 the position constraints at the ends of the beam. Note that in the second setting, position constraints are modelled 
 via springs with rest-length zero for all solvers. In other words, only soft position constraints are used. This has two main advantages:
 Firstly, soft position constraints can easily be modelled using each of the solvers, while it is challenging (or impossible) to 
@@ -2366,7 +2401,7 @@ material stiffness.
 \cite{bouaziz2014}. The graph shows that each of the solvers indeed mostly decreases the objective function from iteration 
 to iteration until it converges towards a final configuration after a sufficient number of iterations. ADMM, PD and QN converge to configurations that 
 yield roughly the same objective function value whereas the value obtained after 1000 XPBD iterations is still slightly larger. QN and ADMM converge after roughly 40 
-and 60 iterations, whereas PD and XPBD converge after upwards of 260 and 1000 iterations, respectively. In order to quantify the progress that other solvers
+and 60 iterations, whereas PD and XPBD converge after upwards of 260 and 1000 iterations, respectively. To quantify the progress that other solvers
 achieve during the number of iterations it takes each of the solvers to converge, we compute relative errors after 40 (QN), 60 (ADMM), 260 (PD) and 1000 (XPBD)
 iterations. The relative error is given by 
 
@@ -2409,7 +2444,7 @@ strain constraints, is almost equivalent to PD and that the convergence rate can
 \autoref{ss:admm-properties}, this is due to the fact that lower weights allow faster progress towards positions that reduce the constraint energy, which is particularly 
 useful for simulations with larger timesteps. Similarly, the faster convergence rate of QN compared to PD is expected in light of the observation that PD is a quasi-Newton method 
 with constant Hessian approximation (see \cite{liu2017}, \cref{ss:pd-quasi-newton}). The QN solver augments the PD solver with a line-search algorithm and LBFGS-updates to 
-the constant Hessian approximation from PD that take into account curvature information from previous iterations in order to better approximate the true Hessian matrix. Both
+the constant Hessian approximation from PD that take into account curvature information from previous iterations to better approximate the true Hessian matrix. Both
 of these measures help improve the convergence rate of QN in comparison to PD. Again, this is in line with results presented by Liu et al.\ \cite{liu2017}. The comparably
 slow convergence rate of XPBD could again be explained by the simplifying assumptions made during the XPBD derivation and the aforementioned oscillations of Gauss-Seidel
 solvers. 
@@ -2430,7 +2465,7 @@ solvers.
 
 To better understand the main factor for XPBD's unfavorable convergence properties, it is helpful to plot the inertial terms and the constraint energies of the objective 
 function separately. The resulting plots are shown in \autoref{fig:strain-beam-untwist-objectives-split}. 
-We focus on the first 500 iterations in order to gain clearer insights into the behavior of the solver during earlier iterations, since these are more relevant for 
+We focus on the first 500 iterations to gain clearer insights into the behavior of the solver during earlier iterations, since these are more relevant for 
 real-time applications. First, it is evident that the constraint energy dominates the objective function value for each solver during most of the iterations before 
 convergence is achieved. While each solver mostly decreases the constraint energy with an increasing number of iterations, the inertial term is mostly increased. 
 The only exception is the ADMM solver between iterations 30 to 60, where the inertial term is decreased from its peak and the constraint energy is increased from its 
@@ -2486,7 +2521,7 @@ In the context of real-time applications, the number of solver iterations is oft
 for the simulation of the next frame. A closer look at \autoref{fig:strain-beam-untwist-objectives-split} shows that all of the solvers are still in the process of 
 converting the constraint energy stored in the twisted beam into kinetic energy after the first 10 iterations. Concomitantly, none of the solvers have reduced the 
 objective function to the minimum achieved by the PD-style solvers yet. After 10 iterations, the QN solver has reduced the objective function the most, followed by 
-ADMM, PD and XPBD. In order to gain a better understanding of the effects caused by terminating solvers before the objective function is minimized, we take a 
+ADMM, PD and XPBD. To gain a better understanding of the effects caused by terminating solvers before the objective function is minimized, we take a 
 closer look at the geometries that the XPBD, PD and ADMM solvers arrive at after 10 solver iterations in \autoref{fig:strain-beam-untwist-geometries} b-d. The 
 corresponding QN geometry is given as a reference in each panel. \autoref{fig:strain-beam-untwist-geometries} b-d shows that the solvers untwist the beam to 
 different extents after the first 10 solver iterations. The QN geometry gets closest to the beam's reference configuration, again followed by ADMM, PD and, lastly, 
@@ -2527,7 +2562,7 @@ appear mostly smooth at the surface. This matches the observation that the const
 objective in \autoref{fig:strain-beam-untwist-objectives-split}. While it is difficult to verify, it is natural to assume that this effect is caused by oscillations 
 of the Gauss-Seidel solver at the core of XPBD, since it does not appear for solvers that have a global optimization step. 
 
-In order to take into account the computational cost of the iterations for different solvers, the objective function values are plotted again over the accumulated
+To take into account the computational cost of the iterations for different solvers, the objective function values are plotted again over the accumulated
 iteration durations in \autoref{fig:strain-beam-untwist-objectives-time} \textcolor{red}{(this should be done for beams of different sizes to show how the simulation
 time grows for each solver!)}. However, the provided iteration durations should be treated as a rough indication of the 
 computational costs of different solvers since no effort has been put into profiling or speeding up the computations by providing a multithreaded 
@@ -2569,17 +2604,24 @@ inertial term of the objective and the constraint energy. This is analogous to t
 the unfavorable convergence properties of XPBD observed in \autoref{fig:strain-beam-untwist-objectives}. 
 
 Again, \autoref{fig:strain-beam-untwist-objectives-split-large-ts} shows that the solvers mostly decrease the constraint energy and increase the inertial term during each 
-iteration. Just as observed in \autoref{fig:strain-beam-untwist-objectives-split}, QN, ADMM and PD are more successful at reducing the constraint energy than XPBD, even 
-though PD converges to a constraint energy that is slightly larger than the one achieved by QN and ADMM this time. While the PD-style solvers manage to bring the constraint 
-energy down to close to zero, XPBD only arrives at a configuration 
-with a constraint energy that is two orders of magnitude larger than the minimim achieved by the other solvers. However, it is evident that XPBD has not fully converged yet 
-as it still continues to decrease the constraint energy values. All in all, the results for the constraint energy are qualitatively the same as the ones observied for 
+iteration. QN, ADMM and PD are more successful at reducing the constraint energy than XPBD, even 
+though PD converges to a constraint energy that is slightly larger than the one achieved by QN and ADMM this time. Each of the PD-style solvers manages to bring the 
+constraint energy down to close to zero. This is significantly lower than the minimum achieved for a time step of \SI{1e-2}{\second} and stiffness \num{1e8} (see 
+\cref{fig:strain-beam-untwist-objectives-split}). However, it is evident that XPBD has not fully converged yet as it still continues to decrease the constraint energy 
+values. All in all, the results for the constraint energy are qualitatively the same as the ones observied for 
 time step \SI{1e-2}{\second} and stiffness \num{1e8}. On the other hand, the plots for the inertial term differ quite significantly. With larger time step and stiffness,
 QN, ADMM and XPBD converge to the same inertial term, whereas the PD solver converges to a value that is more than twice as large. Already after 20 iterations, the inertial 
-term achieved by PD is larger than the value that the other solvers converge to. Still, PD continues to increase the inertial term during the first 400 iterations.
+term achieved by PD is larger than the value that the other solvers converge to. Still, PD continues to increase the inertial term during the first 400 iterations. 
+Finally, each of the solvers converge to an inertial term that is significantly lower than the corresponding inertial term obtained with time step \SI{1e-2}{\second}
+and stiffness \num{1e8}.
 
-The results suggest that the poor convergence properties of the PD solver observed in \autoref{fig:strain-beam-untwist-objectives-split-large-ts} are not due to an 
-inability to properly minimize the constraint energies arising from stiff constraints. Instead, it appears that 
+Since the weight of the inertial term decreases with increasing time step size and the weight of the constraint term increases with increasing stiffness values, moving 
+particles away from their inertial positions to reduce the constraint energy is encouraged in \autoref{fig:strain-beam-untwist-objectives-split-large-ts} compared to
+\autoref{fig:strain-beam-untwist-objectives-split}. This is reflected in the fact that the solvers reduce the constraint energy to a lower value, even though a larger 
+stiffness value is used. The results suggest that the PD solver is too aggressive with moving particles away from their inertial positions if the associated penalty 
+is largely outweighed by the incentives for minimizing the constraint energies. This issue 
+appears to be particularly serious during the first solver iterations, where the derivatives of the quadratic inertial penalty are small. 
+Without further experiments, it is difficult to understand why this effect occurs when using the PD solver while the other solvers are unaffected.
 
 \begin{figure}[h]
     \centering
@@ -2594,6 +2636,11 @@ inability to properly minimize the constraint energies arising from stiff constr
     constraints with stiffness \num{1e9}.}
     \label{fig:strain-beam-untwist-objectives-split-large-ts}
 \end{figure}
+
+To gain further insights into how the large inertial term at the converged configuration from PD manifests itself, we repeat parts of the experiments in 
+\autoref{fig:strain-beam-untwist-geometries} and take a closer look at the geometries that the solvers arrive at after 1000 iterations. 
+
+% TODO: Continue here tomorrow!
 
 % TODO:
 % - Issues with global angular and linear momentum 
