@@ -24,16 +24,19 @@ system of ODEs is commonly referred to as the equations of motion. The equations
 at the configuration of the system at the next time step. For general forces, finding an analytical solution to the equations of motion
 is impossible and numerical integration schemes must be employed instead. In particular, both XPBD (\cref{ss:xpbd-constraint-projection}) 
 and PD (\cref{ss:pd-solver}) are based on a numerical 
-integration technique called implicit Euler integration \cite{macklin2016, bouaziz2014}. The equations of motions due to Newton's second 
+integration technique called implicit Euler integration \cite{macklin2016, bouaziz2014}. The equations of motion due to Newton's second 
 law are reviewed in \cref{s:equations-of-motion}. Common approaches for numerical integration are introduced in 
 \cref{ss:numerical-integration}. An alternative formulation of implicit Euler integration as an unconstrained optimization problem
-called the variational form of implicit Euler integration is presented in \cref{ss:variational-implicit-euler}. Finally, additional 
+called the variational form of implicit Euler integration is presented in \cref{ss:variational-implicit-euler}. Additional 
 considerations for the numerical integration of the equations of motion in real-time settings are covered in 
-\cref{ss:numerical-integration-rt}.
+\cref{ss:numerical-integration-rt}. Simulating deformable bodies via numerical integration requires the computation of elastic forces from 
+deformed configurations. We describe how to achieve this in \autoref{ss:deformable-bodies}. The exact elastic forces do not only depend on 
+the deformation of the body, but also its material. A brief introduction to relevant material models is provided in 
+\autoref{ss:material-models}.
 
 \subsection{The Equations of Motion}\label{s:equations-of-motion}
 
-The motion of a spatially discretized system with $m$ particles evolving in time according to Newton's laws of motion can be modeled via 
+The motion of a spatially discretized system with $m$ particles evolving in time according to Newton's laws can be modeled via 
 the equations of motion
 
 \begin{align}
@@ -46,12 +49,12 @@ the equations of motion
 \noindent where $\vecm{q}(t)$, $\vecm{v}(t)$, $\vecm{f}(\vecm{q}(t), \vecm{v}(t))$ are the particle positions, particle velocities and 
 forces acting on each particle at time $t$, respectively, and $\matm{M}$ is a diagonal matrix with the particle masses as diagonal entries. 
 From now on, we only consider forces that are independent of velocities and write $\vecm{f}(\vecm{q}(t))$ instead of 
-$\vecm{f}(\vecm{q}(t), \vecm{v}(t))$. In the context of projective dynamics (\cref{s:pd}), it is
-$\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{m \times 3}$ and $\matm{M} \in \mathbb{R}^{m \times m}$. 
-In the context of position based dynamics (\cref{s:pbd}), it is $\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{3m}$ and $\matm{M} 
-\in \mathbb{R}^{3m \times 3m}$. $\dot{\vecm{q}}(t)$ and $\dot{\vecm{v}}(t)$ are short for $\frac{d\vecm{q}}{dt}(t)$ and
-$\frac{d\vecm{v}}{dt}(t)$, respectively. From now on, we write $\vecm{q}$ and $\dot{\vecm{q}}$ instead of $\vecm{q}(t)$ and $\dot{\vecm{q}}(t)$ for 
-time-dependent quantities for the sake of brevity.
+$\vecm{f}(\vecm{q}(t), \vecm{v}(t))$. Depending on the context, it is
+$\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{m \times 3}$ and $\matm{M} \in \mathbb{R}^{m \times m}$ or 
+$\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{3m}$ and $\matm{M} 
+\in \mathbb{R}^{3m \times 3m}$. We define $\dot{\vecm{q}}(t) \coloneqq \frac{d\vecm{q}}{dt}(t)$ and $\dot{\vecm{v}}(t) \coloneqq 
+\frac{d\vecm{v}}{dt}(t)$. When the time step $t$ is obvious from the context, we write $\vecm{q}$ and $\dot{\vecm{q}}$ instead of 
+$\vecm{q}(t)$ and $\dot{\vecm{q}}(t)$ for time-dependent quantities for the sake of brevity.
 
 The positions $\vecm{q}(t)$ and velocities $\vecm{v}(t)$ at time $t$ can be determined by solving the equations of motion given some initial conditions
 $\vecm{q}(0) = \vecm{q}_0$ and $\vecm{v}(0) = \vecm{v}_0$. Here, $\vecm{q}_0$ and $\vecm{v}_0$ are the initial positions and velocitities, respectively. 
@@ -79,8 +82,10 @@ need to be solved numerically.
 Numerical integration schemes for the equations of motion aim at approximating the true positions $\vecm{q}(t_n)$ and velocities $\vecm{v}(t_n)$ 
 at discrete points in time $t_n, n \in \mathbb{N}$ without computing the analytical solution $\vecm{s}$ directly. In the context of this 
 thesis, $t_n = nh$ for some time step $h \in \mathbb{R}$. Note that the time step is constant. The approximations of $\vecm{q}(t_n)$ 
-and $\vecm{v}(t_n)$ produced by the integration scheme are referred to as $\vecm{q}_n$ and $\vecm{v}_n$, respectively. 
+and $\vecm{v}(t_n)$ produced by the integration scheme are referred to as $\vecm{q}_n$ and $\vecm{v}_n$, respectively. In the following, we introduce 
+explit Euler integration, symplectic Euler integration and implicit Euler integration.
 
+\paragraph{Explicit Euler Integration.}
 The simplest approach to numerical integration is explict Euler integration. 
 When applied to \autoref{eq:equations-of-motion}, the next position and velocity estimates $\vecm{q}_{n+1}$ and $\vecm{v}_{n+1}$ are derived 
 from the current estimates $\vecm{q}_n$ and $\vecm{v}_n$ via the update formula
@@ -111,6 +116,7 @@ Euler integration amplifies the energy of the simulated system. For example, it 
 \cite{servin2006}. Using the explicit Euler method with larger time steps often manifests itself in exploding
 simulations. These issues are particularly pronounced during the simulation of stiff systems, i.e. systems with large accelerations.
 
+\paragraph{Symplectic Euler Integration.}
 A variation of the explicit Euler method applied to the equations of motion, called the symplectic Euler method, arises when the new 
 velocities $\vecm{v}_{n+1}$ instead of the old velocities $\vecm{v}_n$ are used in the position update \cite{stern2006}. This leads to 
 the update formula
@@ -128,6 +134,7 @@ is a first-order method. However, while it still does not conserve the system's 
 appropriate time steps \cite{stern2006}. Its main drawback is that it also becomes unstable for stiff simulations unless the time step is 
 kept prohibitively small \cite{servin2006}. 
 
+\paragraph{Implicit Euler Integration.}
 Another popular integration scheme for tackling the equations of motion is implicit Euler integration, defined by the update formula
 
 \begin{align}
@@ -212,7 +219,7 @@ Approaching implicit Euler integration in its variational form can often be adva
 \autoref{eq:variational-implicit} presents a natural merit function that can be employed to improve the step size along the search direction 
 that arises in common unconstrained optimization algorithms based on Newton's method \cite{nocedal2006}. As an example, the objective 
 function is used in many step length selection algorithms to ensure that step sizes satisfy the Armijo condition or both Wolfe conditions 
-(\cref{sss:step-length-selection}). In fact, many algorithms for solving non-linear systems of equations construct approximate merit functions 
+(\cref{sss:step-length-selection}). In fact, many algorithms for solving nonlinear systems of equations construct approximate merit functions 
 if the objective function from an equivalent optimization problem is not available \cite{nocedal2006}.
 
 
@@ -258,36 +265,192 @@ are linear. In this case, $\vecm{q}_{n+1}, \vecm{v}_{n+1}$ can be determined in 
 restrictive subset of forces that allows modelling nonlinearities, is used in PD (\cref{s:pd}). The second method is particularly appealing 
 in settings where visual plausibility is prioritized over physical accuracy.
 
-\subsection{Simulation of Deformable Bodies}\label{ss:deformable-bodies}
+\subsection{Elastic Forces For Deformable Bodies}\label{ss:deformable-bodies}
 To be able to perform physically accurate simulations of deformable bodies using the numerical integration schemes for the equations of motion 
 introduced in \autoref{ss:numerical-integration}, we need to be able to compute elastic forces $\vecm{f}(\vecm{q})$ from the discretized 
-positions $\vecm{q}$ of a potentially deformed body. In the following exposition, we lean heavily on the SIGGRAPH course by Sifakis et al.\ 
-\cite{sifakis2012}, but restrict to the parts that are most relevant in the context of this thesis. 
+positions $\vecm{q}$ of a potentially deformed body. Note that the we assume that the elastic forces $\vecm{f}(\vecm{q})$ are determined 
+entirely by the current positions $\vecm{q}$. In particular, this implies that the elastic forces are path-independent. Such materials are called 
+hyperelastic. In the following exposition, we lean heavily on the SIGGRAPH course by Sifakis et al.\ \cite{sifakis2012}. We start by 
+introducing relevant concepts from continuum mechanics and then describe how efficient implementation can be achieved via suitable 
+discretization schemes.
 
-We start by introducing the deformation function 
-$\vecm{\phi} \colon \Sigma \mapsto \mathbb{R}^3$, where $\Sigma \subseteq \mathbb{R}^3$ is the volumetric domain by the undeformed occupied by the 
-undeformed body. This domain $\Sigma$ is called the reference configuration. The deformation function maps every point in the reference configuration 
-to its respective deformed position $\vecm{Q} = \vecm{\phi}(\vecm{q})$. Note that positions in the reference configuration are denoted using small 
-letters while the deformed positions are referred to via capital letters. As an example, the deformation function given by 
+First, we introduce the deformation function $\vecm{\phi} \colon \Omega \mapsto \mathbb{R}^3$, where $\Omega \subseteq \mathbb{R}^3$ is the 
+volumetric domain occupied by the undeformed body. This domain $\Omega$ is called the reference configuration. The deformation 
+function maps every point in the reference configuration 
+to its respective deformed position $\vecm{q} = \vecm{\phi}(\vecm{Q})$. Note that positions in the reference configuration are denoted using capital 
+letters while the deformed positions are referred to via small letters. As an example, the deformation function given by 
 
 \[
-    \vecm{\phi}(\vecm{q}) = 2\matm{I}\vecm{q}
+    \vecm{\phi}(\vecm{Q}) = 2\matm{I}\vecm{Q}
 \]
 
 \noindent describes the deformed configuration that is achieved by stretching the reference domain by a factor of 2 in each direction. 
 
-\begin{itemize}
-    \item In order to simulate deformable bodies numerical integration of the equations of motion, we need to be able to compute forces from the 
-        positions of the deformed body. How? Refer to \cite{sifakis2012} and cover only the most important steps. Start with this. Otherwise, it is not 
-        clear why the deformation gradient is relevant.
-    \item Introduce energy density. Explain that the energy density can be expressed in terms of $\matm{F}$ since the energy density only needs to reflect
-        the deformation behavior in an infitisemal neighborhood of the position of interest.
-    \item Introduce the deformation gradient $\matm{F}$. If the deformation gradient is a rotation matrix, the body is only affected by a rigid body transform.
-    \item Give one example to aid understanding. Introduce strain material, neohookean and simplified neohookean model.
-    \item Show that the energy of a body can be computed by integrating the potential over the domain of the deformed body. 
-    \item Show that the force acting on the body at a certain position can be computed by taking the derivative of the energy with respect to that position. 
-    \item Show how the discretization works.
-\end{itemize}
+The next step is to associate the deformation function that describes the current deformed configuration with an energy. However, the degree to 
+which different parts of the body are deformed may vary. Thus, we need to be able to relate deformations and strain energies on a local scale. 
+This can be achieved by defining an energy density function $\Psi(\vecm{\phi}, \vecm{Q})$ which measures the strain energy per unit undeformed volume 
+on an infitisemal domain $dV$ around $\vecm{Q}$. Since the energy density function only depends on the local behavior of $\vecm{\phi}$ around 
+$\vecm{Q}$, it can be equivalently expressed in terms of the deformation gradient $\matm{F}(\vecm{Q}) \in \mathbb{R}^{3 \times 3}$ given by 
+
+\begin{equation}\label{eq:deformation-gradient}
+    \matm{F} = \matm{F}(Q) = \frac{d\vecm{\phi}}{d\vecm{Q}},
+\end{equation}
+
+\noindent yielding $\Psi(\vecm{\phi}, \vecm{Q}) = \Psi(\matm{F}(\vecm{Q}))$. The choice of the energy density depends on the simulated material and 
+is treated as a black box for now. Relevant material models are introduced in \autoref{ss:material-models}. Now, the elastic energy stored in the 
+entirety of the deformed body can be computed by integrating the energy density function over the reference configuration $\Omega$ like so
+
+\begin{equation}\label{eq:elastic-energy}
+    E(\vecm{\phi}) = \int_{\Omega}\Psi(\matm{F}) d\vecm{Q}.
+\end{equation}
+
+For general nonlinear materials, computing the integral in \autoref{eq:elastic-energy} is infeasible. Thus, simplifying assumptions are required 
+in order to enable efficient simulation of the physics of deformable bodies. Firstly, we describe the reference configuration $\Omega$ as a tetrahedral 
+mesh. Let $\vecm{Q} = (\vecm{Q}_1, \ldots, \vecm{Q}_n)^T$ be the vertex positions of the undeformed mesh. Then, the current 
+state of the model can be expressed via the vertex positions in the deformed configuration $\vecm{q} = (\vecm{\phi}(\vecm{Q}_1), \ldots, 
+\vecm{\phi}(\vecm{Q}_n))^T = (\vecm{q_1}, \ldots, \vecm{q}_n)^T$. Instead of using the true, complex deformation function $\vecm{\phi}$, we construct 
+an approximation $\hat{\vecm{\phi}}$ from $\vecm{Q}$ and $\vecm{q}$ using barycentric interpolation. The reconstructed deformation map $\hat{\vecm{\phi}}$
+is a piecewise linear function over each tetrahedron given by 
+
+\[
+    \hat{\vecm{\phi}}(\vecm{Q}) = \matm{F}_i \vecm{Q} + \vecm{b}_i \text{ for all } \vecm{Q \in \mathcal{T}_i},
+\]
+
+\noindent where $\matm{F}_i \in \mathbb{R}^{3 \times 3}$ and $\vecm{b}_i$ are specific to each tetrahedron $\mathcal{T}_i$. Note that $\matm{F}_i$ 
+can be interpreted as the constant deformation gradient for all positions in the $i$-th tetrahedron. Let $\vecm{Q}_1, \ldots, \vecm{Q}_4$ and 
+$\vecm{q}_1, \ldots, \vecm{q}_4$ denote the positions of the vertices of tetrahedron $\mathcal{T}_i$ in the reference configuration and the deformed 
+configuration, respectively. Sifakis \cite{sifakis2012} shows that $\matm{F}_i$ is given by
+
+\begin{equation}\label{eq:deformation-gradient-tet}
+    \matm{F}_i = \matm{D}_s\matm{D}^{-1}_m
+\end{equation}
+
+\noindent where 
+
+\[
+    \matm{D}_s = \begin{pmatrix}
+        q^x_1 - q^x_4 & q^x_2 - q^x_4 & q^x_3 - q^x_4 \\
+        q^y_1 - q^y_4 & q^y_2 - q^y_4 & q^y_3 - q^y_4 \\
+        q^z_1 - q^z_4 & q^z_2 - q^z_4 & q^z_3 - q^z_4
+    \end{pmatrix}
+\]
+
+\noindent is the deformed shape matrix and 
+
+\[
+    \matm{D}_m = \begin{pmatrix}
+        Q^x_1 - Q^x_4 & Q^x_2 - Q^x_4 & Q^x_3 - Q^x_4 \\
+        Q^y_1 - Q^y_4 & Q^y_2 - Q^y_4 & Q^y_3 - Q^y_4 \\
+        Q^z_1 - Q^z_4 & Q^z_2 - Q^z_4 & Q^z_3 - Q^z_4
+    \end{pmatrix}
+\]
+
+\noindent is called the reference shape matrix.
+
+Now, the elastic energy of the deformed body can be computed as a sum over the tetrahedral elements of the mesh via
+
+\[
+    E(\vecm{q}) = \sum_e E_e(\vecm{q}) = \sum_e \int_{\Omega_e} \Psi(\hat{\matm{F}}(\vecm{Q}, \vecm{q})) d\vecm{Q},
+\]
+
+\noindent where $\hat{\matm{F}}(\vecm{Q}, \vecm{q})$ is the deformation gradient of the reconstructed deformation 
+function $\hat{\vecm{\phi}}$. Since the deformation gradient $\hat{\matm{F}}$ is constant across each tetrahedral element, 
+it is further
+
+\[
+    E(\vecm{q}) = \sum_e V_e \Psi(\matm{F}_e),
+\]
+
+\noindent where $V_e$ is the volume of the undeformed tetrahedral element $e$. In contrast to \autoref{eq:elastic-energy}, this can be computed efficiently. 
+Finally, we are able to specify the elastic forces $\vecm{f}(\vecm{q})$ acting on the particles of the deformed body with positions $\vecm{q}$ by computing
+
+\[
+    \vecm{f}(\vecm{q}) = -\frac{dE(\vecm{\vecm{q}})}{d\vecm{q}}.
+\]
+
+\subsection{Material Models}\label{ss:material-models}
+In \autoref{ss:deformable-bodies}, we demonstrated how to compute the elastic forces acting on a particle system with deformed positions 
+$\vecm{q}$, but treated the material-dependent energy density function $\Psi$ as a black box. In this section, we fill in the gaps and describe the material
+models relevant for this thesis. Note that the material models covered here are isotropic, i.e. their energy density functions satisfy $\Psi(\matm{F}) = 
+\Psi(\matm{R}\matm{F})$ for any rotation matrix $\matm{R}$ \cite{sifakis2012}. Informally, this means that the response to a deformation is 
+independent of the orientation the deformation is applied in. Additionally, we focus on material models that generate elastic forces that are nonlinear 
+in the deformation gradient. In the following, we introduce the strain material model \cite{bouaziz2014}, the classical neohookean model and a simplified 
+variation thereof \cite{smith2018}.
+
+\paragraph{Strain Material Model.}
+The first material model, which we simply refer to as the strain material model \cite{bouaziz2014}, is given by
+
+\begin{equation}\label{eq:strain-material-model}
+    \Psi_{\text{strain}}(\vecm{F}) = \frac{k}{2} \norm{\matm{U}\matm{I}\matm{V}^T - \matm{U}\matm{\Sigma}\matm{V}^T}^2_F 
+    = \frac{k}{2} \norm{\matm{I} - \matm{\Sigma}}^2_F,
+\end{equation}
+
+\noindent where $\matm{F} = \matm{U}\matm{\Sigma}\matm{V}^T$ is the singular value decomposition of the deformation gradient $\matm{F}$ and $k 
+\in \mathbb{R}^+$ is a stiffness parameter. Note that $\Psi_{\text{strain}}(\vecm{F}) = 0$ iff $\matm{\Sigma} = \matm{I}$ or equivalently iff 
+$\matm{F}$ is a rotational matrix. It is easy to verify that $\matm{F}$ is a rotation iff the deformation function $\vecm{\phi}$ is a rigid body 
+transform. Thus, \autoref{eq:strain-material-model} can be interpreted as a quadratic penalty for the distance between the 
+deformation function $\vecm{\phi}$ and its closest rigid-body transform as measured by the Frobenius norm of the difference of their deformation 
+gradients. 
+
+Since the PD solver cannot be applied to classical material models like the St.\ Venant-Kirchhoff and the neohookean model, the strain 
+material model is the main tool for achieving simulations of deformable bodies using PD (see \cref{s:pd}).
+While simple, the strain material model comes with a couple of disadvantages. Firstly, the computation of the singular value decomposition of 
+$\matm{F}$ is expensive. Secondly, the restorative elastic forces arising from the strain material model are proportional 
+to the aformentioned distance between the deformation and its closest rigid-body transform. As such, the strain material model is too 
+restrictive to model complex materials such as skin or flesh \cite{liu2017}. 
+
+\paragraph{Neohookean Material Model.}
+A popular material model that is more suitable for simulating biological materials is the neohookean material model and its variations 
+\cite{smith2018}. Its popularity is reflected by the fact that it has been implemented with a variety of different solvers including 
+PBD \cite{bender2014}, XPBD \cite{macklin2021}, ADMM \cite{overby2017} and a quasi-Newton solver based on PD \cite{liu2017}.
+The classical version of the neohookean material model is given below
+
+\begin{equation}\label{eq:neohookean-material-model}
+    \Psi_{\text{Neo}} = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) - \mu \text{log}(\text{det}(\matm{F})) 
+    + \frac{\lambda}{2}\text{log}(\text{det}(\matm{F}))^2.
+\end{equation}
+
+\noindent Here, $\mu$ and $\lambda$ are the material-specific Lamé parameters. The first term is minimized if $\matm{F} = \matm{0}$, which 
+happens if the deformed volume has collapsed to a single point. Note that $\text{det}(\matm{F})$ can be considered a measure for the 
+infitisemal local change in volume caused by the deformation $\vecm{\phi}$. Then, the last two terms can be interpreted as volume-preserving, 
+since $\text{log}(\text{det}(\matm{F}))$ approaches negative infinity as $\text{det}(\matm{F})$ approaches $0$. In particular, 
+the volume-preserving terms strongly counteract the compression of the modelled material encouraged by the first term. This way, the 
+classical neohookean model achieves rest stability.
+
+The main issue with the neohookean material model is that the volume-preserv-ing terms can grow unbounded when $\text{det}(\matm{F})$ approaches 
+$0$ and are infeasible for $\text{det}(\matm{F}) < 0$. Note that while configurations where $\text{det}(\matm{F}) < 0$ are theoretically 
+impossible to achieve, they can often occur in practice as a result of geometric constraints, instability of time integration techniques or 
+inadequate convergence of numerical solvers \cite{sifakis2012}. Thus, $\Psi_{\text{Neo}}$ is not inversion stable \cite{smith2018}.
+
+\paragraph{Simplified Neohookean Material Model.}
+To address the issues with the classical neohookean material model, Smith et al.\ propose a modified version of $\Psi_{\text{Neo}}$ where 
+the volume-preserving terms are replaced by the bounded, well-defined and invertible term $\frac{\lambda}{2}(\text{det}(\matm{F}) - 1)^2$. 
+This yields the following energy density
+
+\[
+    \Psi(\matm{F}) = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) + \frac{\lambda}{2}(\text{det}(\matm{F})-1)^2.
+\]
+
+\noindent While this ensures inversion stability, Smith et al.\ show that its Piola-Kirchhoff tensor 
+
+\[
+    \matm{P}(\matm{F}) = \frac{d\Psi(\matm{F})}{d\matm{F}}
+\]
+
+\noindent is non-zero at undeformed configurations, i.e.\ $\matm{P}(\matm{I}) \neq \matm{0}$. Consequently, $\Psi$ is not rest stable. In particular,
+the effective rest state is achieved when elements are slightly deflated. The authors correct this by adjusting the volume-preserving term so that 
+elements are inflated again, yielding the following energy density
+
+\begin{equation}\label{eq:smith-neohookean-material-model}
+    \Psi_{\text{Smith}}(\matm{F}) = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) + \frac{\lambda}{2}\left(\text{det}(\matm{F}) - 
+    \left(1 + \frac{\mu}{\lambda}\right)\right)^2.
+\end{equation}
+
+\noindent We refer to this material model as the simplified neohookean model.
+
+Equipped with these energy density functions, we have all the tools available that are required to compute the elastic forces acting on the particles 
+of a deformed body as described in \cref{ss:deformable-bodies}. Note that the material models covered here are by no means exhaustive. Again, the 
+SIGGRAPH tutorial by Sifakis \cite{sifakis2012} is a good place to gain a better overview for the interested reader.
 
 \section{Unconstrained Optimization}\label{s:unconstrained-optimization}
 \begin{itemize}
@@ -1036,7 +1199,9 @@ stiffness.
 Since PBD and XPBD only differ in the way individual constraints are projected, we give a general overview over PBD-style algorithms 
 in \cref{ss:pbd-framework}. 
 The details of individual constraint projection in PBD and XPBD are covered in \cref{ss:pbd-constraint-projection} and 
-\cref{ss:xpbd-constraint-projection}, respectively.
+\cref{ss:xpbd-constraint-projection}, respectively. A comprehensive discussion of the properties of both solvers is provided in 
+\cref{ss:pbd-properties} and \cref{ss:xpbd-properties}, respectively. Lastly, we show how to simulate deformable bodies using physically-based 
+material models with PBD in \cref{ss:pbd-deformable-bodies} and with XPBD in \cref{ss:xpbd-deformable-bodies}.
 
 \subsection{Overview Over the PBD Framework}\label{ss:pbd-framework}
 Both PBD and XPBD share the same algorithmic structure. Let a dynamic object be defined by a set of $m$ 
@@ -1060,10 +1225,10 @@ such that the constraint is satisfied and linear and angular momentum are preser
 velocity update (line 7) and eventually passed on to the next time step (line 8) in correspondence with a Verlet integration step. Note that the only
 difference between PBD and XPBD is the constraint projection in \textsc{projectConstraints} (line 5).
 
-For general, non-linear constraints, moving the initial estimates from the symplectic Euler integration to positions that satisfy the constraints
-requires solving a non-linear system of equations. Solving this system of equations is further complicated by the presence of inequality constraints, which
+For general, nonlinear constraints, moving the initial estimates from the symplectic Euler integration to positions that satisfy the constraints
+requires solving a nonlinear system of equations. Solving this system of equations is further complicated by the presence of inequality constraints, which
 need to be added or removed depending on whether they are satisfied during the current iteration. Thus, Müller et al.\ \cite{mueller2006} opt for a 
-non-linear adaptation of the Gauss-Seidel solver in their original PBD solver. Macklin et al.\ \cite{macklin2016} adapt this approach in XPBD. 
+nonlinear adaptation of the Gauss-Seidel solver in their original PBD solver. Macklin et al.\ \cite{macklin2016} adapt this approach in XPBD. 
 Just like the original Gauss-Seidel algorithm, which is only suitable for linear systems of equations, 
 constraints are solved independently one after another. During each constraint solve, only the particles that contribute to the current constraint are
 moved while all the other particle positions remain untouched. Additionally, position updates from the projection of a constraint are immediately 
@@ -1147,7 +1312,7 @@ Plugging into $\autoref{eq:pbd-delta}$ and approximating by first-order Taylor e
 \end{equation}
 
 Finally, the stiffness $k_c$ of the constraint needs to be taken into account. The simplest way is to simply multiply the projection update
-$\Delta \vecm{p}$ by $k_c$. However, after multiple iterations of the solver, the effect of the stiffness on the update is non-linear. Consider
+$\Delta \vecm{p}$ by $k_c$. However, after multiple iterations of the solver, the effect of the stiffness on the update is nonlinear. Consider
 a distance constraint with rest length 0 acting on predictions $\vecm{p}_{i_1}, \vecm{p}_{i_2}$ given by
 
 \begin{equation}\label{eq:pbd-distance}
@@ -1166,7 +1331,7 @@ $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iteration
 \For{all iterations $n_s$}
 \ForNoDo{all constraints $C_j$ with cardinality $n_j$, } 
 \StatexIndent[3] particle indices $i_1, \ldots, i_{n_j}$ \algorithmicdo
-\If{$C_j$ is an inequality constraint and $C_j(\vecm{p}_j) \geq 0$}
+\If{$C_j$ is an inequality constraint and $C_j(\vecm{p}) \geq 0$}
 \State \textbf{continue} to next constraint
 \EndIf
 \For{all particles $i \in \{ i_1, \ldots, i_{n_j} \}$}
@@ -1183,19 +1348,23 @@ C_j(\vecm{p}) \vert^2 } w_i \nabla_{\vecm{p}_i} C_j(\vecm{p})$
 
 \subsection{Properties of PBD}\label{ss:pbd-properties}
 Due to its simplicity and controllability, PBD is a popular choice for real-time simulations where visually plausible results are sufficient. 
-At the core of the PBD algorithm is the non-linear Gauss-Seidel type solver for constraint projections. Immediately making position
+In the following section, we take a closer look at the properties of the PBD solver.
+
+\paragraph{Gauss-Seidel Solver.}
+At the core of the PBD algorithm is the nonlinear Gauss-Seidel-type solver for constraint projections. Immediately making position
 updates from one constraint projection visible in the following constraint projections enables faster propagation of 
 constraints through the simulated body \cite{mueller2006}. However, the same property makes parallelization of the constraint projections 
 in lines 8-9 of Algorithm \ref{alg:pbd-solver}
 more challenging. Synchronization is required to make sure that constraints that involve the same particle do not run into race conditions. 
-Alternatively, graph coloring algorithms where constraints of different colors are guaranteed to work on separate sets of particles can be employed
-\textcolor{red}{(citation needed!)}. Due to the fact that constraints are handled individually, the solver is incapable of finding a 
+Alternatively, graph coloring algorithms where constraints of the same color are guaranteed to work on separate sets of particles can be employed. 
+Due to the fact that constraints are handled individually, the solver is incapable of finding a 
 compromise between contradicting constraints \cite{mueller2006, bouaziz2014}. In fact, oscillations can occur in over-constrainted situations. 
 The exact result depends on the order in which constraints are handled.
 
-The position update due to a single constraint $C$ in \autoref{eq:pbd-update} is related to the Newton-Raphson method for finding roots of non-linear 
+\paragraph{Relation to the Newton-Raphson Method.}
+The position update due to a single constraint $C$ in \autoref{eq:pbd-update} is related to the Newton-Raphson method for finding roots of nonlinear 
 functions $f \colon \mathbb{R} \to \mathbb{R}$ \cite{mueller2006}. There, the current guess $x_i \in \mathbb{R}$ for a root of $f$ is refined 
-using the following update formula \textcolor{red}{(Citation needed? Falls into the curriculum of a B.Sc.\ )}
+using the following update formula 
 
 \begin{equation}\label{eq:newton-raphson}
     x_{i+1} = x_i - \frac{f(x_i)}{f^{\prime}(x_0)}.
@@ -1210,36 +1379,55 @@ using the following update formula \textcolor{red}{(Citation needed? Falls into 
 \noindent yields
 
 \[
-    \lambda_{i+1} = \lambda_i - \frac{C(\vecm{p} + \lambda_i \matm{W} \nabla C(\vecm{p}))}
-    {\nabla C(\vecm{p} + \lambda_i \nabla C(\vecm{p}))^T \matm{W} \nabla C(\vecm{p})}.
+    \lambda_{i+1} = \lambda_i - \frac{C(\vecm{p}_i + \lambda_i \matm{W} \nabla C(\vecm{p}_i))}
+    {\nabla C(\vecm{p}_i + \lambda_i \matm{W} \nabla C(\vecm{p}_i))^T \matm{W} \nabla C(\vecm{p}_i)}.
 \]
 
-\noindent and with $\lambda_0 = 0$ we arrive at 
+\noindent With $\lambda_0 = 0$, the update formula for the first iteration is 
 
 \[
-    \lambda_1 = -\frac{C(\vecm{p})}{\nabla^T C(\vecm{p}) \matm{W} \nabla C(\vecm{p})}
-    = - \frac{C(\vecm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\vecm{p}_i} C(\vecm{p}) \vert^2}.
+    \lambda_1 = -\frac{C(\vecm{p}_0)}{\nabla C(\vecm{p}_0)^T \matm{W} \nabla C(\vecm{p}_0)}.
 \]
 
-\noindent Note that this is exactly the same as the $\lambda$ used in the constraint solver given in \autoref{eq:pbd-lambda}. Thus, a single 
+\noindent Here, subscripts denote the current iteration instead of the particle index. Note that this is exactly the same as the formula for 
+$\lambda$ used in the constraint solver given in \autoref{eq:pbd-lambda}. Thus, a single 
 constraint projection corresponds to the first iteration of the Newton-Raphson method applied to \autoref{eq:newton-raphson-f} with 
-$\lambda_0 = 0$. The correspondence breaks down if $\lambda_0 \neq 0$ or if multiple position updates are performed consecutively for the 
-same constraint.
+$\lambda_0 = 0$. It is worth pointing out that the correspondence breaks down after the first iteration of PBD constraint projections. To 
+see this, consider the second PBD iteration for the constraint $C$ under the assumption that the positions of the particles that $C$ acts on 
+are not altered by any other constraint projections. Then, the second constraint projection is simply
 
+\[
+    \lambda_2 = -\frac{C(\vecm{p_1})}{\nabla C(\vecm{p}_1)^T \matm{W} \nabla C(\vecm{p}_1)}.
+\]
+
+\noindent However, since the positions after the first iteration are given by $\vecm{p}_1 = \vecm{p}_0 + \lambda_1 \matm{W} \nabla C(\vecm{p_0})$, 
+the corresponding Newton-Raphson update is equivalent to 
+
+\[
+    \lambda_2 = \lambda_1 - \frac{C(\vecm{p}_1)}{\nabla C(\vecm{p}_1)^T \matm{W} \nabla C(\vecm{p}_0)}.
+\]
+
+\noindent Due to these differences, it is not clear whether convergence and stability guarantees of the Newton-Raphson solver are applicable to 
+PBD constraint projection.
+
+\paragraph{Stability.}
 Müller et al.\ \cite{mueller2006} claim that PBD is unconditionally stable since the projected positions $\vecm{p}_i$ computed by the constraint 
 solver are physically valid in the sense that all constraints are satisfied and no extrapolation into the future takes place in lines 7-8 of
-Algorithm \ref{alg:pbd}. They further state that the only source of instabilities is the constraint solver itself, which is based on the Newton-Raphson 
-method. The position updates in \autoref{eq:pbd-update-individual} are independent of the time step and solely depend on the shape of the
-constraints. At this point, it is worth taking into consideration that the constraint solver does not always succeed at moving particles to 
-physically valid
-positions as implied. As mentioned above, oscillations can occur if there are contradictory constraints and constraint projections that are 
-performed towards the end might undo progress achieved by previous projections. Additionally, we have shown above that a single constraint 
-projection corresponds to the first iteration of a Newton-Raphson method with initial guess $\lambda_0 = 0$. For highly non-linear constraints, 
-it cannot be expected that the positions are moved onto or even close to the constraint manifold of interest after a single linearization. 
-Lastly, for general non-linear constraints, it is the shape of the constraint at the current configuration that matters for the stability of 
-the position update. Whether a Newton-Raphson iteration is effective or not cannot be answered for a function -- or in this case for a 
-constraint -- in its entirety, but in the proximity of specific values.
+Algorithm \ref{alg:pbd}. They further state that the only source of instabilities is the constraint solver itself, which is based on the 
+Newton-Raphson method. The position updates in \autoref{eq:pbd-update-individual} are independent of the time step and solely depend on the 
+shape of the constraints. 
 
+At this point, it is worth taking into consideration that the constraint solver does not always succeed at moving 
+particles to physically valid positions as implied. As mentioned above, oscillations can occur if there are contradictory constraints. 
+In particular, constraint projections that are performed towards the end might undo progress achieved by previous projections. 
+Moreover, we have shown above that the correspondence between the PBD constraint projections and the Newton-Raphson method breaks down 
+after the first iteration. However, since it is known that the Newton-Raphson solver may fail to converge if the initial guess $\lambda_0$
+is not sufficiently close to a true root $\lambda^*$ of \autoref{eq:newton-raphson-f}, it is expected that the same issue can occur for 
+repeated applications of PBD constraint projections. Lastly, for general nonlinear constraints, it is the shape of the constraint at the 
+current configuration that matters for the stability of the position update. Whether Newton-Raphson iterations are effective or not cannot be 
+answered for a function -- or in this case for a constraint -- in its entirety, but only in the proximity of specific values.
+
+\paragraph{Dependence of Stiffness On Iterations and Time Step Size.}
 The main disadvantage of PBD is the fact that the stiffness depends on the iteration count and the chosen time step \cite{mueller2006}. Again, 
 we take a look at
 a distance constraint with rest length 0 (\cref{eq:pbd-distance}). As discussed in \cref{ss:pbd-constraint-projection}, the remaining error after
@@ -1252,8 +1440,10 @@ $n_s$ solver iterations is simply $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (
 \noindent meaning that the distance constraint becomes infinitely stiff, regardless of the exact value of $k_c$. If instead $k^{\prime}
 = 1 - (1-k)^{1/n_s}$ is used, then the error after $n_s$ solver iterations becomes $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)$. Thus,
 infinite stiffness due to large iteration counts is prevented in this setting. However, the perceived stiffness still depends on the time
-step. In the limit of infinitely short time steps, the material is going to appear infinitely stiff. 
+step. In the limit of infinitely short time steps, the material is going to appear infinitely stiff. Generally, soft bodies can only be 
+simulated by restricting the number of PBD iterations.
 
+\paragraph{Preservation of Individual Momenta.}
 While the simulated object's global linear and angular momentum are preserved, the linear momenta of individual particles are at risk of 
 being washed out by the PBD constraint solver \cite{bouaziz2014}. This is because even though the structure of the position updates 
 preserves global momentum, there is no punishment for moving individual particles away from their inertial positions. Generally, the 
@@ -1275,9 +1465,17 @@ factor does not affect position updates. Washing out of individual momenta also 
 with the stiffness $k_c$ directly, or in the limit of infinitely short time steps. In both cases, the simulated material will appear infinitely stiff, 
 meaning that momenta of individual particles are not necessarily preserved.
 
-\subsection{Simulating Physically-Based Materials with PBD}\label{ss:pbd-physical}
-\textcolor{red}{Write about the Bender paper here. Also mention somewhere that PBD technically implements hard constraints, but that they are only satisfied 
-after a large number of iterations. At least position constraints can be truly hard by setting inverse massses to zero. Same thing is true for XPBD of course.}
+\subsection{Simulating Deformable Bodies using PBD}\label{ss:pbd-deformable-bodies}
+As discussed in \autoref{ss:pbd-constraint-projection}, the PBD constraint projection is designed to solve geometric constraints. However, Bender et al.\ 
+\cite{bender2014} simulate continuous elastic materials by deriving constraints from physical material models. Let $\Psi$ be the energy density of the 
+material model and let $E_e$, $\matm{F}_e$ and $V_e$ be the elastic energy, deformation gradient and volume of a tetrahedral element $e$, respectively
+(see \cref{ss:deformable-bodies}). Then, the authors introduce a constraint $C_e$ with $C_e(\vecm{q}) = E_e(\vecm{q}) = V_e\Psi(\matm{F}_e)$ for each 
+tetrahedral element, with small adjustments to achieve robust inversion handling. In short, the tetrahedral energies are simply repurposed as geometric 
+constraints. Note that this approach for simulating 
+deformable bodies comes with the disadvantages inherent to PBD (see \cref{ss:pbd-properties}). Most notably, the perceived stiffness of the material is 
+dependent on the time step size and the number of iterations. In the limit of infinite iterations and zero time step size, the simulated body will 
+appear rigid. As a result, the simulations are not physically accurate, even though the constraints are derived directly from the energy density $\Psi$. 
+Still, complex physical phenomena such as lateral contraction can be simulated with PBD using this setup \cite{bender2014}.
 
 \subsection{XPBD Constraint Projection}\label{ss:xpbd-constraint-projection}
 The derivation of XPBD \cite{macklin2016} starts from the position-level implicit Euler update formula for the equations of motion 
@@ -1308,7 +1506,7 @@ $\vecm{C}$ with $\vecm{C}(\vecm{q}) = [C_1(\vecm{q}), \ldots, C_r(\vecm{q})]^T$ 
 $\matm{\alpha} = \text{diag}(\alpha_1, \ldots, \alpha_r)$, then
 
 \begin{equation}\label{eq:xpbd-potential}
-    \psi(\vecm{q}) \coloneq \sum_j \psi_j(\vecm{q}) = \frac{1}{2}\vecm{C}(\vecm{q})^T \matm{\alpha}^{-1} \vecm{C}(\vecm{q}).
+    \psi(\vecm{q}) \coloneqq \sum_j \psi_j(\vecm{q}) = \frac{1}{2}\vecm{C}(\vecm{q})^T \matm{\alpha}^{-1} \vecm{C}(\vecm{q}).
 \end{equation}
 
 \noindent where $\psi$ is the combined internal energy potential. The force from the internal potential is given by
@@ -1331,17 +1529,17 @@ and a scalar component by introducing the Lagrange multiplier
     \vecm{\lambda} = -\tilde{\matm{\alpha}}^{-1}\vecm{C}(\vecm{q}).
 \end{equation}
 
-\noindent This leads to the following non-linear system of equations in terms of $\vecm{q}_{n+1}$ and $\vecm{\lambda}_{n+1}$:
+\noindent This leads to the following nonlinear system of equations in terms of $\vecm{q}_{n+1}$ and $\vecm{\lambda}_{n+1}$:
 
 \begin{align}
     \matm{M}(\vecm{q}_{n+1} - \tilde{\vecm{q}}) - \nabla (\vecm{q}_{n+1})^T \vecm{\lambda}_{n+1} &= \vecm{0} \label{eq:xpbd-g} \\
     \vecm{C}(\vecm{q}_{n+1}) + \tilde{\matm{\alpha}}\vecm{\lambda}_{n+1} &= \vecm{0} \label{eq:xpbd-h}.
 \end{align}
 
-\noindent The left-hand side of \autoref{eq:xpbd-g} and \autoref{eq:xpbd-h} are referred to as $\vecm{g}$ and $\vecm{h}$, respectively. The non-linear 
+\noindent The left-hand side of \autoref{eq:xpbd-g} and \autoref{eq:xpbd-h} are referred to as $\vecm{g}$ and $\vecm{h}$, respectively. The nonlinear 
 system of equations is solved using a fixed-point iteration based on Newton's method. We replace the index $(n+1)$ indicating the current
 time step by the index of the current guess in the fixed-point iteration indicated by $(i+1)$ for the sake of clarity. During each iteration, 
-guesses $\vecm{q}_i, \vecm{\lambda}_i$ for a solution of the non-linear system are improved by updates $\Delta \vecm{q}, \Delta \vecm{\lambda}$ to 
+guesses $\vecm{q}_i, \vecm{\lambda}_i$ for a solution of the nonlinear system are improved by updates $\Delta \vecm{q}, \Delta \vecm{\lambda}$ to 
 yield new iterates $\vecm{q}_{i+1}, \vecm{\lambda}_{i+1}$. The updates are determined by solving the following linear system of equations, 
 which arises from the linearization of \autoref{eq:xpbd-g} and \autoref{eq:xpbd-h}:
 
@@ -1367,10 +1565,11 @@ which arises from the linearization of \autoref{eq:xpbd-g} and \autoref{eq:xpbd-
     \matm{K} = \frac{\partial \vecm{g}}{\partial \vecm{q}}(\vecm{q}_i) = \matm{M} - \frac{\partial \nabla \vecm{C}(\vecm{q_i})^T \vecm{\lambda_i}}{\partial \vecm{q}}.
 \end{equation}
 
-\noindent Note how the second term corresponds to the geometric stiffness (see \cite{tournier2015}, \textcolor{red}{reference appropriate section}). 
-We refer to the system matrix of \autoref{eq:xpbd-lse} as $\matm{H}$. At this point, two simplifying assumptions are made.
+\noindent Note how the second term on the right side corresponds to the geometric stiffness $d\vecm{f}(\vecm{q})/d\vecm{q}$ 
+\cite{tournier2015}. We refer to the system matrix of \autoref{eq:xpbd-lse} as $\matm{H}$. At this point, two simplifying assumptions 
+are made.
 
-\textbf{Assumption 1:} Computing the geometric stiffness in $\matm{K}$ requires evaluating second derivatives of the constraint functions
+\paragraph{Assumption 1.} Computing the geometric stiffness in $\matm{K}$ requires evaluating second derivatives of the constraint functions
 $C_j$. This is expensive and error-prone. To avoid the challenges of computing second derivatives and to re-establish a connection 
 to PBD (\cref{ss:pbd-constraint-projection}), Macklin et al.\ \cite{macklin2016} drop the geometric stiffness by approximating 
 
@@ -1379,9 +1578,9 @@ to PBD (\cref{ss:pbd-constraint-projection}), Macklin et al.\ \cite{macklin2016}
 \end{equation}
 
 \noindent According to the authors, this simplification does not affect the solution that the fixed-point iteration converges to. However, 
-altering the system matrix decreases the convergence rate akin to a Quasi-Newton method for solving non-linear systems of equations.
+altering the system matrix decreases the convergence rate akin to a Quasi-Newton method for solving nonlinear systems of equations.
 
-\textbf{Assumption 2:} Macklin et al.\ \cite{macklin2016} further assume that 
+\paragraph{Assumption 2.} Macklin et al.\ \cite{macklin2016} further assume that 
 
 \begin{equation}\label{eq:xpbd-assumption-2}
     \vecm{g}(\vecm{q}_i, \vecm{\lambda}_i) = \vecm{0}. 
@@ -1448,15 +1647,17 @@ to take the Schur complement with respect to $\matm{M}$ to obtain a reduced syst
 \noindent The position update $\Delta \vecm{q}$ can be derived from $\Delta \vecm{\lambda}$ via the formula
 
 \begin{equation}\label{eq:xpbd-position-update}
-    \Delta \vecm{q} = \matm{M}^{-1} \nabla \vecm{C}(\vecm{q}_i)^T \Delta \vecm{\lambda}.
+    \Delta \vecm{q} = \matm{W} \nabla \vecm{C}(\vecm{q}_i)^T \Delta \vecm{\lambda},
 \end{equation}
 
+\noindent where $\matm{W} = \matm{M}^{-1}$
+
 Up until here, all constraints were handled together during each iteration. To make a connection to PBD and to return to the framework of a
-non-linear Gauss-Seidel solver \cref{ss:pbd-framework}, it is necessary to specify how to solve a single constraint. To that end we rewrite 
+nonlinear Gauss-Seidel solver \cref{ss:pbd-framework}, it is necessary to specify how to solve a single constraint. To that end we rewrite 
 \autoref{eq:xpbd-schur} for a single constraint $C_j$ and get the update for its scalar Lagrange multiplier $\lambda_j$ by computing
 
 \begin{equation}\label{eq:xpbd-lambda-j}
-    \Delta \lambda_j = \frac{-C_j(\vecm{q}_i) - \tilde{\alpha}_j \lambda_{ji}}{\nabla C_j(\vecm{q}_i) \matm{M}^{-1} \nabla C_j(\vecm{q}_i)^T + \tilde{\alpha}_j}.
+    \Delta \lambda_j = \frac{-C_j(\vecm{q}_i) - \tilde{\alpha}_j \lambda_{ji}}{\nabla C_j(\vecm{q}_i) \matm{W} \nabla C_j(\vecm{q}_i)^T + \tilde{\alpha}_j}.
 \end{equation}
 
 \noindent Here, $\lambda_{ji}$ is the value of the Lagrange multiplier of the $j$-th constraint after the $i$-th solver iteration. The position update for 
@@ -1489,11 +1690,10 @@ PBD solver in Algorithm \ref{alg:pbd-solver}.
 \If{$C_j$ is an inequality constraint and $C_j(\vecm{p}) \geq 0$}
 \State \textbf{continue} to next constraint
 \EndIf
-\State $\Delta \lambda_j = \frac{-C_j(\vecm{p}) - \tilde{\alpha}_j \lambda_{j}}{\nabla C_j(\vecm{p}) \matm{M}^{-1} \nabla C_j(\vecm{p})^T + \tilde{\alpha}_j}$
+\State $\Delta \lambda_j = \frac{-C_j(\vecm{p}) - \tilde{\alpha}_j \lambda_{j}}{\nabla C_j(\vecm{p}) \matm{W} \nabla C_j(\vecm{p})^T + \tilde{\alpha}_j}$
 \State $\lambda_{j} = \lambda_{j} + \Delta \lambda_j$
 \For{all particles $i \in \{ i_1, \ldots, i_{n_j} \}$}
-\State $\Delta \vecm{p}_i = -\frac{C_j(\vecm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_j} \}} w_i \vert \nabla_{\vecm{p}_i}C_j(\vecm{p}) \vert^2 } w_i 
-\nabla_{\vecm{p}_i} C_j(\vecm{p})$
+\State $\Delta \vecm{p}_i = \Delta \lambda_j w_i \nabla_{\vecm{p}_i} C_j(\vecm{p})$
 \State $\vecm{p}_i = \vecm{p}_i + \Delta \vecm{p}_i$
 \EndFor
 \EndFor
@@ -1506,74 +1706,52 @@ PBD solver in Algorithm \ref{alg:pbd-solver}.
 \subsection{Properties of XPBD}\label{ss:xpbd-properties}
 XPBD is a natural extension of PBD that addresses some of PBD's shortcoming while maintaining the simplicity of the original algorithm. Due to
 the similarity of both algorithms, PBD implementations can readily be extended to XPBD at the minor cost of storing an additional variable per 
-constraint.
+constraint. In the following, the properties of XPBD are discussed.
 
+\paragraph{Relation between XPBD and PBD.}
 The derivation of the XPBD constraint projection builds on the concept of compliant constraints developed by Servin et al.\ 
-\cite{servin2006}. As discussed in \cref{ss:compliant-constraints}, the compliant constraint formulation often allows handling infinite stiffness by
-setting $\matm{\alpha} = \matm{0}$. This requires removing all occurrences of stiffnesses in favor of compliances. In XPBD, this is achieved by
-pulling large stiffness values out of the constraints in \autoref{eq:xpbd-potential-j} and introducing artificial Lagrange multipliers 
-(\cref{eq:lagrange-multiplier}) that hide large stiffness values and treating them as unknowns in \autoref{eq:xpbd-g} and \autoref{eq:xpbd-h} . 
-Indeed, a closer look at the PBD update formula 
-\autoref{eq:pbd-update-individual} and the XPBD update formulas in \autoref{eq:xpbd-lambda-j}, \autoref{eq:xpbd-position-update-i} reveals that XPBD and 
-PBD are equivalent if the compliance term $\tilde{\alpha}_j$ of constraint $C_j$ is zero. This matches with the observation that bodies 
-simulated by PBD are infinitely stiff in the limit of infinite iterations (\cref{ss:pbd-properties}). If $\tilde{\alpha}_j \neq 0$, the 
-compliance terms in \autoref{eq:xpbd-lambda-j} regularize the constraint in such a way that the constraint force is limited and corresponds 
-to the constraint potential \cite{macklin2016}. This addresses the issue of coupling
-between iteration count and stiffness in the original PBD algorithm (\cref{ss:pbd-properties}). Since the time step is also baked into 
-$\tilde{\alpha}_j$, coupling between time step size and stiffness is also reduced.
+\cite{servin2006}. As discussed in \cref{ss:compliant-constraints}, the compliant constraint formulation often allows handling hard constraints by
+setting $\matm{\alpha} = \matm{0}$. Indeed, a closer look at the PBD update formula in \autoref{eq:pbd-update-individual} and the XPBD update 
+formulas in \autoref{eq:xpbd-lambda-j}, \autoref{eq:xpbd-position-update-i} reveals that XPBD and 
+PBD are equivalent if the compliance term $\alpha_j$ of constraint $C_j$ is zero. This matches with the observation that bodies 
+simulated by PBD are infinitely stiff in the limit of infinite iterations (\cref{ss:pbd-properties}). Note that this correspondence between XPBD 
+and PBD gets lost if the stiffnesses are not moved out of the constraints and moved into the compliances. To see this, consider the energy 
+potential $\psi(\vecm{q}) = \frac{1}{2} \alpha^{-1} C(\vecm{q})^2$. If we construct alternative constraints $C^\prime$ with $C^\prime(\vecm{q}) = 
+\alpha^{-1/2}C(\vecm{q})$ we can alternatively express the energy potential $\psi$ as follows
 
-%TODO: Improve this paragraph so that the motivation is clear according to Fabians feedback.
-The discussion above highlights the importance of pulling large stiffness values out of the constraints in \autoref{eq:xpbd-potential}. 
-However, in many cases it can be challenging to pull stiffness factors out of the constraints. In such cases, it is interesting to ask 
-whether XPBD -- despite the iterative nature of the Gauss-Seidel solver and the assumptions made during its derivation 
-(\cref{eq:xpbd-assumption-1}, \cref{eq:xpbd-assumption-2}) -- behaves the same for both formulations if only large, but finite, 
-stiffnesses are used.
-To this end, the constraint potentials in \autoref{eq:xpbd-potential} can be rewritten in terms of the alternative constraint 
-function $\vecm{C}^{\prime}$ given by
+\[
+    \psi(\vecm{q}) = \frac{1}{2} C^{\prime}(\vecm{q})^2 = \frac{1}{2} \alpha^{\prime -1}C^{\prime}(\vecm{q})^2,
+\]
 
-\begin{equation}\label{eq:xpbd-alt-constraint}
-    \vecm{C}^{\prime}(\vecm{q}) = \matm{\alpha}^{-1/2}\vecm{C}(\vecm{q}).
+\noindent with compliance $\alpha^\prime = 1$ independent of material stiffness. In this setting, modelling infinite stiffness by setting 
+$\alpha^\prime = 0$ does not work.
+
+If $\alpha_j \neq 0$, the compliance terms in \autoref{eq:xpbd-lambda-j} regularize the constraint in such a way that the constraint force is 
+limited and corresponds to the constraint potential \cite{macklin2016}. This addresses the issue of coupling between iteration count and stiffness in 
+the original PBD algorithm (\cref{ss:pbd-properties}). Since the time step is later baked into $\tilde{\alpha}_j$, coupling between time step size 
+and stiffness is also removed.
+
+\paragraph{Generality.}
+The XPBD derivation builds on the assumption that energy potentials $\psi$ fit into the compliant constraint framework (see \cref{eq:xpbd-potential-j}).
+Thus, implementing an energy potential $\psi$ in XPBD requires constructing a constraint $C$ such that 
+$\psi(\vecm{q}) = \frac{1}{2} \alpha^{-1} C(\vecm{q})^2$. Since $\alpha \geq 0$ and $C(\vecm{q})^2 \geq 0$ for all $\vecm{q}$ irrespective of $C$, this 
+can only be achieved for non-negative energy potentials 
+$\psi$. Thus, XPBD is not compatible with energy potentials that can take on negative values without further modifications. However, we can take 
+advantage of the fact that adding a constant offset $c \in \mathbb{R}$ to $\psi$ does not affect the resulting forces $\vecm{f} = d\psi / d\vecm{q}$ 
+to construct an equivalent energy potential $\psi^\prime$ if $\psi$ is bounded from below. Let $b \in \mathbb{R}$ be a lower bound of $\psi$. Then,
+an equivalent non-negative energy potential $\psi^\prime$ can be constructed by setting
+
+\begin{equation}\label{eq:xpbd-potential-non-negative}
+    \psi^\prime(\vecm{q}) = \psi(\vecm{q}) + \vert b \vert.
 \end{equation}
 
-\noindent leading to the equivalent constraint potentials
+\noindent Note that this strategy does not work if $\psi$ does not have a lower bound. For example, the neohookean energy density from 
+\autoref{eq:neohookean-material-model} is unbounded from below due to the volume-preserving log terms. Consequently, it is imcompatible with the XPBD 
+solver.
 
-\begin{equation}\label{eq:xpbd-potential-2}
-    \psi(\vecm{q}) = \frac{1}{2} \vecm{C}^{\prime}(\vecm{q})^T \matm{I} \vecm{C}^{\prime}(\vecm{q}) 
-    = \frac{1}{2} \vecm{C}^{\prime}(\vecm{q})^T \matm{\alpha}^{\prime -1} \vecm{C}^{\prime}(\vecm{q}).
-\end{equation}  
-
-\noindent Here, $\matm{\alpha}^{\prime -1} = \matm{I}$ without relation to the constraint stiffnesses $k_j$. Thus, using zero compliance in 
-order to model infinite stiffness becomes impossible.  If $\vecm{C}^{\prime}$ and 
-$\matm{\alpha}^{\prime}$ are used, the update formulas for individual Lagrange multipliers (\cref{eq:xpbd-lambda-j}) and individual 
-positions (\cref{eq:xpbd-position-update-i}) become
-
-\begin{equation}\label{eq:xpbd-lambda-j-2}
-    \begin{split}
-    \Delta \lambda_j 
-    &= \frac{-C^{\prime}_j(\vecm{q}_i) - \frac{1}{h^2}\lambda_{ij}}{\nabla C^{\prime}_j(\vecm{q}_i)\matm{M}^{-1} \nabla C^{\prime}_j(\vecm{q}_i)^T + \frac{1}{h^2}} \\
-    &= \frac{-\sqrt{k_j}C_j(\vecm{q}_i) - k_j \tilde{\alpha}_j \lambda_{ij}}{k_j \nabla C_j(\vecm{q}_i)\matm{M}^{-1} \nabla C_j(\vecm{q}_i)^T + k_j \tilde{\alpha}_j} \\
-    &= \frac{-\frac{1}{\sqrt{k_j}}C_j(\vecm{q}_i) - \tilde{\alpha}_j \lambda_{ij}}{\nabla C_j(\vecm{q}_i)\matm{M}^{-1} \nabla C_j(\vecm{q}_i)^T + \tilde{\alpha}_j}.
-    \end{split}
-\end{equation}
-
-\noindent and 
-
-\begin{equation}\label{eq:xpbd-position-update-i-2}
-    \begin{split}
-    \Delta \vecm{q}_l
-    &= \frac{-\frac{1}{\sqrt{k_j}}C_j(\vecm{q}_i) - \tilde{\alpha}_j \lambda_{ij}}{\nabla C_j(\vecm{q}_i)\matm{M}^{-1} \nabla C_j(\vecm{q}_i)^T + \tilde{\alpha}_j}
-    w_l \nabla C^{\prime}_j(\vecm{q}_i)^T \\
-    &= \frac{-\frac{1}{\sqrt{k_j}}C_j(\vecm{q}_i) - \tilde{\alpha}_j \lambda_{ij}}{\nabla C_j(\vecm{q}_i)\matm{M}^{-1} \nabla C_j(\vecm{q}_i)^T + \tilde{\alpha}_j}
-    w_l \sqrt{k_j} \nabla C_j(\vecm{q}_i)^T.
-    \end{split}
-\end{equation}
-
-\noindent By looking at the last lines of \autoref{eq:xpbd-lambda-j-2} and \autoref{eq:xpbd-position-update-i-2}, it is easy to see that using $C^{\prime}_j$ 
-and $\alpha^{\prime}_j$ with $\vecm{\lambda}_0 = 0$ yields the same positions, but decreases the Lagrange multipliers by a factor of $1 / \sqrt{k_j}$. 
-Note that numerical differences between both formulations might still arise \textcolor{red}{(No idea how to reason about this. Looks this up or ask Fabian)}.
-
+\paragraph{Simplifying Assumptions.}
 As mentioned in \cref{ss:xpbd-constraint-projection}, assumption 1 (\cref{eq:xpbd-assumption-1}) corresponds to dropping the geometric stiffness 
-$\delta \nabla \vecm{C}(\vecm{q_i})^T \vecm{\lambda_i} / \delta \vecm{q}$. It is worth noting that with $\vecm{\lambda}_0 = \vec{0}$, this assumption is 
+$\delta \nabla \vecm{C}(\vecm{q_i})^T \vecm{\lambda_i} / \delta \vecm{q}$. It is worth noting that with $\vecm{\lambda}_0 = \vecm{0}$, this assumption is 
 trivially satisfied during the first iteration. According to \autoref{eq:lagrange-multiplier}, after a sufficient number of iterations it is $\vecm{\lambda}_i 
 \approx \tilde{\matm{\alpha}} \vecm{C}(\vecm{q}_i)$, meaning that the entries of the geometric stiffness grow with increasing constraint stiffness and iteration
 count. Thus, with stiffer constraints and larger iteration counts, assumption 1 becomes more aggressive. Tournier et al.\ \cite{tournier2015} state that
@@ -1604,6 +1782,7 @@ the LSEs in \autoref{eq:xpbd-lse} and \autoref{eq:xpbd-simplified-lse}. In contr
 this does affect the solution the solver converges to. Thus, due to assumption 2, the XPBD solver cannot be said to solve the original 
 implicit equations of motion \cite{macklin2016}.
 
+\paragraph{Preservation of Individual Momenta.}
 When investigating the properties of PBD (\cref{ss:pbd-properties}), we mentioned that multiplying all particle masses $m_i$ with a constant
 positive factor $a \in \mathbb{R}^+$ does not impact the PBD update, highlighting that there is no punishment for moving individual
 particles from their inertial positions in PBD. The fact that both positions and Lagrange multipliers are updated during each
@@ -1625,21 +1804,151 @@ should be encouraged whereas as moving particles away from $\tilde{\vecm{q}}$ sh
 $\tilde{\vecm{q}}$ is not simply used as an initial guess for the XPBD solver, but also used explicitly in the update equations. However, setting
 $\vecm{g}(\vecm{q}_i, \vecm{\lambda}_i) = \vecm{0}$ in assumption 2 removes all occurrences of the inertial positions from \autoref{eq:xpbd-simplified-lse}.
 
-Both assumptions 1 and 2 benefit from the choice $\vecm{\lambda}_0 = \vecm{0}$. It is worth mentioning that this precludes the use of the more natural
+\paragraph{Initial Guess For $\vecm{\lambda}_0$.}
+Both assumptions 1 and 2 exploit the choice $\vecm{\lambda}_0 = \vecm{0}$. It is worth mentioning that this precludes the use of the more natural
 initial guess given by $\vecm{\lambda}_0 = -\tilde{\matm{\alpha}} \vecm{C}(\tilde{\vecm{q}})$. This candidate results from plugging the 
 inertial positions into the
 definition of the Lagrange multipliers in \autoref{eq:lagrange-multiplier}. Picking an initial guess that is as close as possible to the true
 solution is important for keeping the linearization error during the fixed-point iteration based on Newton's method in the XPBD derivation 
 small. 
 
+\paragraph{Numerical Damping.}
 While motion due to external forces is handled by the symplectic Euler integration in lines 3-4 of Algorithm \ref{alg:pbd}, the way 
 elasticity is handled is derived from the implicit equations of motions (\cref{eq:implicit-positional-detailed-2}). As a result 
 elastic forces are subjected to numerical damping that gets more severe with growing time step sizes in XPBD (\cref{ss:numerical-integration}). 
 For this reason, even though baking the time step into $\tilde{\matm{\alpha}}$ in the compliant constraint formulation reduces coupling 
 between time step and stiffness, the perceived stiffness of simulated materials is still time step dependent to some extent.
 
-Finally, it is worth pointing out that the implications of using a Gauss-Seidel type solver discussed in the context of PBD 
+\paragraph{Gauss-Seidel Solver.}
+Finally, it is worth pointing out that the implications of using a Gauss-Seidel-type solver discussed in the context of PBD 
 (\cref{ss:pbd-properties}) apply to XPBD as well.
+
+\subsection{Simulating Deformable Bodies using XPBD}\label{ss:xpbd-deformable-bodies}
+To simulate deformable bodies using the material models presented in \autoref{ss:material-models}, we introduce constraints $C_j$ with 
+compliance $\alpha_j$ for each tetrahedral element such that the corresponding constraint energy 
+potential $\psi_j$ satisfies
+
+\begin{equation}\label{eq:xpbd-deformation-goal}
+    \psi_j(\vecm{q}) = \frac{1}{2}\alpha^{-1}_jC_j(\vecm{q})^2 = V_j\Psi_{\text{mat}}(\matm{F}_j).
+\end{equation}
+
+\noindent Here, $V_j$ is the volume of the undeformed tetrahedron, $\Psi_{\text{mat}}$ is the energy density of the material 
+model and $\matm{F}_j$ is the deformation gradient of the deformed tetrahedron. As discussed in \autoref{ss:xpbd-properties}, this 
+cannot be achieved for the classical neohookean material model in \autoref{eq:neohookean-material-model}. In the following, we show 
+how to implement the strain material model (\cref{eq:strain-material-model}) and the simplified neohookean material model 
+(\cref{eq:smith-neohookean-material-model}) in XPBD.
+
+\paragraph{Strain Material Model.}
+For the strain material model $\Psi_{\text{strain}}$ in \autoref{eq:strain-material-model}, \autoref{eq:xpbd-deformation-goal} is 
+satisfied by setting 
+
+\[
+    \alpha_j = \frac{1}{k V_j} \, \, \, \text{and} \, \, \, C_j(\vecm{q}) = \norm{\matm{I} - \matm{\Sigma}_j}_F,
+\]
+
+\noindent where $k$ is the stiffness of the strain material model and $\matm{\Sigma}_j$ is the diagonal matrix whose entries 
+are the singular values of $\matm{F}_j$. Note that $k$ only appears in the compliance $\alpha_j$, but not in of the constraint 
+$C_j$. Thus, the behavior of PBD can be recovered by setting $\alpha_j = 0$.
+
+\paragraph{Simplified Neohookean Material Model.}
+For the simplified neohookean material model in \autoref{eq:smith-neohookean-material-model}, constructing suitable constraints 
+$C_j$ and compliances $\alpha_j$ is more complicated. This is due to the fact that $\Psi_{\text{Smith}}$ can take on 
+negative values. First, we observe that $\Psi_{\text{Smith}}$ is bounded from below by rearranging terms as follows
+
+\begin{align*}
+    \Psi_{\text{Smith}}(\matm{F}) &= \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) + \frac{\lambda}{2}\left(\text{det}(\matm{F}) - 
+    \left(1 + \frac{\mu}{\lambda}\right)\right)^2\\
+                                  &= \frac{\mu}{2}\text{tr}(\matm{F}^T\matm{F}) + \frac{\lambda}{2}\left(\text{det}(\matm{F}) - 
+                                  \left(1 + \frac{\mu}{\lambda}\right)\right)^2 - \frac{3\mu}{2}.
+\end{align*}
+
+\noindent Note that the first two terms are non-negative, while the last term is negative and independent of 
+$\vecm{q}$. Consequently, $-\frac{3\mu}{2}$ is a lower bound of $\Psi_{\text{Smith}}$ and the equivalent 
+non-negative energy density $\Psi^\prime_{\text{Smith}}$ given by
+
+\[
+    \Psi^\prime_{\text{Smith}}(\mat{F}) = \frac{\mu}{2}\text{tr}(\matm{F}^T\matm{F})     
+    + \frac{\lambda}{2}\left(\text{det}(\matm{F}) - \left(1 + \frac{\mu}{\lambda}\right)\right)^2
+\]
+
+\noindent can be constructed (see \cref{ss:xpbd-properties}). We refer to the first and second term of 
+$\Psi^\prime_{\text{Smith}}$ as the deviatoric and hydrostatic term, respectively.
+
+To prepare pulling out the large Lamé coefficients $\mu$ and $\lambda$ that 
+controll the stiffness and incompressibility of the simulated material, we factor out the larger coefficient 
+$x \coloneqq \text{max}(\mu, \lambda)$ as follows
+
+\[
+    \Psi^\prime_{\text{Smith}}(\mat{F}) = \frac{x}{2} \left(\frac{\mu}{x}\text{tr}(\matm{F}^T\matm{F})     
+    + \frac{\lambda}{x}\left(\text{det}(\matm{F}) - \left(1 + \frac{\mu}{\lambda}\right)\right)^2\right).
+\]
+
+\noindent Now, \autoref{eq:xpbd-deformation-goal} is satisfied for $\Psi_{\text{mat}} = \Psi^\prime_{\text{Smith}}$ if 
+we set
+
+\[
+    \alpha_j = \frac{1}{x V_j} \, \, \, \text{and} \, \, \, C_j(\vecm{q}) = \sqrt{\frac{\mu}{x}\text{tr}(\matm{F}_j^T\matm{F}_j)     
+    + \frac{\lambda}{x}\left(\text{det}(\matm{F}_j) - \left(1 + \frac{\mu}{\lambda}\right)\right)^2}.
+\]
+
+\noindent We refer to this type of constraint as the combined neohookean constraint. Note that $x$ does not only appear in the 
+compliance $\alpha_j$, but in the constraint $C_j$ as well. Thus, this formulation can only be applied directly if $\alpha_j \neq 0$. 
+Otherwise, we need to adjust $C_j$ in order to maintain consistency by either computing $C^\mu_j \coloneqq \lim_{\mu\to\infty}C_j$ 
+or $C^\lambda_j \coloneqq \lim_{\lambda\to\infty}C_j$. If $x = \mu$, then $C^\mu_j$ is undefined since $\lim_{\mu\to\infty}$ diverges. 
+However, if $x = \lambda$, it is easy to see that $C^\lambda_j$ must be
+
+\begin{equation}\label{eq:combined-neohookean-0-compliance}
+    C^\lambda_j(\vecm{q}) = \lim_{\lambda\to\infty}  C_j(\vecm{q}) = \sqrt{(\text{det}(\matm{F}_j) - 1)^2} = \text{det}(\matm{F}_j) - 1.
+\end{equation}
+    
+
+\noindent Note that $C^\lambda_j$ only enforces that the volume of its tetrahedron is preserved. Still, it does not prevent stretching the 
+tetrahdron in one direction if compressing it in another direction balances out the change in volume. 
+
+Macklin et al.\ \cite{macklin2021} suggest a different way of implementing the simplified neohookean material model with XPBD. The trick is 
+to introduce not one, but two constraints for each tetrahedral element. The authors construct separate constraints $C^D_j$ with compliance 
+$\alpha^D_j$ and $C^H_j$ with compliance $\alpha^H_j$ for the deviatoric and hydrostatic terms of $\Psi^\prime_{\text{Smith}}$, respectively, 
+given by 
+
+\begin{equation}\label{eq:deviatoric-constraint}
+    C^D_j(\vecm{q}) = \sqrt{\text{tr}(\matm{F}_j^T\matm{F}_j)}, \, \, \, \, \, \, \alpha^D_j = \frac{1}{\mu V_j}
+\end{equation}
+
+\noindent and 
+
+\begin{equation}\label{eq:hydrostatic-constraint}
+    C^H_j(\vecm{q}) = \text{det}(\matm{F}_j) - \left(1 + \frac{\mu}{\lambda}\right), \, \, \, \, \, \, \alpha^H_j = \frac{1}{\lambda V_j}.
+\end{equation}
+
+\noindent It is easily verified that
+
+\[
+    \psi_j(\vecm{q}) = \frac{1}{2}(\alpha^{D}_j)^{-1} C^D_j(\vecm{q})^2 + \frac{1}{2}(\alpha^{H}_j)^{-1} C^H_j(\vecm{q})^2 
+    = V_j\Psi^\prime_{\text{Smith}}(\matm{F}_j).
+\]
+
+The advantage of splitting constraints becomes apparent when modelling hard incompressibility by setting $\alpha^H_j = 0$. Since $\lambda$ 
+appears in both $\alpha^H_j = 0$ and $C^H_j$, it is necessary to adjust $C^H_j$ by computing $\lim_{\lambda\to\infty}C^H_j$ again. It is 
+
+\[
+    \lim_{\lambda\to\infty}C^H_j(\vecm{q}) = \text{det}(\matm{F}_j) - 1,
+\]
+
+\noindent which is the same as what was observed for combined neohookean constraints in \autoref{eq:combined-neohookean-0-compliance}.
+However, this time, there is an independent deviatoric constraint $C^D_j$ that additionally drives the tetrahedron towards configurations 
+where the principal stretches of the deformation gradient $\matm{F}_j$ are not unevenly distributed. Note that setting $\alpha^D_j = 0$ is 
+impossible again, since $\lim_{\mu\to\infty}C^H_j$ diverges.
+
+On the other hand, constructing separate constraints for the deviatoric and hydrostatic terms also introduces problems. In 
+\autoref{ss:material-models},
+we discussed that the hydrostatic term needs to be corrected to ensure the rest stability of the simplified neohookean material model. The 
+correction is chosen such that tetrahedral elements are artificially inflated by exactly the right amount to make up for the deflation caused 
+by the deviatoric term. The derivation of the correction term relies on the assumption that both the deviatoric and the hydrostatic term act 
+on the same positions simultaneously \cite{smith2018}. However, due to the nature of the Gauss-Seidel-type solver used in XPBD, the constraints 
+$C^D_j$ and $C^H_j$ change the tetrahedral positions after each other. Thus, elements are inflated and deflated sequentially during each solver 
+iteration. This way, rest stability cannot be ensured. The issue is particularly severe for simulations with large Lamé coefficient $\mu$, 
+since this increases the degree to which both $C^D_j$ and $C^H_j$ deflate and inflate the elements, respectively. Similarly, we expect 
+larger time steps to make matters worse.
 
 \section{Projective Dynamics}\label{s:pd}
 
@@ -1656,8 +1965,9 @@ factorization for the system matrix of the global step can be precomputed and re
 potentials from the PD framework can be solved efficiently. In \autoref{ss:pd-overview}, an overview over the PD solver is provided. There, 
 we focus on introducing the broad structure of PD energy potentials and the way it benefits the convergence properties of the solver. In 
 \autoref{ss:pd-potentials}, an exact formulation of PD energy potentials is provided. This formulation is used in \autoref{ss:pd-solver} 
-to fill in the gaps in the overview given in \autoref{ss:pd-overview} and to give a complete description of the PD solver. Finally, the 
-properties of the PD solver are discussed in \autoref{ss:pd-properties}.
+to fill in the gaps in the overview given in \autoref{ss:pd-overview} and to give a complete description of the PD solver. The 
+properties of the PD solver are discussed in \autoref{ss:pd-properties}. Finally, we show how to simulate deformable bodies using the strain 
+material model (see \cref{eq:strain-material-model}) in \autoref{ss:pd-deformable-bodies}.
 
 \subsection{Overview Over Projective Dynamics}\label{ss:pd-overview}
 Projective Dynamics starts from the variational form of implicit Euler integration of the equations of motion (\cref{eq:variational-implicit}),
@@ -1795,55 +2105,22 @@ always use squared distance functions $d_j$ of the form
 \end{equation}
 
 \noindent where $\matm{A}_j, \matm{B}_j$ are matrices of appropriate dimensions and $w_j \in \mathbb{R}$ is the weight assigned to the
-$j$-th constraint. Note that $\sqrt{d_j}$ is the distance function that is induced by a Frobenius norm with weights $\matm{A}_j, 
-\matm{B}_j$ in the standard manner. Formally, $d_j$ itself cannot be considered a distance function since it violates the absolute
-homogeneity property, i.e. 
-
-\[
-    d_j(a\matm{q}_j, a\matm{p}_j) = a^2d_j(\matm{q}_j, \matm{p}_j) \neq ad_j(\matm{q}_j, \matm{p}_j). 
-\]
-
-
-Plugging the definition of $d_j$ in \autoref{eq:pd-distance} into the PD energy potentials in \autoref{eq:pd-min-W} yields
+$j$-th constraint. Plugging the definition of $d_j$ in \autoref{eq:pd-distance} into the PD energy potentials in \autoref{eq:pd-min-W} 
+yields
 
 \begin{equation}\label{eq:pd-potentials}
     \psi_j(\matm{q}) = \min_{\matm{p}_j} \frac{w_j}{2} \norm{\matm{A}_j\matm{q}_j - \matm{B}_j\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j).
 \end{equation}
 
-\paragraph{Example: Strain Energies} 
-As an elucidating example, we briefly recap how to formulate strain energies in terms of PD energy potentials 
-(\autoref{eq:pd-potentials}) according to Bouaziz et al.\ \cite{bouaziz2014}. Strain energies measure the change of local variation between 
-the deformed and undeformed state. If the simulated body consists of linear tetrahedral elements, the continuous strain energy can be 
-discretized across the tetrahedra according to \textcolor{red}{(refer to appropriate section)}. The energy potential for a single tetrahedron
-with index $j$ can be approximated in terms of PD energy potentials via a constraint acting on the four tetrahedral particles. Thus, it is
-$\matm{q}_j, \matm{p}_j \in \mathbb{R}^{4 \times 3}$. The constraint manifold $\cman{C}_j$ contains all matrices $\matm{p} \in 
-\mathbb{R}^{4 \times 3}$ that correspond to undeformed tetrahedra if the rows of $\matm{p}$ are interpreted as the positions of the tetrahedral
-vertices. If $\matm{D} \in \mathbb{R}^{3 \times 4}$ is the matrix that maps such matrices $\matm{p}$ to the transpose of their deformation 
-gradient $\matm{F}_\matm{p}^T$, then $\cman{C}_j$ can be defined as
+Note that $\sqrt{d_j}$ is the distance function that is induced by a Frobenius norm with weights $\matm{A}_j, 
+\matm{B}_j$ in the standard manner. Formally, $d_j$ itself cannot be considered a distance function since it violates the absolute
+homogeneity property, i.e. 
 
-\begin{equation}\label{eq:pd-strain-constraint}
-    \cman{C}_j = \{ \matm{p} \mid \matm{D}\matm{p} = \matm{F}_\matm{p}^T \in \text{SO}(3) \},
-\end{equation}
+\[
+    d_j(a\matm{q}_j, a\matm{p}_j) = a^2d_j(\matm{q}_j, \matm{p}_j) \neq \vert a \vert d_j(\matm{q}_j, \matm{p}_j) \text{ for } 
+    a \in \mathbb{R}. 
+\]
 
-\noindent where $\text{SO}(3)$ is the group of three-dimensional rotational matrices. We set $\matm{A}_j = \matm{B}_j 
-= \matm{D}$ and $w_j = k_jV_j$, where $V_j$ is the volume of the undeformed tetrahedron and $k_j$ is a user-defined 
-stiffness value. Together, it is
-
-\begin{align}
-    \begin{split}\label{eq:pd-strain}    
-    \psi_j(\matm{q}) 
-    = \min_{\matm{p}_j} W(\matm{S}_j\matm{q}, \matm{p}_j) 
-    &= \min_{\matm{p}_j} \frac{k_jV_j}{2} \norm{\matm{D}\matm{q}_j - \matm{D}\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j) \\
-    &= \min_{\matm{p}_j} \frac{k_jV_j}{2} \norm{\matm{F}_{\matm{q}_j}^T - \matm{F}_{\matm{p}_j}^T}^2_F + \delta_{\cman{C}_j}(\matm{p}_j).
-    \end{split}
-\end{align}
-
-\noindent Essentially, $\psi_j(\matm{q})$ computes the squared distance of $\matm{q}_j$ to the closest undeformed tetrahedral configuration, 
-where the distance is defined in terms of the Frobenius norm of the difference of their deformation gradients. It is easy to 
-show that this energy is zero if and only if $\matm{F}_{\matm{q}_j}$ itself is a rotational matrix and grows as the 
-singular values of $\matm{F}_{\matm{q}_j}$ move away from 1 \cite{bouaziz2014}. Informally, the energy increases the more the tetrahedron gets 
-stretched or squashed. The projection $\matm{p}_j$ can be computed as $\matm{p}_j = \matm{UIV}^T$ where $\matm{F}^T_{\matm{q}_j} = 
-\matm{U \Sigma V}^T$ is the singular value decomposition of the inverse deformation gradient $\matm{F}^T_{\matm{q}_j}$.
 
 \subsection{Projective Implicit Euler Solver}\label{ss:pd-solver}
 The PD solver can be derived by plugging the squared distance functions from \autoref{eq:pd-distance} into the variational 
@@ -1859,12 +2136,8 @@ Euler integration for PD energy potentials (\cref{eq:pd-variational-overview}). 
 $\matm{q}_j$ more apparent, we required $\text{dim}(\matm{S}_j\matm{q}) = \text{dim}(\matm{p}_j)$ so far. However, the 
 notation can be simplified by introducing the alternative constraint manifold $\cman{C}^\prime_j = \{ \matm{B}_j\matm{p} 
 \mid \matm{p} \in \cman{C}_j \}$. Of course, this requires changing the shape of the projection variables. If 
-$\matm{B}_j \in \mathbb{R}^{r \times n_j}$, then $\matm{p}_j \in \mathbb{R}^{r \times 3}$. Consider the energy 
-potentials for strain energies introduced in \cref{eq:pd-potentials}. There, $\cman{C}^\prime_j = \text{SO}(3)$ 
-and $\matm{p}_j \in \mathbb{R}^{3 \times 3}$, meaning that the projection variables now correspond to the transpose 
-of the deformation gradient 
-instead of the configuration of the projected tetrahedron. If further $\matm{A}_j\matm{S}_j$ are combined into a single 
-matrix $\matm{G}_j$, an equivalent optimization problem given by 
+$\matm{B}_j \in \mathbb{R}^{r \times n_j}$, then $\matm{p}_j \in \mathbb{R}^{r \times 3}$. If further $\matm{A}_j\matm{S}_j$ 
+are combined into a single matrix $\matm{G}_j$, an equivalent optimization problem given by 
 
 \begin{equation}\label{eq:pd-minimization}
     \min_{\matm{q}, \matm{p}_j} \tilde{g}(\matm{q}, \matm{p}_j) = 
@@ -1933,24 +2206,30 @@ Algorithm \ref{alg:pd}.
 \end{algorithm}
 
 \subsection{Properties of Projective Dynamics}\label{ss:pd-properties}
+Projective dynamics is an efficient algorithm for implicit euler integration of the equations of motion with energy potentials of the form 
+presented in \autoref{eq:pd-potentials}. Its properties are discussed in detail in this section.
+
+\paragraph{Efficient Implementation.}
 The structure of the PD energy potentials allows for Algorithm \ref{alg:pd} to be implemented efficiently. Since the constraint projections
 in \autoref{eq:pd-local-minimization} can be carried out independently, the local optimization step lends itself to massive parallelization. 
 Further, because the system matrix $\matm{S}$ is constant, its prefactorization can be computed at initialization, enabling
 efficient solves of the linear system in the global optimization step. Note that since $\matm{q} \in \mathbb{R}^{m \times 3}$ in \autoref{eq:pd-global-system}, 
 the global system can be solved independently and in parallel for each coordinate.
 
+\paragraph{Generality.}
 The last property follows from the fact that the squared distance functions $d_j$ in \autoref{eq:pd-distance} have no dependencies between 
 $x$-, $y$- and $z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: 
 Many arbitrary nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
 in terms of PD elastic potentials. Further, since PD energy potentials $\psi_j$ are defined in terms of a squared distance function $\d_j$, the 
 resulting forces are always proportional to the distance from the constraint manifold $\cman{C}_j$ \cite{overby2017}. Many classical energies 
-like the Neo-Hookean and St.\ Venant-Kirchoff energies do not fit into the PD framework \cite{liu2017}. Additionally, there is no obvious way to 
+like the Neo-Hookean and St.\ Venant-Kirchhoff energies do not fit into the PD framework \cite{liu2017}. Additionally, there is no obvious way to 
 implement hard constraints since energy potentials with infinite stiffness cannot be formulated in terms of PD energy potentials. Making stiffness arbitrarily 
 large allows approximating hard constraints. However, this comes with adverse effects to the numerical properties of the system matrix (see 
 \cref{ss:penalty-forces}). On the other hand, the authors show that a variety of soft constraints, including strain constraints, bending constraints, 
 collisions and positional constraints can be expressed in terms of PD potentials and handled by the PD solver in a unified manner \cite{bouaziz2014}. 
 Where applicable, the constraints are derived from continuous energies, leaving them reasonably independent to the underlying meshing.
 
+\paragraph{Convergence.}
 While a simplified minimization problem is constructed by restricting to PD energy potentials, the solver attempts to find the 
 true solution of \autoref{eq:pd-minimization} instead of computing an approximation. The objective function is quadratic, bounded below 
 and both local and global steps are guaranteed to weakly decrease it. As a result, the optimization converges without additional 
@@ -1959,10 +2238,58 @@ PD converges to the positions that minimize the objective function of the variat
 According to Bouaziz et al.\ \cite{bouaziz2014}, the true implicit positions preserve linear and angular momentum if the elastic potential 
 is rigid motion invariant. It is not clear whether this property is satisfied for the positions that PD converges to as well.
 
+\paragraph{Changing Constraint Sets.}
 Lastly, it is important to note that the PD solver is not suited for handling frequently changing constraint sets. For example, every time 
 a collision is detected, a new constraint needs to be added to the simulation and the global system matrix $\matm{S}$ needs
-to be refactorized. This can slow down the PD solver quite significantly and lead to unpredictable solver speeds that are infeasible in the
+to be refactorized. This can slow down the PD solver quite significantly and can lead to unpredictable solver speeds that are infeasible in the
 context of real-time simulations.
+
+\subsection{Simulating Deformable Bodies using PD}\label{ss:pd-deformable-bodies}
+As discussed in \cref{ss:pd-properties}, classical material models such as the St.\ Venant-Kirchhoff and neohookean model cannot be expressed in 
+terms of PD energy potentials and are incompatible with the PD solver as a result. However, we demonstrate how the strain material model in 
+\autoref{eq:strain-material-model} can be used with PD. For each tetrahedron in the tetrahedral mesh of the simulated body, we need to 
+construct a PD energy potential $\psi_i$ such that 
+
+\[
+    \psi_j(\matm{q}) = \min_{\matm{p}_j} \frac{w_j}{2} \norm{\matm{A}_j\matm{q}_j - \matm{B}_j\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j)
+    = V_j\psi_{\text{strain}}(\matm{F}_j),
+\]
+
+\noindent where $V_j$ is the volume of the undeformed tetrahedron. Recall that $\matm{F}_j$ is the constant deformation gradient over the volume 
+of the tetrahedron and can be computed via \autoref{eq:deformation-gradient-tet}. 
+
+Since the energy potential of a single tetrahedron solely depends on its four tetrahedral vertices, it 
+is $\matm{q}_j, \matm{p}_j \in \mathbb{R}^{4 \times 3}$. We set the constraint manifold $\cman{C}_j$ to the set of all matrices $\matm{p} 
+\in \mathbb{R}^{4 \times 3}$ that correspond to undeformed tetrahedra if the rows of $\matm{p}$ are interpreted as the positions of the 
+tetrahedral vertices. Let $\matm{D} \in \mathbb{R}^{3 \times 4}$ be the matrix that maps such matrices $\matm{p}$ to the transpose of their deformation 
+gradient $\matm{F}_\matm{p}^T$. Then $\cman{C}_j$ can be defined as
+
+\begin{equation}\label{eq:pd-strain-constraint}
+    \cman{C}_j = \{ \matm{p} \mid \matm{D}\matm{p} = \matm{F}_\matm{p}^T \in \text{SO}(3) \},
+\end{equation}
+
+\noindent where $\text{SO}(3)$ is the group of three-dimensional rotational matrices. We set $\matm{A}_j = \matm{B}_j = \matm{D}$ and $w_j = k_jV_j$, 
+where $V_j$ is the volume of the undeformed tetrahedron and $k_j$ is a user-defined stiffness value. Together, it is
+
+\begin{align}
+    \begin{split}\label{eq:pd-strain}    
+    \psi_j(\matm{q}) 
+    = \min_{\matm{p}_j} W(\matm{S}_j\matm{q}, \matm{p}_j) 
+    &= \min_{\matm{p}_j} \frac{k_jV_j}{2} \norm{\matm{D}\matm{q}_j - \matm{D}\matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j) \\
+    &= \min_{\matm{F}_{\matm{p}_j}} \frac{k_jV_j}{2} \norm{\matm{F}_j^T - \matm{F}_{\matm{p}_j}^T}^2_F + \delta_{\text{SO}(3)}(\matm{F}_{\matm{p}_j}).
+    \end{split}
+\end{align}
+
+\noindent It is easy to show that $\matm{F}_{\matm{p}_j}$ can be computed as $\matm{F}_{\matm{p}_j} = \matm{UIV}^T$ where $\matm{F}_j = 
+\matm{U \Sigma V}^T$ is the singular value decomposition of the deformation gradient $\matm{F}_j$. Plugging into \autoref{eq:pd-strain}
+yields
+
+\[
+    \psi_j(\matm{q}) = \frac{k_jV_j}{2} \norm{\matm{U}^T\matm{\Sigma}\matm{V} - \matm{U}^T\matm{I}\matm{V}}^2_F 
+    = \frac{k_jV_j}{2} \norm{\matm{\Sigma} - \matm{I}}^2_F = V_j \psi_{\text{strain}}(\matm{F}_i),
+\]
+
+\noindent showing that the strain material model can be expressed in terms of PD energy potentials.
 
 \subsection{Projective Dynamics as a Special Case of Quasi-Newton Methods}\label{ss:pd-quasi-newton}
 In PD, the variational form of implicit Euler integration that results from restricting to PD energy potentials (\cref{eq:pd-minimization}) 
@@ -1970,8 +2297,9 @@ is solved by using a specialized local/global alternating minimization technique
 $\matm{p}^j_{\matm{q}}$ with 
 
 \[
-    \psi_j({\matm{q}}) = \min_{\matm{p}} \frac{w_j}{2} \norm{\matm{gq} - \matm{p}}^2_F + \delta_{\cman{C}}(\matm{p})
-    = \frac{w_j}{2} \norm{\matm{gq} - \matm{p}^i_\matm{q}}^2_F
+    \matm{p}_{\matm{q}_j} 
+    = \argmin{\matm{p}_j} \psi_j(\matm{q}) 
+    = \argmin{\matm{p}_j} \frac{w_j}{2} \norm{\matm{G}_j\matm{q} - \matm{p}_j}^2_F + \delta_{\cman{C}_j}(\matm{p}_j)
 \]
 
 \noindent are considered functions of $\matm{q}$ with $\matm{p}_j(\matm{q}) = \matm{p}^j_{\matm{q}}$, then the equivalent optimization problem
@@ -1983,13 +2311,12 @@ $\matm{p}^j_{\matm{q}}$ with
 \end{equation}
 
 \noindent can be solved using general purpose algorithms for unconstrained optimization, including Newton's method (\cref{sss:newton-method}),
-the BFGS method (\cref{sss:quasi-newton}) or the L-BFGS method (\cref{sss:limited-memory-quasi-newton}) \textcolor{red}{It is better to use the
-argmin notation here again, possibly even $W(\vecm{p}, \matm{q})$}. In fact, it can be shown that
+the BFGS method (\cref{sss:quasi-newton}) or the L-BFGS method (\cref{sss:limited-memory-quasi-newton}). In fact, it can be shown that
 the PD solver applied to \autoref{eq:pd-minimization} is a special case of a Quasi-Newton method with constant Hessian approximation 
 applied to \autoref{eq:pd-minimization-q} \cite{liu2017}. 
 
 The gradient $\nabla g$ of the objective function $g$ from \autoref{eq:pd-minimization-q} needs to be computed for all the line search 
-methods mentioned above. Liu et al. \cite{liu2017} show that \textcolor{red}{(maybe put the derivation into the appendix)} $\nabla g$ 
+methods mentioned above. Liu et al. \cite{liu2017} show that $\nabla g$ 
 is given by
 
 \begin{equation}\label{eq:pd-gradient-qn}
@@ -2003,18 +2330,18 @@ $\matm{p}_j(\matm{q})$ of the positions $\matm{q}$. In Newton's method, the sear
 by $-(\nabla^2 g(\matm{q}))^{-1} \nabla g(\matm{q})$, which is a descent direction if $\nabla^2 g(\matm{q})$ is positive definite 
 (\cref{sss:newton-method}). In Quasi-Newton methods, the true Hessian $\nabla^2 g(\matm{q})$ is approximated by some positive definite matrix $\matm{B}_k$ 
 instead (\cref{sss:quasi-newton}). If $\matm{B}_k = \matm{S}$ -- i.e.\ the system matrix 
-(\cref{eq:pd-global-system}) from the global optimization in PD -- is used with step size $\alpha = 1$ the following update is recovered:
+(\cref{eq:pd-global-system}) from the global optimization in PD -- is used with step size $\alpha = 1$ the following update is recovered
 
 \[
     \matm{S}^{-1} \nabla g(\matm{q}) = 
-    \matm{q} - (\frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j)^{-1} 
-    (\frac{1}{h^2}\matm{M}\tilde{\matm{q}} + \sum_j w_j \matm{G}_j^T \matm{p}_j(\matm{q}))
+    \matm{q} - \matm{S}^{-1} 
+    (\frac{1}{h^2}\matm{M}\tilde{\matm{q}} + \sum_j w_j \matm{G}_j^T \matm{p}_j(\matm{q})).
 \]
 
 \noindent Note that 
 
 \[
-    \matm{q}^* \coloneqq \matm{S}^{-1} (\frac{1}{h^2}\matm{M}\tilde{\matm{s}} + \sum_j w_j 
+    \matm{q}^* \coloneqq \matm{S}^{-1} (\frac{1}{h^2}\matm{M}\tilde{\matm{q}} + \sum_j w_j 
     \matm{G}_j^T \matm{p}_j(\matm{q}))
 \]
 
@@ -2079,7 +2406,7 @@ implicit Euler integration with general conservative energy potentials (\cref{eq
 natural extension of the approach mentioned above to energies that do not fit into the original PD framework. However,
 if general conservative energy potentials are used, it is not obvious how to construct the initial Hessian approximation
 $\matm{S}$ anymore. Liu et al.\ suggest a way to emulate the global system matrix $\matm{S}$ for energies that can be written in
-the Valanis-Landel form, which includes Neo-Hookean and St.\ Venant-Kirchoff energies. This extension is covered in 
+the Valanis-Landel form, which includes Neo-Hookean and St.\ Venant-Kirchhoff energies. This extension is covered in 
 \cref{ss:qn-valanis-landel}
 
 \subsection{Quasi-Newton Methods for PD Energy Potentials}\label{ss:qn-pd}
@@ -2144,8 +2471,8 @@ candidate for the initial Hessian approximation $\matm{B}_0$ or its inverse $\ma
 without modification as the matrices $\matm{G}_j$ are taken directly from the definitions of the individual PD energy potentials.
 
 We focus on the setting of 3-manifold simplicial complexes where energy potentials are defined for each tetrahedron and the
-energy of the entire body is the sum of the individual tetrahedral energies \textcolor{red}{(refer to the appropriate section)}.
-As shown in \cref{ss:pd-potentials}, the strain energy of a single tetrahedron can be emulated with special PD strain 
+energy of the entire body is the sum of the individual tetrahedral energies (see \autoref{ss:deformable-bodies}).
+As shown in \cref{ss:pd-deformable-bodies}, the strain energy of a single tetrahedron can be emulated with special PD strain 
 potentials (\cref{eq:pd-strain}). Here $\matm{G}_j = \matm{A}_j$, where $\matm{A}_j$ is the linear operator that maps $\matm{q}$ 
 to the tranpose of the deformation gradient $\matm{F}^T_j$, $\cman{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
 volume of the undeformed tetrahedron and $k_j$ is a user-defined stiffness value. 
@@ -2168,9 +2495,7 @@ values $\sigma_1, \sigma_2, \sigma_3$ of $\matm{F_j}$ called the principal stret
 \end{equation}
 
 \noindent with $a, b, c : \mathbb{R} \to \mathbb{R}$. Many popular material models including St.\ Venant-Kirchhoff and 
-Neo-Hookean 
-can be expressed in this form \textcolor{red}{(How? I can't seem to find how to do this in detail. There is a paper that 
-might be useful called 'The Valanis–Landel Strain-Energy Function', but I am not sure it is useful \ldots)}.
+Neo-Hookean can be expressed in this form.
 
 The approach uses the insight that for linear materials that follow Hooke's law, the stiffness $k_j$ is given as the second 
 derivative of the energy potential. Computing first and second partial derivatives in the rest configuration $\sigma_1, 
@@ -2252,31 +2577,67 @@ energies during the $\vecm{z}$-update. This effect might also be responsible for
 
 \section{Results}
 
-\noindent \textbf{Experimental Setup} \\
-\noindent The main tool for comparing solvers used in this report consists of setting up identical simulation states and analyzing the positions 
-computed by the solvers during each of the iterations required for the simulation of a single time step. Experiments start from the 
+\subsection{Experimental Setup}
+The main tool for comparing solvers used in this report consists of setting up identical simulation states and analyzing the positions 
+computed by the solvers during each of the iterations required for the simulation of a single time step. The convergence behavior of the 
+solvers can then be analyzed by plotting the values of the objective function of implicit Euler integration 
+(see \cref{ss:variational-implicit-euler}) over the iterations or the accumulated simulation time \cite{liu2017, overby2017}.
+
+\paragraph{Test Scenarios.}
+Experiments start from the 
 deformed configuration of a cuboid beam that has been twisted in opposite directions at both ends (\cref{fig:twisting-beam-setup}, left).
 The deformed configuration is determined by simulating the twisting motion of the beam using the QN solver with a number of iterations 
 that ensures convergence during each simulated time step. Twisting is achieved by in-plane rotation of the reference positions of 
-position constraints acting on particles at the ends of the beam. Starting from this configuration, we investigate the behavior of the 
+position constraints acting on particles at the ends of the beam. 
+
+Starting from this configuration, we investigate the behavior of the 
 solvers during the next time step in two settings: In the first, the position constraints at the ends of the beam are released, causing the 
 beam to untwist (\cref{fig:twisting-beam-setup}, top right). In the second, the beam is twisted further in accordance with a fixed angular
 velocity as described above (\cref{fig:twisting-beam-setup}, bottom right). In both settings, the initial positions of the twisted beam 
 need to be updated to adapt to the changes to 
 the position constraints at the ends of the beam. Note that in the second setting, position constraints are modelled 
-via springs with rest-length zero for all solvers. In other words, only soft position constraints are used. This has two main advantages:
+via springs with rest-length zero and finite stiffness for all solvers. In other words, only soft position constraints are used. This has two main advantages:
 Firstly, soft position constraints can easily be modelled using each of the solvers, while it is challenging (or impossible) to 
 implement hard position constraints with PD and QN. Mixing soft and hard position constraints makes it impossible to compare solvers,
 since they would converge towards distinct solutions. Secondly, soft position constraints have corresponding spring energies that are 
-finite and continuously differentiable. This allows for the computation of common metrics of deformed configurations such as the energy 
-or the energy gradient. The elastic properties of the beam are modelled via the 3D strain material model presented by Bouaziz et al.\ 
-\cite{bouaziz2014} and the simplified neohookean material model \textcolor{red}{(ref somewhere!)} used by Macklin et al.\ 
-\cite{macklin2021}. The strain model is supported by all solvers, whereas the simplified neohookean model is not supported by PD. The 
-simplified neohookean model is chosen over the original neohookean model because the log term in the original neohookean energy potential
-makes it incompatible with XPBD \textcolor{red}{(ref somewhere!)}. The experiments are run for time steps \SI{1e-1}{\second}, 
-\SI{1e-2}{\second}, \SI{1e-3}{\second} and \SI{1e-4}{\second}. For the strain and neohookean constraints, both stiffness and 
-Youngs modulus, respectively, are set to powers of ten ranging from \num{1e5} to \num{1e12}. The Poisson ratio is fixed at 0.45 for 
-all experiments.
+finite and continuously differentiable. This allows for the computation of common metrics of deformed configurations such as the constraint 
+energy and its gradient. 
+
+The elastic properties of the beam are modelled via the strain material model and the simplified neohookean 
+material model (see \cref{ss:material-models}). The strain model is supported by all solvers, whereas the simplified neohookean model is 
+not supported by PD. The simplified neohookean model is chosen over the original neohookean model because the log term in the original 
+neohookean energy potential makes it incompatible with XPBD (see \cref{ss:xpbd-deformable-bodies}). The experiments are run for time steps 
+\SI{1e-1}{\second}, \SI{1e-2}{\second}, \SI{1e-3}{\second} and \SI{1e-4}{\second}. For the strain and neohookean constraints, both 
+stiffness and Youngs modulus, respectively, are set to powers of ten ranging from \num{1e5} to \num{1e12}. The Poisson ratio is fixed 
+at 0.45 for all experiments, since we put the focus of our evalution on material stiffness over incompressibility. In \autoref{ss:experiments}, 
+we discuss a representative subset of the experiments in order to highlight the properties of the solvers 
+in different settings.
+
+\paragraph{Analyzing Solver Convergence.}
+With the exception of PBD, all solvers discussed in the context of this thesis are based on implicit Euler integration of the equations of 
+motion (\cref{ss:numerical-integration}) and aim to either approximate (XPBD) or compute exactly (PD, ADMM and QN) the implicit positions at the next time step. 
+As discussed in \autoref{ss:numerical-integration}, the implicit positions can be interpreted as the positions that minimize the objective function of the variational 
+form of implicit Euler integration given in \autoref{eq:variational-implicit}. To gain initial insights into the convergence behavior of the solvers, we compute 
+the objective function value for the positions obtained after each iteration for each solver. The objective function is restated here for the convenience of the 
+reader
+
+\begin{equation}\label{eq:variational-implicit-copy}
+    f_{\text{obj}}(\vecm{q}) \coloneqq \min_{\vecm{q}} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \psi_j(\vecm{q}).
+\end{equation}
+
+\noindent Note again that the objective function consists of an inertial term which penalizes moving vertices away from their inertial
+positions and a term that computes the constraint energies for the current configuration. The solvers are expected to decrease the objective function with each iteration 
+until a value close to the minimum obtained 
+by the implicit positions is obtained. By comparing the objective function values for the positions after the final iteration, the quality of the configurations different
+solvers converge to can be analyzed. Further, by plotting the objective function values over the iteration number and inspecting the slope of the graphs, information about
+the convergence rates of the solvers can be inferred. Lastly, further insights into the failure modes of solvers can be gained by creating separate plots for the inertial 
+and constraint term of the objective function. 
+
+It is worth pointing out that during the discussion of the resulting figures, we consider a solver converged once the 
+graph of its objective function value over the iterations is visually indistinguishable from a horizontal line. While not entirely rigorous, this is particularly appropriate 
+for comparing solvers in the context of real-time applications where solver iterations that only make minor progress towards the true implicit solutions often cannot be 
+afforded. Additionally, this allows setting the focus on the most important qualitative differences between solvers without getting lost in the details of when a solver can 
+formally be considered converged.
 
 \begin{figure}[h]
     \centering
@@ -2297,8 +2658,8 @@ all experiments.
     \label{fig:twisting-beam-setup}
 \end{figure}
 
-\noindent \textbf{Concerning PBD}\\
-\noindent In contrast to XPBD and the PD-style solvers, all of which are derived from the implicit integration of the equations of motion, PBD is a geometric solver with no 
+\subsection{PBD}
+In contrast to XPBD and the PD-style solvers, all of which are derived from the implicit integration of the equations of motion, PBD is a geometric solver with no 
 clear link to Newton's laws. As a result, the stiffness of materials simulated using PBD depends on the number of iterations and the 
 chosen time step (see \cref{ss:pbd-properties}). Concomitantly, in the limit of infinite iterations and zero time step size, the material becomes infinitely stiff. 
 We demonstrate this effect by example of a single solve using time steps \SI{1e-2}{\second} and \SI{1e-3}{\second} in the 
@@ -2323,47 +2684,9 @@ instead.
     \label{fig:strain-pbd}
 \end{figure}
 
-\noindent \textbf{Objective function of the variational form of implicit Euler integration (\cref{eq:variational-implicit}) as a tool for analyzing convergence}\\
-\noindent With the exception of PBD, all solvers discussed in the context of this thesis are based on implicit Euler integration of the equations of 
-motion (\cref{ss:numerical-integration}) and aim to either approximate (XPBD) or compute exactly (PD, ADMM and QN) the implicit positions at the next time step. 
-As discussed in \autoref{ss:numerical-integration}, the implicit positions can be interpreted as the positions that minimize the objective function of the variational 
-form of implicit Euler integration given in \autoref{eq:variational-implicit}. To gain initial insights into the convergence behavior of the solvers, we compute 
-the objective function value for the positions obtained after each iteration for each solver. The objective function is restated here for the convenience of the 
-reader
 
-\begin{equation}\label{eq:variational-implicit-copy}
-    f_{\text{obj}}(\vecm{q}) \coloneq \min_{\vecm{q}} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\vecm{q} - \tilde{\vecm{q}})}^2_F + \sum_j \psi_j(\vecm{q}).
-\end{equation}
-
-\noindent Note again that the objective function consists of an inertial term which penalizes moving vertices away from their inertial
-positions and a term that computes the constraint energies for the current configuration. The solvers are expected to decrease the objective function with each iteration 
-until a value close to the minimum obtained 
-by the implicit positions is obtained. By comparing the objective function values for the positions after the final iteration, the quality of the configurations different
-solvers converge to can be analyzed. Further, by plotting the objective function values over the iteration number and inspecting the slope of the graphs, information about
-the convergence rates of the solvers can be inferred. 
-
-It is worth pointing out that during the discussion of the resulting figures, we consider a solver converged once the 
-graph of its objective function value over the iterations is visually indistinguishable from a horizontal line. While not entirely rigorous, this is particularly appropriate 
-for comparing solvers in the context of real-time applications where solver iterations that only make minor progress towards the true implicit solutions often cannot be 
-afforded. Additionally, this allows setting the focus on the most important qualitative differences between solvers without getting lost in the details of when a solver can 
-formally be considered converged.
-
-\begin{figure}[h]
-    \centering
-    \begin{subfigure}{\textwidth}
-        \includegraphics[width=\linewidth]{figures/strain_admm_weights_1e-2.pdf}
-        \subcaption{Time step \SI{1e-2}{\second}}
-    \end{subfigure}
-    \begin{subfigure}{\textwidth}
-        \includegraphics[width=\linewidth]{figures/strain_admm_weights_1e-3.pdf}
-        \subcaption{Time step \SI{1e-3}{\second}}
-    \end{subfigure}
-    \caption{Values of the objective function of the variational form of implicit Euler integration (\cref{eq:variational-implicit}) over the iterations of a single 
-    ADMM solve (time steps \SI{1e-2}{\second} and \SI{1e-3}{\second}) for an untwisting beam with strain constraints with stiffness \num{1e8}.}\label{fig:strain-weights-admm}
-\end{figure}
-
-\noindent \textbf{Concerning ADMM weights}\\
-\noindent As stated in \autoref{ss:admm-properties}, there is no generally valid method for determining ADMM weights that ensures acceptable convergence properties.
+\subsection{ADMM Weights - Strain Material Model}
+As stated in \autoref{ss:admm-properties}, there is no generally valid method for determining ADMM weights that ensures acceptable convergence properties.
 Thus, we need to manually fine-tune ADMM weights before comparing different solvers using the method described above. Again, the convergence of the ADMM solver is evaluated via 
 the objective function. We focus on experiments using strain constraints. For each combination of time steps from \SI{1e-1} to \SI{1e-4} and stiffnesses $k$ from 
 \num{1e5} to \num{1e12}, candidate weights around the recommended value $w_i = \sqrt{k}$ are generated and the weight that reduces the objective function value the 
@@ -2390,20 +2713,29 @@ makes finding suitable ADMM weights incredibly tedious: For each material model,
 material stiffness. 
 
 \begin{figure}[h]
-    \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives.pdf}
-    \caption{Values of the objective function of the variational form of implicit Euler integration (\cref{eq:variational-implicit}) over the iterations of a single solve (time step 
-    \SI{1e-2}{\second}) for an untwisting beam using strain constraints with stiffness \num{1e8}}
-    \label{fig:strain-beam-untwist-objectives}
+    \centering
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{figures/strain_admm_weights_1e-2.pdf}
+        \subcaption{Time step \SI{1e-2}{\second}}
+    \end{subfigure}
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{figures/strain_admm_weights_1e-3.pdf}
+        \subcaption{Time step \SI{1e-3}{\second}}
+    \end{subfigure}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (\cref{eq:variational-implicit}) over the iterations of a single 
+    ADMM solve (time steps \SI{1e-2}{\second} and \SI{1e-3}{\second}) for an untwisting beam with strain constraints with stiffness \num{1e8}.}\label{fig:strain-weights-admm}
 \end{figure}
 
-\noindent \textbf{Analyzing convergence behavior of solvers}\\ 
-\noindent In \autoref{fig:strain-beam-untwist-objectives}, the objective function values are plotted for an untwisting beam whose material is modelled using strain constraints 
-\cite{bouaziz2014}. The graph shows that each of the solvers indeed mostly decreases the objective function from iteration 
-to iteration until it converges towards a final configuration after a sufficient number of iterations. ADMM, PD and QN converge to configurations that 
-yield roughly the same objective function value whereas the value obtained after 1000 XPBD iterations is still slightly larger. QN and ADMM converge after roughly 40 
-and 60 iterations, whereas PD and XPBD converge after upwards of 260 and 1000 iterations, respectively. To quantify the progress that other solvers
-achieve during the number of iterations it takes each of the solvers to converge, we compute relative errors after 40 (QN), 60 (ADMM), 260 (PD) and 1000 (XPBD)
-iterations. The relative error is given by 
+\subsection{Experiments}\label{ss:experiments}
+\textcolor{red}{Add some glue text! Rough order of experiments, untwisting beam with strain, twisting beam with strain, untwisting beam neohookean.}
+We start by analyzing the behavior of different solvers in the untwisting beam scenario (see \cref{fig:twisting-beam-setup}) using the strain material model 
+with time step size \SI{1e2}{\second} and stiffness \num{1e8}. Note that the results are representative for a large range of time step sizes and stiffness values.
+The objective function values are plotted over the iterations in \autoref{fig:strain-beam-untwist-objectives}. The graph shows that each of the solvers indeed mostly 
+decreases the objective function from iteration to iteration until it converges towards a final configuration after 
+a sufficient number of iterations. ADMM, PD and QN converge to configurations that yield roughly the same objective function value whereas the value obtained after 1000 
+XPBD iterations is still slightly larger. QN and ADMM converge after roughly 40 and 60 iterations, whereas PD and XPBD converge after upwards of 260 and 1000 iterations, 
+respectively. To quantify the progress that other solvers achieve during the number of iterations it takes each of the solvers to converge, we compute relative errors after 
+40 (QN), 60 (ADMM), 260 (PD) and 1000 (XPBD) iterations. The relative error is given by 
 
 \begin{equation}\label{eq:rel-error}
     \frac{f_{\text{obj}}(\vecm{q}_k) - f_{\text{obj}}(\vecm{q}^*)}{f_{\text{obj}}(\vecm{q}_0) - f_{\text{obj}}(\vecm{q}^*)},
@@ -2450,6 +2782,23 @@ slow convergence rate of XPBD could again be explained by the simplifying assump
 solvers. 
 
 \begin{figure}[h]
+    \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives.pdf}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (\cref{eq:variational-implicit}) over the iterations of a single solve (time step 
+    \SI{1e-2}{\second}) for an untwisting beam using strain constraints with stiffness \num{1e8}}
+    \label{fig:strain-beam-untwist-objectives}
+\end{figure}
+
+
+To better understand the main factor for XPBD's unfavorable convergence properties, it is helpful to plot the inertial terms and the constraint energies of the objective 
+function separately. The resulting plots are shown in \autoref{fig:strain-beam-untwist-objectives-split}. 
+We focus on the first 500 iterations to gain clearer insights into the behavior of the solver during earlier iterations, since these are more relevant for 
+real-time applications. First, it is evident that the constraint energy dominates the objective function value for each solver during most of the iterations before 
+convergence is achieved. While each solver mostly decreases the constraint energy with an increasing number of iterations, the inertial term is mostly increased. 
+The only exception is the ADMM solver between iterations 30 to 60, where the inertial term is decreased from its peak and the constraint energy is increased from its 
+low point. ADMM, PD and QN converge to configurations with roughly the same inertial terms and constraint energies. However, at its final state, the constraint 
+energy of the XPBD solver is higher than its counterparts from the PD-style solvers, whereas the opposite is observed for the inertial term. 
+
+\begin{figure}[h]
     \centering
     \begin{subfigure}{\textwidth}
         \includegraphics[width=\linewidth]{figures/strain_beam_untwist_constraintObjectives.pdf}
@@ -2462,15 +2811,6 @@ solvers.
     constraints with stiffness \num{1e8}.}
     \label{fig:strain-beam-untwist-objectives-split}
 \end{figure}
-
-To better understand the main factor for XPBD's unfavorable convergence properties, it is helpful to plot the inertial terms and the constraint energies of the objective 
-function separately. The resulting plots are shown in \autoref{fig:strain-beam-untwist-objectives-split}. 
-We focus on the first 500 iterations to gain clearer insights into the behavior of the solver during earlier iterations, since these are more relevant for 
-real-time applications. First, it is evident that the constraint energy dominates the objective function value for each solver during most of the iterations before 
-convergence is achieved. While each solver mostly decreases the constraint energy with an increasing number of iterations, the inertial term is mostly increased. 
-The only exception is the ADMM solver between iterations 30 to 60, where the inertial term is decreased from its peak and the constraint energy is increased from its 
-low point. ADMM, PD and QN converge to configurations with roughly the same inertial terms and constraint energies. However, at its converged state, the constraint 
-energy of the XPBD solver is higher than its counterparts from the PD-style solvers, whereas the opposite is observed for the inertial term. 
 
 As discussed in \autoref{ss:variational-implicit-euler}, the weighting between the inertial term and the constraint energy depends on the time step, the particle masses 
 and the material stiffnesses. The results suggest that with a time step of \SI{1e-2}{\second} and a constraint stiffness of \num{1e8}, the constraint energy can be 
@@ -2600,30 +2940,10 @@ As discussed in \autoref{ss:pd-properties} each PD iteration is guaranteed to we
 at the configuration PD converges to is never higher than the initial objective. There is no guarantee that 
 PD converges to the true implicit positions. Thus, the observation that PD can fail at reducing the objective function all the way is not surprising. To gain a better 
 understanding of why the convergence properties of the PD solver worsen when combining larger time steps and stiffness values, we again create separate plots for the 
-inertial term of the objective and the constraint energy. This is analogous to the experiments conducted in \autoref{fig:strain-beam-untwist-objectives-split} to investigate 
+inertial term and the constraint energy. This is analogous to the experiments conducted in \autoref{fig:strain-beam-untwist-objectives-split} to investigate 
 the unfavorable convergence properties of XPBD observed in \autoref{fig:strain-beam-untwist-objectives}. 
 
-Again, \autoref{fig:strain-beam-untwist-objectives-split-large-ts} shows that the solvers mostly decrease the constraint energy and increase the inertial term during each 
-iteration. QN, ADMM and PD are more successful at reducing the constraint energy than XPBD, even 
-though PD converges to a constraint energy that is slightly larger than the one achieved by QN and ADMM this time. Each of the PD-style solvers manages to bring the 
-constraint energy down to close to zero. This is significantly lower than the minimum achieved for a time step of \SI{1e-2}{\second} and stiffness \num{1e8} (see 
-\cref{fig:strain-beam-untwist-objectives-split}). However, it is evident that XPBD has not fully converged yet as it still continues to decrease the constraint energy 
-values. All in all, the results for the constraint energy are qualitatively the same as the ones observied for 
-time step \SI{1e-2}{\second} and stiffness \num{1e8}. On the other hand, the plots for the inertial term differ quite significantly. With larger time step and stiffness,
-QN, ADMM and XPBD converge to the same inertial term, whereas the PD solver converges to a value that is more than twice as large. Already after 20 iterations, the inertial 
-term achieved by PD is larger than the value that the other solvers converge to. Still, PD continues to increase the inertial term during the first 400 iterations. 
-Finally, each of the solvers converge to an inertial term that is significantly lower than the corresponding inertial term obtained with time step \SI{1e-2}{\second}
-and stiffness \num{1e8}.
-
-Since the weight of the inertial term decreases with increasing time step size and the weight of the constraint term increases with increasing stiffness values, moving 
-particles away from their inertial positions to reduce the constraint energy is encouraged in \autoref{fig:strain-beam-untwist-objectives-split-large-ts} compared to
-\autoref{fig:strain-beam-untwist-objectives-split}. This is reflected in the fact that the solvers reduce the constraint energy to a lower value, even though a larger 
-stiffness value is used. The results suggest that the PD solver is too aggressive with moving particles away from their inertial positions if the associated penalty 
-is largely outweighed by the incentives for minimizing the constraint energies. This issue 
-appears to be particularly serious during the first solver iterations, where the derivatives of the quadratic inertial penalty are small. 
-Without further experiments, it is difficult to understand why this effect occurs when using the PD solver while the other solvers are unaffected.
-
-\begin{figure}[h]
+\begin{figure}[t]
     \centering
     \begin{subfigure}{\textwidth}
         \includegraphics[width=\linewidth]{figures/strain_beam_untwist_constraintObjectives_large_ts.pdf}
@@ -2637,14 +2957,100 @@ Without further experiments, it is difficult to understand why this effect occur
     \label{fig:strain-beam-untwist-objectives-split-large-ts}
 \end{figure}
 
-To gain further insights into how the large inertial term at the converged configuration from PD manifests itself, we repeat parts of the experiments in 
-\autoref{fig:strain-beam-untwist-geometries} and take a closer look at the geometries that the solvers arrive at after 1000 iterations. 
+Again, \autoref{fig:strain-beam-untwist-objectives-split-large-ts} shows that the solvers mostly decrease the constraint energy and increase the inertial term during each 
+iteration. QN, ADMM and PD are more successful at reducing the constraint energy than XPBD, even 
+though PD converges to a constraint energy that is slightly larger than the one achieved by QN and ADMM this time. Each of the PD-style solvers manages to bring the 
+constraint energy down to close to zero. This is significantly lower than the minimum achieved for a time step of \SI{1e-2}{\second} and stiffness \num{1e8} (see 
+\cref{fig:strain-beam-untwist-objectives-split}). However, it is evident that XPBD has not fully converged yet as it still continues to decrease the constraint energy 
+values. All in all, the results for the constraint energy are qualitatively the same as the ones observied for 
+time step \SI{1e-2}{\second} and stiffness \num{1e8}. On the other hand, the plots for the inertial term differ quite significantly. With larger time step and stiffness,
+QN, ADMM and XPBD converge to roughly the same inertial term, whereas the PD solver converges to a value that is more than twice as large. Already after 20 iterations, 
+the inertial term achieved by PD is larger than the value that the other solvers converge to. Still, PD continues to increase the inertial term during the first 400 
+iterations. Finally, each of the solvers converge to an inertial term that is significantly lower than the corresponding inertial term obtained with time step 
+\SI{1e-2}{\second} and stiffness \num{1e8}.
 
-% TODO: Continue here tomorrow!
+Since the weight of the inertial term decreases with increasing time step size and the weight of the constraint term increases with increasing stiffness values, moving 
+particles away from their inertial positions to reduce the constraint energy is encouraged in \autoref{fig:strain-beam-untwist-objectives-split-large-ts} compared to
+\autoref{fig:strain-beam-untwist-objectives-split}. This is reflected in the fact that the solvers reduce the constraint energy to a lower value, even though a larger 
+stiffness value is used. The results suggest that the PD solver is too aggressive with moving particles away from their inertial positions if the associated penalty 
+is largely outweighed by the incentives for minimizing the constraint energies. This issue 
+appears to be particularly serious during the first solver iterations, where the derivatives of the quadratic inertial penalty are small. 
+Without further experiments, it is difficult to understand why this effect occurs when using the PD solver while the other solvers are unaffected.
+
+To gain further insights into the cause of the large inertial term at the converged configuration from PD, we repeat parts of the 
+experiments in \autoref{fig:strain-beam-untwist-geometries} and take a closer look at the geometries that the solvers arrive at after 1000 
+iterations. \autoref{fig:strain-beam-untwist-geometries-large-ts} a shows a comparison between the XPBD and PD geometries. Similar to the 
+results in \autoref{fig:strain-beam-untwist-geometries} a, the XPBD solver does not untwist the beam as far as the QN solver. This is in 
+line with the observation that the constraint term for XPBD is larger than the constraint term of PD-style solvers after 1000 iterations (see 
+\autoref{fig:strain-beam-untwist-objectives-split-large-ts}). More interestingly, the comparison of the QN, ADMM and PD geometries in 
+\autoref{fig:strain-beam-untwist-geometries-large-ts} b shows that all PD-style solvers succeed at untwisting the beam to its reference 
+configuration. However, while the orientations of the beams appear the same between solvers, the positions of their centers of gravity 
+are shifted with respect to each other. This shift is very apparent for PD, whereas the QN and ADMM geometries are almost overlapping.
+
+The results in \autoref{fig:strain-beam-untwist-geometries-large-ts} suggest that the large inertial term observed for the PD solver in 
+\autoref{fig:strain-beam-untwist-objectives-split-large-ts} is caused by undesired rigid-body motion introduced during the solver iterations. 
+The shifted center of gravity of the beam is unexpected in light of the fact that the beam has zero global linear and angular momentum in 
+its initial twisted configuration and no external forces are applied. At the true implicit positions that the PD solver attempts to converge to, global 
+linear and angular momentum are preserved \cite{bouaziz2014}. However, the shifted center of gravity indicates that the global linear 
+momentum of the beam is non-zero after 1000 PD iterations.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth, trim={0 5.0cm 0 2.5cm}, clip]{figures/strain_beam_untwist_QN_vs_XPBD_large_ts.png}
+        \subcaption{QN and XPBD after 1000 iterations}
+    \end{subfigure}
+    \hspace{0.001\textwidth}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth, trim={0 4.5cm 0 2.15cm}, clip]{figures/strain_beam_untwist_QN_vs_ADMM_vs_PD_large_ts.png}
+        \subcaption{QN, PD and ADMM after 1000 iterations}
+    \end{subfigure}
+    \caption{Geometries of an untwisting beam with strain constraints (stiffness \num{1e9}) after 1000 iterations of a single solve over a time step 
+        of \SI{1e-1}{\second} using XPBD (pink), PD (orange), ADMM (gree) and QN (cyan) solvers.}
+    \label{fig:strain-beam-untwist-geometries-large-ts}
+\end{figure}
+
+To dig deeper, we plot the norms of the global linear and angular momentum of the beam over the solver iterations in 
+\autoref{fig:strain-beam-untwist-momenta-large-ts}. First, the plots confirm that the initial linear and angular momenta are zero at the initial 
+configuration. However, the QN solver is the only solver that succeeds at preserving both types of momentum. XPBD preserves linear momentum, 
+but increases the angular momentum. PD and ADMM fail to preserve either type of momentum. The bulk of the 
+increase in linear momentum observed for PD and ADMM happens during the first 20 iterations. The final linear momentum observed for the PD solver is 
+significantly larger that the one observed for the other solvers. During the rest of the iterations, the linear momentum remains almost constant for all solvers. 
+
+It is worth pointing out that the plot for the linear momentum is representative for the corresponding plots for almost all combinations of time step size and 
+constraint stiffness. On the other hand, the plots for the angular momentum are more varied. The main commonality is that the angular momentum norms are much 
+smaller than the linear momentum norms observed for PD and ADMM solvers. For these reasons, we focus our discussion on linear momentum. First, the large spike 
+in linear momentum observed for PD after 20 iterations explains why the corresponding spike of the inertial term in 
+\autoref{fig:strain-beam-untwist-objectives-split-large-ts} does not go along with a large decrease in the constraint term: The spike is caused by rigid-body 
+motion while the elastic constraint energies are invariant to rigid-body motion. Secondly, we discussed in \autoref{ss:pd-quasi-newton} that PD can be considered 
+a quasi-Newton method with constant Hessian approximation. The QN solver enhances the PD solver by integrating local curvature information into the Hessian 
+approximation via an LBFGS update and adding a line search algorithm. In order to find out which of these factors contributes more to the QN solver's ability to 
+maintain zero linear and angular momentum, it might be interesting to remove the line search or the LBFGS-update from the QN solver. Lastly, recall that ADMM 
+and PD are almost identical for strain constraints if the ADMM weights $w_i$ are set to $\sqrt{k}$. For the experiments in 
+\autoref{fig:strain-beam-untwist-momenta-large-ts}, $w_i \approx \frac{1}{2}\sqrt{k}$ is used. Thus, the smaller linear momentum observed for ADMM invites 
+the hypothesis that lower ADMM weights can be beneficial for the preservation of linear momentum. However, more effort is required to verify this claim and 
+to establish the causal justification. 
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{figures/strain_beam_untwist_momenta_large_ts.pdf}
+    \end{subfigure}
+    \begin{subfigure}{\textwidth}
+        \includegraphics[width=\linewidth]{figures/strain_beam_untwist_angular_momenta_large_ts.pdf}
+    \end{subfigure}
+    \caption{Norms of the global linear (top) and global angular (bottom) momenta in $\text{kg}\cdot\text{m}^2\cdot\text{s}^{-1}$ over the iterations 
+    of a single solve (time step \SI{1e-1}{\second}) for an untwisting beam with strain constraints with stiffness \num{1e9}. The required velocities 
+    $\vecm{v}_k$ at iteration $k$ are computed by a Verlet integration step given by $\vecm{v}_k = (\vecm{q}_k - \vecm{q}_0)/h$, where $\vecm{q}_i$ 
+    are the positions after iteration $i$ and $h$ is the time step.
+}
+    \label{fig:strain-beam-untwist-momenta-large-ts}
+\end{figure}
 
 % TODO:
-% - Issues with global angular and linear momentum 
+% - Proof read stuff from yesterday
 % - Fixed beam scenario and XPBD's lack of punishment for moving away from inertial positions
+% - ADMM overoptimizing
 % - ADMM weights for neohookean model
 % - XPBD formulations for neohookean model (incompressibility, stability)
 % - Iteration times XPBD solvers
