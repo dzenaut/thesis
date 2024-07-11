@@ -1,0 +1,441 @@
+\chapter{Foundations}\label{ch:foundations}
+
+In most approaches for the simulation of physical systems, the motion of the system is assumed to be in accordance with Newton's laws of
+motion. Due to Newton's second law 
+
+\begin{equation}\label{newtons-laws-2}
+    \vecm{f} = m\vecm{a},
+\end{equation}
+
+\noindent it is possible to relate the force $\vecm{f}$ acting on a particle and the resulting acceleration $\vecm{a}$ via the particle
+mass $m$. The motion of a particle system can then be described in terms of a system of ordinary differential equations (ODEs). This
+system of ODEs is commonly referred to as the equations of motion. The equations of motion are integrated over time to arrive 
+at the configuration of the system at the next time step. For general forces, finding an analytical solution to the equations of motion
+is impossible and numerical integration schemes must be employed instead. In particular, both XPBD \textcolor{red}{(ref somewhere)} 
+and PD \textcolor{red}{(ref somewhere)} are based on a numerical integration technique called implicit Euler integration 
+\cite{macklin2016, bouaziz2014}. The equations of motion due to Newton's second law are reviewed in Section \ref{s:equations-of-motion}. Common 
+approaches for numerical integration are introduced in Section \ref{ss:numerical-integration}. An alternative formulation of implicit Euler integration 
+as an unconstrained optimization problem called the variational form of implicit Euler integration is presented in Section \ref{ss:variational-implicit-euler}. 
+Additional considerations for the numerical integration of the equations of motion in real-time settings are covered in 
+Section \ref{ss:numerical-integration-rt}. Simulating deformable bodies via numerical integration requires the computation of elastic forces from 
+deformed configurations. We describe how to achieve this in Section \ref{ss:deformable-bodies}. The exact elastic forces do not only depend on 
+the deformation of the body, but also its material. A brief introduction to relevant material models is provided in Section \ref{ss:material-models}.
+
+\section{The Equations of Motion}\label{s:equations-of-motion}
+
+The motion of a spatially discretized system with $m$ particles evolving in time according to Newton's laws can be modeled via 
+the equations of motion
+
+\begin{align}
+    \begin{split}\label{eq:equations-of-motion}
+        \dot{\vecm{q}}(t) &= \vecm{v}(t) \\
+        \dot{\vecm{v}}(t) &= \matm{M}^{-1}\vecm{f}(\vecm{q}(t), \vecm{v}(t)),
+    \end{split}
+\end{align}
+
+\noindent where $\vecm{q}(t)$, $\vecm{v}(t)$, $\vecm{f}(\vecm{q}(t), \vecm{v}(t))$ are the particle positions, particle velocities and 
+forces acting on each particle at time $t$, respectively, and $\matm{M}$ is a diagonal matrix with the particle masses as diagonal entries. 
+From now on, we only consider forces that are independent of velocities and write $\vecm{f}(\vecm{q}(t))$ instead of 
+$\vecm{f}(\vecm{q}(t), \vecm{v}(t))$. Depending on the context, it is
+$\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{m \times 3}$ and $\matm{M} \in \mathbb{R}^{m \times m}$ or 
+$\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{3m}$ and $\matm{M} 
+\in \mathbb{R}^{3m \times 3m}$. We define $\dot{\vecm{q}}(t) \coloneqq \frac{d\vecm{q}}{dt}(t)$ and $\dot{\vecm{v}}(t) \coloneqq 
+\frac{d\vecm{v}}{dt}(t)$. When the time step $t$ is obvious from the context, we write $\vecm{q}$ and $\dot{\vecm{q}}$ instead of 
+$\vecm{q}(t)$ and $\dot{\vecm{q}}(t)$ for time-dependent quantities for the sake of brevity.
+
+The positions $\vecm{q}(t)$ and velocities $\vecm{v}(t)$ at time $t$ can be determined by solving the equations of motion given some initial conditions
+$\vecm{q}(0) = \vecm{q}_0$ and $\vecm{v}(0) = \vecm{v}_0$. Here, $\vecm{q}_0$ and $\vecm{v}_0$ are the initial positions and velocitities, respectively. 
+A function $\vecm{s}$ is a solution of the equations of motion if 
+
+\[
+    \vecm{s}(0) = 
+    \begin{pmatrix}
+        \vecm{q}(0)\\
+        \vecm{v}(0)
+    \end{pmatrix} 
+    \text{ and } 
+    \dot{\vecm{s}} = 
+    \begin{pmatrix}
+        \dot{\vecm{q}}\\
+        \dot{\vecm{v}}
+    \end{pmatrix}.
+\]
+
+\noindent Given an analytical solution $\vecm{s}$, the positions and velocities of the simulated system at time $t$ can be determined by computing 
+$\vecm{s}(t)$. For general nonlinear forces, analytical solutions of the equations of motion are usually not available. Thus, the equations of motion 
+need to be solved numerically.
+
+\section{Numerical Integration of The Equations of Motion}\label{ss:numerical-integration}
+Numerical integration schemes for the equations of motion aim at approximating the true positions $\vecm{q}(t_n)$ and velocities $\vecm{v}(t_n)$ 
+at discrete points in time $t_n, n \in \mathbb{N}$ without computing the analytical solution $\vecm{s}$ directly. In the context of this 
+thesis, $t_n = nh$ for some time step $h \in \mathbb{R}$. Note that the time step is constant. The approximations of $\vecm{q}(t_n)$ 
+and $\vecm{v}(t_n)$ produced by the integration scheme are referred to as $\vecm{q}_n$ and $\vecm{v}_n$, respectively. In the following, we 
+introduce explit, symplectic and implicit Euler integration in Section \ref{ss:explicit-euler}, \ref{ss:symplectic-euler} and 
+\ref{ss:implicit-euler}, respectively.
+
+\subsection{Explicit Euler Integration}\label{ss:explicit-euler}
+When applied to Equation \ref{eq:equations-of-motion}, the next position and velocity estimates $\vecm{q}_{n+1}$ and $\vecm{v}_{n+1}$ are derived 
+from the current estimates $\vecm{q}_n$ and $\vecm{v}_n$ via the update formula
+
+\begin{align*}
+    \vecm{q}_{n+1} &= \vecm{q}_n + h\vecm{v}_n\\
+    \vecm{v}_{n+1} &= \vecm{v}_n + h\matm{M}^{-1}\vecm{f}(\vecm{q}_n).
+\end{align*}
+
+\noindent The idea is to simplify the integration of the functions $\dot{\vecm{q}}, \dot{\vecm{v}}$ over the time step $h$ by using constant 
+approximations. Then, time integration is as simple as multiplying the constant function values 
+with the time step $h$. In the explicit Euler method, we approximate $\dot{\vecm{q}}, \dot{\vecm{v}}$ by their current estimates $\vecm{q}_n , 
+\vecm{v}_n$.
+
+One main criterion for evaluating numerical integration schemes is the global trunction error \cite{chapra2005}, which is the error between 
+$(\vecm{q}^T_n, \vecm{v}^T_n)^T$ and $(\vecm{q}(t_n)^T, \vecm{v}(t_n)^T)^T$ incurred during $n$ applications of the update formula. The global 
+trunction error is the sum 
+of the local trunction error (the error that results in the application of the method over a single time step $h$) and the propagated truncation 
+error (the
+error resulting from the approximations produced during the previous steps). It can be shown that the global truncation error of explicit Euler 
+integration over $n$ iterations is $\mathcal{O}(nh)$. Thus, explicit Euler integration is a first-order method. 
+
+The main drawback of explicit Euler integration is that its estimates $\vecm{q}_n$ and $\vecm{v}_n$ can often diverge with growing $n$ unless 
+prohibitely small time steps are used, even if the true functions $\vecm{q}$ and $\vecm{v}$ are bounded \cite{chapra2005}. Such integration schemes 
+are called unstable. In the context of phyiscal simulations, it is also desirable that numerical integration schemes preserve important physical 
+invariants of the equations of motion such as the conservation of momentum and energy. However, in the absence of artificial damping, explicit
+Euler integration amplifies the energy of the simulated system. For example, it fails unconditionally on the undampened harmonic oscillator 
+\cite{servin2006}. Using the explicit Euler method with larger time steps often manifests itself in exploding
+simulations. These issues are particularly pronounced during the simulation of stiff systems, i.e. systems with large accelerations.
+
+\subsection{Symplectic Euler Integration}\label{ss:symplectic-euler}
+A variation of the explicit Euler method applied to the equations of motion, called the symplectic Euler method, arises when the new 
+velocities $\vecm{v}_{n+1}$ instead of the old velocities $\vecm{v}_n$ are used in the position update \cite{stern2006}. This leads to 
+the update formula
+
+\begin{align}
+    \begin{split}\label{eq:symplectic-euler}
+        \vecm{q}_{n+1} &= \vecm{q}_n + h\vecm{v}_{n+1}\\
+        \vecm{v}_{n+1} &= \vecm{v}_n + h\matm{M}^{-1}\vecm{f}(\vecm{q}_n).
+    \end{split}
+\end{align}
+
+\noindent The symplectic Euler method has the same computational cost as the explicit Euler method. Just like explicit Euler integration, it 
+is a first-order method. However, while it still does not conserve the system's energy exactly, it conserves a quadratic form that is close 
+\cite{servin2006}. In contrast to the explicit Euler method, the symplectic Euler method preserves the amplitude of a swinging pendulum with 
+appropriate time steps \cite{stern2006}. Its main drawback is that it also becomes unstable for stiff simulations unless the time step is 
+kept prohibitively small \cite{servin2006}. 
+
+\subsection{Implicit Euler Integration}\label{ss:implicit-euler}
+Another popular integration scheme for tackling the equations of motion is implicit Euler integration, defined by the update formula
+
+\begin{align}
+    \begin{split}\label{eq:implicit-euler}
+        \vecm{q}_{n+1} &= \vecm{q}_n + h\vecm{v}_{n+1}\\
+        \vecm{v}_{n+1} &= \vecm{v}_n + h\matm{M}^{-1}\vecm{f}(\vecm{q}_{n+1}).
+    \end{split}
+\end{align}
+
+\noindent Note how $\vecm{q}_{n+1}$ and $\vecm{v}_{n+1}$ appear on both sides of the equations. Consequently, performing implicit 
+Euler integration includes solving a system of algebraic equations. For general nonlinear forces, the entire system of equations is nonlinear.
+Thus, implicit Euler integration is more computationally expensive than both explicit and symplectic Euler integration. 
+Despite the added complexity, implicit Euler integration is still only first-order accurate. However, implicit Euler integration 
+remains a popular choice for physical simulation since it can be shown to be unconditionally stable \cite{chapra2005}. This allows 
+dramatically increasing the size of the time steps. The additional cost of a single implicit Euler 
+step compared to the previously mentioned integration schemes is offset by the fact that fewer steps are required to drive the 
+simulation forward the same amount of time in a stable manner. It is worth poiting out that the stability guarantees of implicit Euler 
+integration require the computation of the exact solution of the NLSE in Equation \ref{eq:implicit-euler}. Solving the NLSE commonly involves
+solving derived LSEs whose system matrices are often ill-conditioned if the equations of motion are stiff (see Sec.\ \ref{ss:penalty-forces}). 
+Thus, implicit Euler integration is still prone to numerical instabilities in practice. Finally, implicit Euler integration is known 
+to exhibit numerical 
+damping \cite{stern2006}. This manifests itself in a loss of energy in the simulated system. For example, the amplitude of a swinging 
+pendulum decreases if integrated using the implicit Euler method. It is important to note that the extent of the observed numerical damping
+depends on the time step $h$, making it difficult to control.
+
+This brief discussion of numerical integration schemes shows that each of the introduced methods comes with their own sets of advantages and
+drawbacks. In particular, each of the methods trade off stability in favor of the preservation of physical invariants such as the conservation
+of energy or vice versa. Additionally, numerical integration of stiff system poses challenges for each of the methods introduced here. While
+explicit and symplectic Euler integration are analytically unstable without prohibitively small time steps or additional
+precautions, implicit Euler integration is prone to numerical instabilities for stiff systems. More sophisticated methods for physical 
+simulation (see Sec.\ \ref{s:dynamic-simulation}) build on top of the integration schemes introduced here with the goal of alleviating their 
+drawbacks without sacrificing their more advantageous properties. 
+
+\section{Variational Form of Implicit Euler Integration}\label{ss:variational-implicit-euler}
+
+Instead of solving the system of equations in Equation \ref{eq:implicit-euler} directly, it is possible to approach implicit
+Euler integration via an equivalent unconstrained minimization problem over the particle positions at the next time step. This formulation
+is called the variational form of implicit Euler integration \cite{bouaziz2014}. We summarize the derivation of the optimization problem
+according to Bouaziz et al.\ \cite{bouaziz2014} below.
+
+By rewriting the first line of Equation \ref{eq:implicit-euler} as
+
+\[
+    \vecm{v}_{n+1} = \frac{1}{h}(\vecm{q}_{n+1} - \vecm{q}_n)
+\]
+
+\noindent and substituting into the velocity update of Equation \ref{eq:implicit-euler} the following equation can be derived
+
+\begin{equation}\label{eq:implicit-positional}
+    \matm{M}(\vecm{q}_{n+1} - \vecm{q}_n - h\vecm{v}_n) = h^2(\vecm{f}(\vecm{q}_{n+1})).
+\end{equation}
+
+\noindent We separate forces $\vecm{f}(\vecm{q})$ into internal forces $\vecm{f}_{\text{int}}(\vecm{q}) = \sum_{i \in \mathcal{I}_{\text{int}}} 
+\vecm{f}^i_{\text{int}}
+(\vecm{q})$ and external forces $\vecm{f}_{\text{ext}}(\vecm{q}) = \sum_{i \in \mathcal{I}_{\text{ext}}} \vecm{f}^i_{\text{ext}}(\vecm{q})$ 
+with index sets $\mathcal{I}_{\text{int}}$ and $\mathcal{I}_{\text{ext}}$. We consider all external forces to be constant. Internal forces 
+are conservative and defined in terms of scalar potential energy functions 
+$\psi_j$ via $\vecm{f}^j_{\text{int}}(\vecm{q}) = -\nabla \psi_j(\vecm{q})$. Together, we have $\vecm{f} (\vecm{q}) 
+= \vecm{f}_{\text{int}} (\vecm{q}) + \vecm{f}_{\text{ext}} = -\sum_j \nabla \psi_j(\vecm{q}) + \vecm{f}_{\text{ext}}$. Plugging into 
+Equation \ref{eq:implicit-positional}, it is
+
+\begin{equation}\label{eq:implicit-positional-detailed}
+    \matm{M}(\vecm{q}_{n+1} - \vecm{q}_n - h\vecm{v}_n) = h^2\left(\vecm{f_\text{ext}} - \sum_j \nabla \psi_j(\vecm{q}_{n+1})\right).
+\end{equation}
+
+\noindent By computing first-order optimality conditions, it is easily verified that the system of equations above is equivalent to the optimization 
+problem
+
+\begin{equation}\label{eq:variational-implicit}
+    \min_{\vecm{q}_{n+1}} \frac{1}{2h^2} \norm{\matm{M}^{\frac{1}{2}}(\vecm{q}_{n+1} - \tilde{\vecm{q}})}^2_F + \sum_j \psi_j(\vecm{q}_{n+1}).
+\end{equation}
+
+\noindent where $\tilde{\vecm{q}} = \vecm{q}_n + h\vecm{v}_n + h^2\matm{M}^{-1}\vecm{f}_{\text{ext}}$.  
+We refer to the first and second term of the objective function as the inertial term and the constraint energy, respectively \cite{bouaziz2014}. 
+Thus, the minimization problem requires that the solution minimizes the elastic deformation as best as possible while ensuring that the solution is 
+close to following its momentum plus external forces. The weighting between the inertial term and the constraint energy depends on the 
+particle masses $\matm{M}$, the time step $h$ and the material stiffness of the elastic potentials $\psi_j$. Larger masses and smaller time steps 
+increase the weighting of the inertial term, whereas larger material stiffness increases the weighting of the constraint energy. 
+The solution preserves linear and angular momentum as long as the elastic potentials are rigid motion invariant \cite{bouaziz2014}.
+
+Approaching implicit Euler integration in its variational form can often be advantageous. That is because the objective function of 
+Equation \ref{eq:variational-implicit} presents a natural merit function that can be employed to improve the step size along the search direction 
+that arises in common unconstrained optimization algorithms based on Newton's method \cite{nocedal2006}. As an example, the objective 
+function is used in many step length selection algorithms to ensure that step sizes satisfy the Armijo condition or both Wolfe conditions 
+(see Sec.\ \ref{sss:step-length-selection}). In fact, many algorithms for solving nonlinear systems of equations construct approximate merit functions 
+if the objective function from an equivalent optimization problem is not available \cite{nocedal2006}.
+
+
+\section{Considerations for Real-Time Simulations}\label{ss:numerical-integration-rt}
+As discussed in Section \ref{ss:numerical-integration}, both the explicit and symplectic Euler integrators exhibit instabilities when simulating
+stiff systems without keeping the time step $h$ infeasibly small or adding artificial damping terms. On the other hand, implicit Euler integration
+is unconditionally stable, even though numerical instabilities might still occur. Since unstable simulations cannot simply be restarted and 
+recovered from in the real-time setting, stability is of utmost importance. For that reason, physical simulations for real-time applications
+are commonly based on implicit Euler integration. However, this comes at the cost of artificial numerical damping and significant computational
+overhead. According to Tournier et al.\ \cite{tournier2015}, it is common that the time budget allotted for integration over one time step is 
+barely enough to perform a single linearization of the NLSE in Equation \ref{eq:implicit-euler}. Thus, additional measures are required to make
+implicit Euler integration viable for real-time applications. 
+
+There are two main strategies for speeding up the integration step. The first one is to simply approximate the solution of the NLSE in
+Equation \ref{eq:implicit-euler}. In the simplest case, this consists of solving a linearized version of Equation \ref{eq:implicit-euler} and updating 
+the new positions $\vecm{q}_{n+1}$ and velocities $\vecm{v}_{n+1}$ with the resulting values without iterating any further \cite{baraff1998}. 
+Applying first-order Taylor expansion to the forces yields the following LSE
+
+\begin{equation}\label{eq:linear-implicit-lse}
+    \begin{split}
+    \Delta \vecm{q} &= h \vecm{v}_{n+1} \\
+    \Delta \vecm{v} &= h \matm{M}^{-1}(\vecm{f}(\vecm{q}_n) + \nabla_q \vecm{f}(\vecm{q}_n) \Delta \vecm{q}),
+    \end{split}
+\end{equation}
+
+\noindent where $\Delta \vecm{q} = \vecm{q}_{n+1} - \vecm{q}_n$ and $\Delta \vecm{v} = \vecm{v}_{n+1} - \vecm{v}_n$. By rearranging terms, it is 
+easy to show that $\vecm{v}_{n+1}$ can be determined by solving
+
+\begin{equation}\label{eq:linear-implicit-stepper}
+    (\matm{M} - h^2\matm{K})\vecm{v}_{n+1} = \matm{M}\vecm{v}_n + h\vecm{f}(\vecm{q}_n),
+\end{equation}
+
+\noindent where $\matm{K} = \frac{d\vecm{f}}{d\vecm{q}}$. The new positions can be computed via $\vecm{q}_{n+1} = h \vecm{v}_{n+1}$. 
+Borrowing the terminology from \cite{servin2006}, we refer to this approach as the linear implicit Euler stepper. Note that iteratively solving
+the linearized system of equations in Equation \ref{eq:linear-implicit-lse} and updating $\vecm{q}_{n+1}, \vecm{v}_{n+1}$ as described converges to 
+the true solution of the NLSE for implicit Euler integration (see Eq.\ \ref{eq:implicit-euler}). The strategy of approximating the solution of 
+Equation \ref{eq:implicit-euler} is also at the heart of XPBD (see Sec.\ \ref{ss:xpbd-constraint-projection}), even though the manner in which the 
+approximation is achieved differs quite significantly from the linear implicit Euler stepper.
+
+The second strategy is to compute the exact solution of Equation \ref{eq:implicit-euler}, but to restrict to a subset of forces whose strucuture 
+allows speeding up the process of solving the NLSE. As an example, note that Equation \ref{eq:implicit-euler} is linear if the featured forces 
+are linear. In this case, $\vecm{q}_{n+1}, \vecm{v}_{n+1}$ can be determined in a single linear solve. A similar approach, but with a less 
+restrictive subset of forces that allows modelling nonlinearities, is used in PD (see Sec.\ \ref{s:pd}). The second method is particularly appealing 
+in settings where visual plausibility is prioritized over physical accuracy.
+
+\section{Elastic Forces For Deformable Bodies}\label{ss:deformable-bodies}
+To be able to perform physically accurate simulations of deformable bodies using the numerical integration schemes for the equations of motion 
+introduced in Section \ref{ss:numerical-integration}, we need to be able to compute elastic forces $\vecm{f}(\vecm{q})$ from the discretized 
+positions $\vecm{q}$ of a potentially deformed body. Note that the we assume that the elastic forces $\vecm{f}(\vecm{q})$ are determined 
+entirely by the current positions $\vecm{q}$. In particular, this implies that the elastic forces are path-independent. Such materials are called 
+hyperelastic. In the following exposition, we lean heavily on the SIGGRAPH course by Sifakis et al.\ \cite{sifakis2012}. We start by 
+introducing relevant concepts from continuum mechanics and then describe how efficient implementation can be achieved via suitable 
+discretization schemes.
+
+First, we introduce the deformation function $\vecm{\phi} \colon \Omega \mapsto \mathbb{R}^3$, where $\Omega \subseteq \mathbb{R}^3$ is the 
+volumetric domain occupied by the undeformed body. This domain $\Omega$ is called the reference configuration. The deformation 
+function maps every point in the reference configuration 
+to its respective deformed position $\vecm{q} = \vecm{\phi}(\vecm{Q})$. Note that positions in the reference configuration are denoted using capital 
+letters while the deformed positions are referred to via small letters. As an example, the deformation function given by 
+
+\[
+    \vecm{\phi}(\vecm{Q}) = 2\matm{I}\vecm{Q}
+\]
+
+\noindent describes the deformed configuration that is achieved by stretching the reference domain by a factor of 2 in each direction. 
+
+The next step is to associate the deformation function that describes the current deformed configuration with an energy. However, the degree to 
+which different parts of the body are deformed may vary. Thus, we need to be able to relate deformations and strain energies on a local scale. 
+This can be achieved by defining an energy density function $\Psi(\vecm{\phi}, \vecm{Q})$ which measures the strain energy per unit undeformed volume 
+on an infitisemal domain $dV$ around $\vecm{Q}$. Since the energy density function only depends on the local behavior of $\vecm{\phi}$ around 
+$\vecm{Q}$, it can be equivalently expressed in terms of the deformation gradient $\matm{F}(\vecm{Q}) \in \mathbb{R}^{3 \times 3}$ given by 
+
+\begin{equation}\label{eq:deformation-gradient}
+    \matm{F} = \matm{F}(Q) = \frac{d\vecm{\phi}}{d\vecm{Q}},
+\end{equation}
+
+\noindent yielding $\Psi(\vecm{\phi}, \vecm{Q}) = \Psi(\matm{F}(\vecm{Q}))$. The choice of the energy density depends on the simulated material and 
+is treated as a black box for now. Relevant material models are introduced in Section \ref{ss:material-models}. Now, the elastic energy stored in the 
+entirety of the deformed body can be computed by integrating the energy density function over the reference configuration $\Omega$ like so
+
+\begin{equation}\label{eq:elastic-energy}
+    E(\vecm{\phi}) = \int_{\Omega}\Psi(\matm{F}) d\vecm{Q}.
+\end{equation}
+
+For general nonlinear materials, computing the integral in Equation \ref{eq:elastic-energy} is infeasible. Thus, simplifying assumptions are required 
+in order to enable efficient simulation of the physics of deformable bodies. Firstly, we describe the reference configuration $\Omega$ as a tetrahedral 
+mesh. Let $\vecm{Q} = (\vecm{Q}_1, \ldots, \vecm{Q}_n)^T$ be the vertex positions of the undeformed mesh. Then, the current 
+state of the model can be expressed via the vertex positions in the deformed configuration $\vecm{q} = (\vecm{\phi}(\vecm{Q}_1), \ldots, 
+\vecm{\phi}(\vecm{Q}_n))^T = (\vecm{q_1}, \ldots, \vecm{q}_n)^T$. Instead of using the true, complex deformation function $\vecm{\phi}$, we construct 
+an approximation $\hat{\vecm{\phi}}$ from $\vecm{Q}$ and $\vecm{q}$ using barycentric interpolation. The reconstructed deformation map $\hat{\vecm{\phi}}$
+is a piecewise linear function over each tetrahedron given by 
+
+\[
+    \hat{\vecm{\phi}}(\vecm{Q}) = \matm{F}_i \vecm{Q} + \vecm{b}_i \text{ for all } \vecm{Q \in \mathcal{T}_i},
+\]
+
+\noindent where $\matm{F}_i \in \mathbb{R}^{3 \times 3}$ and $\vecm{b}_i$ are specific to each tetrahedron $\mathcal{T}_i$. Note that $\matm{F}_i$ 
+can be interpreted as the constant deformation gradient for all positions in the $i$-th tetrahedron. Let $\vecm{Q}_1, \ldots, \vecm{Q}_4$ and 
+$\vecm{q}_1, \ldots, \vecm{q}_4$ denote the positions of the vertices of tetrahedron $\mathcal{T}_i$ in the reference configuration and the deformed 
+configuration, respectively. Sifakis \cite{sifakis2012} shows that $\matm{F}_i$ is given by
+
+\begin{equation}\label{eq:deformation-gradient-tet}
+    \matm{F}_i = \matm{D}_s\matm{D}^{-1}_m
+\end{equation}
+
+\noindent where 
+
+\[
+    \matm{D}_s = \begin{pmatrix}
+        q^x_1 - q^x_4 & q^x_2 - q^x_4 & q^x_3 - q^x_4 \\
+        q^y_1 - q^y_4 & q^y_2 - q^y_4 & q^y_3 - q^y_4 \\
+        q^z_1 - q^z_4 & q^z_2 - q^z_4 & q^z_3 - q^z_4
+    \end{pmatrix}
+\]
+
+\noindent is the deformed shape matrix and 
+
+\[
+    \matm{D}_m = \begin{pmatrix}
+        Q^x_1 - Q^x_4 & Q^x_2 - Q^x_4 & Q^x_3 - Q^x_4 \\
+        Q^y_1 - Q^y_4 & Q^y_2 - Q^y_4 & Q^y_3 - Q^y_4 \\
+        Q^z_1 - Q^z_4 & Q^z_2 - Q^z_4 & Q^z_3 - Q^z_4
+    \end{pmatrix}
+\]
+
+\noindent is called the reference shape matrix.
+
+Now, the elastic energy of the deformed body can be computed as a sum over the tetrahedral elements of the mesh via
+
+\[
+    E(\vecm{q}) = \sum_e E_e(\vecm{q}) = \sum_e \int_{\Omega_e} \Psi(\hat{\matm{F}}(\vecm{Q}, \vecm{q})) d\vecm{Q},
+\]
+
+\noindent where $\hat{\matm{F}}(\vecm{Q}, \vecm{q})$ is the deformation gradient of the reconstructed deformation 
+function $\hat{\vecm{\phi}}$. Since the deformation gradient $\hat{\matm{F}}$ is constant across each tetrahedral element, 
+it is further
+
+\[
+    E(\vecm{q}) = \sum_e V_e \Psi(\matm{F}_e),
+\]
+
+\noindent where $V_e$ is the volume of the undeformed tetrahedral element $e$. In contrast to Equation \ref{eq:elastic-energy}, this can be computed efficiently. 
+Finally, we are able to specify the elastic forces $\vecm{f}(\vecm{q})$ acting on the particles of the deformed body with positions $\vecm{q}$ by computing
+
+\[
+    \vecm{f}(\vecm{q}) = -\frac{dE(\vecm{\vecm{q}})}{d\vecm{q}}.
+\]
+
+\section{Material Models}\label{ss:material-models}
+In Section \ref{ss:deformable-bodies}, we demonstrated how to compute the elastic forces acting on a particle system with deformed positions 
+$\vecm{q}$, but treated the material-dependent energy density function $\Psi$ as a black box. In this section, we fill in the gaps and describe the material
+models relevant for this thesis. Note that the material models covered here are isotropic, i.e. their energy density functions satisfy $\Psi(\matm{F}) = 
+\Psi(\matm{R}\matm{F})$ for any rotation matrix $\matm{R}$ \cite{sifakis2012}. Informally, this means that the response to a deformation is 
+independent of the orientation the deformation is applied in. Additionally, we focus on material models that generate elastic forces that are nonlinear 
+in the deformation gradient. In the following, we introduce the strain material model \cite{bouaziz2014}, the classical neohookean model and a simplified 
+variation thereof \cite{smith2018}.
+
+\paragraph{Strain Material Model.}
+The first material model, which we simply refer to as the strain material model \cite{bouaziz2014}, is given by
+
+\begin{equation}\label{eq:strain-material-model}
+    \Psi_{\text{strain}}(\vecm{F}) = \frac{k}{2} \norm{\matm{U}\matm{I}\matm{V}^T - \matm{U}\matm{\Sigma}\matm{V}^T}^2_F 
+    = \frac{k}{2} \norm{\matm{I} - \matm{\Sigma}}^2_F,
+\end{equation}
+
+\noindent where $\matm{F} = \matm{U}\matm{\Sigma}\matm{V}^T$ is the singular value decomposition of the deformation gradient $\matm{F}$ and $k 
+\in \mathbb{R}^+$ is a stiffness parameter. Note that $\Psi_{\text{strain}}(\vecm{F}) = 0$ iff $\matm{\Sigma} = \matm{I}$ or equivalently iff 
+$\matm{F}$ is a rotational matrix. It is easy to verify that $\matm{F}$ is a rotation iff the deformation function $\vecm{\phi}$ is a rigid body 
+transform. Thus, Equation \ref{eq:strain-material-model} can be interpreted as a quadratic penalty for the distance between the 
+deformation function $\vecm{\phi}$ and its closest rigid-body transform as measured by the Frobenius norm of the difference of their deformation 
+gradients. 
+
+Since the PD solver cannot be applied to classical material models like the St.\ Venant-Kirchhoff and the neohookean model, the strain 
+material model is the main tool for achieving simulations of deformable bodies using PD (see Sec.\ \ref{s:pd}).
+While simple, the strain material model comes with a couple of disadvantages. Firstly, the computation of the singular value decomposition of 
+$\matm{F}$ is expensive. Secondly, the restorative elastic forces arising from the strain material model are proportional 
+to the aformentioned distance between the deformation and its closest rigid-body transform. As such, the strain material model is too 
+restrictive to model complex materials such as skin or flesh \cite{liu2017}. 
+
+\paragraph{Neohookean Material Model.}
+A popular material model that is more suitable for simulating biological materials is the neohookean material model and its variations 
+\cite{smith2018}. Its popularity is reflected by the fact that it has been implemented with a variety of different solvers including 
+PBD \cite{bender2014}, XPBD \cite{macklin2021}, ADMM \cite{overby2017} and a quasi-Newton solver based on PD \cite{liu2017}.
+The classical version of the neohookean material model is given below
+
+\begin{equation}\label{eq:neohookean-material-model}
+    \Psi_{\text{Neo}} = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) - \mu \text{log}(\text{det}(\matm{F})) 
+    + \frac{\lambda}{2}\text{log}(\text{det}(\matm{F}))^2.
+\end{equation}
+
+\noindent Here, $\mu$ and $\lambda$ are the material-specific Lamé parameters. The first term is minimized if $\matm{F} = \matm{0}$, which 
+happens if the deformed volume has collapsed to a single point. Note that $\text{det}(\matm{F})$ can be considered a measure for the 
+infitisemal local change in volume caused by the deformation $\vecm{\phi}$. Then, the last two terms can be interpreted as volume-preserving, 
+since $\text{log}(\text{det}(\matm{F}))$ approaches negative infinity as $\text{det}(\matm{F})$ approaches $0$. In particular, 
+the volume-preserving terms strongly counteract the compression of the modelled material encouraged by the first term. This way, the 
+classical neohookean model achieves rest stability.
+
+The main issue with the neohookean material model is that the volume-preserv-ing terms can grow unbounded when $\text{det}(\matm{F})$ approaches 
+$0$ and are infeasible for $\text{det}(\matm{F}) < 0$. Note that while configurations where $\text{det}(\matm{F}) < 0$ are theoretically 
+impossible to achieve, they can often occur in practice as a result of geometric constraints, instability of time integration techniques or 
+inadequate convergence of numerical solvers \cite{sifakis2012}. Thus, $\Psi_{\text{Neo}}$ is not inversion stable \cite{smith2018}.
+
+\paragraph{Simplified Neohookean Material Model.}
+To address the issues with the classical neohookean material model, Smith et al.\ propose a modified version of $\Psi_{\text{Neo}}$ where 
+the volume-preserving terms are replaced by the bounded, well-defined and invertible term $\frac{\lambda}{2}(\text{det}(\matm{F}) - 1)^2$. 
+This yields the following energy density
+
+\[
+    \Psi(\matm{F}) = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) + \frac{\lambda}{2}(\text{det}(\matm{F})-1)^2.
+\]
+
+\noindent While this ensures inversion stability, Smith et al.\ show that its Piola-Kirchhoff tensor 
+
+\[
+    \matm{P}(\matm{F}) = \frac{d\Psi(\matm{F})}{d\matm{F}}
+\]
+
+\noindent is non-zero at undeformed configurations, i.e.\ $\matm{P}(\matm{I}) \neq \matm{0}$. Consequently, $\Psi$ is not rest stable. In particular,
+the effective rest state is achieved when elements are slightly deflated. The authors correct this by adjusting the volume-preserving term so that 
+elements are inflated again, yielding the following energy density
+
+\begin{equation}\label{eq:smith-neohookean-material-model}
+    \Psi_{\text{Smith}}(\matm{F}) = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) + \frac{\lambda}{2}\left(\text{det}(\matm{F}) - 
+    \left(1 + \frac{\mu}{\lambda}\right)\right)^2.
+\end{equation}
+
+\noindent We refer to this material model as the simplified neohookean model.
+
+Equipped with these energy density functions, we have all the tools available that are required to compute the elastic forces acting on the particles 
+of a deformed body as described in Section \ref{ss:deformable-bodies}. Note that the material models covered here are by no means exhaustive. Again, the 
+SIGGRAPH tutorial by Sifakis \cite{sifakis2012} is a good place to gain a better overview for the interested reader.
+
