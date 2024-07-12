@@ -1,730 +1,5 @@
 \chapter{Method}\label{ch:method}
 
-\section{Unconstrained Optimization}\label{s:unconstrained-optimization}
-\begin{itemize}
-    \item \textcolor{red}{Don't forget glue text!!!}
-    \item \textcolor{red}{Truncate this section!!!}
-    \item \textcolor{red}{Mention that the entire section is based on \cite{nocedal2006}} and only cite other sources.
-\end{itemize}
-
-The goal of unconstrained optimization is to find the global minimizer of smooth, but generally nonlinear functions of the form $f \colon 
-\mathbb{R}^n \to \mathbb{R}, n \in \mathbb{N}$, or formally
-
-\[
-    \min_{\vecm{x}} f(\vecm{x}).
-\]
-
-\noindent Here, $f$ is called the objective function. 
-
-Most algorithms are incapable of finding global minimizers of general nonlinear functions. 
-Instead, these algorithms begin their search at a starting point $\vecm{x}_0$ and then iteratively improve this initial guess until a local 
-minimizer is found. A local minimizer is a point $\vecm{x}^*$ such that there is a neighborhood $\mathcal{N}$ of 
-$\vecm{x}^*$ such that $f(\vecm{x}^*) \leq f(\vecm{x})$ for all $\vecm{x} \in \mathcal{N}$. If the initial guess $\vecm{x}^*$ is close enough 
-to the global minimizer the local minimizer that the algorithm converges to can often coincide with a global minimizer. 
-
-\subsection{Line Search Methods}\label{ss:line-search}
-It can be shown that $\nabla f(\vecm{x}^*) = 0$ if $\vecm{x}^*$ is a local minimizer and f is continuously differentiable in an open neighborhood
-of $\vecm{x}^*$. The proof is by contradiction and establishes that if $\nabla f(\vecm{x}^*) \neq 0$, then it is possible to pick a descent 
-direction along which it is possible to decrease the value of the objective function if the step size is picked sufficiently small. This 
-observation gives rise to the idea of a family of optimization algorithms called line search algorithms: Given the current 
-iterate $\vecm{x}_k$, pick a descent direction $\vecm{p}_k$ and search along this direction for a new iterate $\vecm{x}_{k+1}$ with $\vecm{x}_{k+1} = 
-\vecm{x}_k + \alpha_k \vecm{p}_k$. This process is repeated until $\nabla f(\vecm{x}_k)$ is sufficiently close to zero. It is important to note that 
-$\nabla f(\vecm{x}) = 0$ does not imply that $\vecm{x}$ is a local minimizer. Instead, $\vecm{x}$ is only guaranteed to be a local minimizer if 
-the second-order 
-optimality conditions are satisfied, which additionally require $\nabla^2 f(\vecm{x})$ to be positive semidefinite.
-
-Ideally, $\alpha_k$ is picked such that it is the minimizer of the one-dimensional optimization problem
-
-\[
-    \min_{\alpha_k > 0} f(\vecm{x}_k + \alpha_k \vecm{p}_k).
-\]
-
-\noindent In most cases, it is infeasible to compute $\alpha_k$ exactly. Instead, the idea is to compute an approximation of $\alpha_k$ such that 
-the objective function decreases sufficiently and that $\alpha_k$ is close enough to the true minimizer. Formally, these requirements
-are captured in the strong Wolfe conditions for step lengths $\alpha_k$:
-
-\begin{align}
-    f(\vecm{x}_k + \alpha_k \vecm{p}_k) &\leq f(\vecm{x}_k) + c_1 \alpha_k \nabla f(\vecm{x}_k)^T \vecm{p}_k \label{eq:wolfe1} \\
-    \abs{\nabla f(\vecm{x}_k + \alpha_k \vecm{p}_k)^T \vecm{p}_k} &\leq c_2 \abs{\nabla f(\vecm{x}_k)^T \vecm{p}_k} \label{eq:wolfe2}
-\end{align}
-
-\noindent for some constants $c_1 \in (0, 1), c_2 \in (c_1, 1)$. Equation \ref{eq:wolfe1} is called the sufficient decrease or the Armijo condition 
-and states that the reduction in $f$ should be proportional to both the step length $\alpha_k$ and the directional derivative 
-$\nabla f(\vecm{x}_k)^T \vecm{p}_k$. Informally, the second condition (see Eq.\ \ref{eq:wolfe2}), known as the curvature condition, ensures that there 
-is no more fast 
-progress to be made along the search direction $\vecm{p}_k$, indicated by the fact that $\abs{\nabla f(\vecm{x}_k + \alpha_k \vecm{p}_k)^T
-\vecm{p}_k}$ is already rather small. 
-
-Step sizes satisfying the strong Wolfe conditions have the following properties under mild assumptions. Firstly, 
-if $\vecm{p}_k$ is a descent direction, it is possible to find a step size that satisfies the strong Wolfe conditions. In particular,
-the Armijo condition is always satisfied once $\alpha_k$ is sufficiently close to zero. Secondly, it 
-can be shown that line search methods where $\alpha_k$ satisfies the strong Wolfe conditions for all $k$ converge to a stationary
-point $\vecm{x}^*$ with $\nabla f(\vecm{x}^*) = 0$ if the search direction $\vecm{p}_k$ is sufficiently far from orthogonal to the steepest
-descent direction $\nabla f(\vecm{x}_k)$ for all $k$. Such line search algorithms are called globally convergent.
-
-The general structure of line search methods is given in Algorithm \ref{alg:line-search}.
-
-\begin{algorithm}
-\caption{Line Search Methods}\label{alg:line-search}
-\begin{algorithmic}
-\State \textbf{require } $\epsilon > 0$
-\Procedure{lineSearchMethod}{$\vecm{x}_0$, $\epsilon$}
-\State $\vecm{x}_k = \vecm{x}_0$
-\While{$\norm{\nabla f(\vecm{x}_k)} > \epsilon$}
-\State compute a descent direction $\vecm{p}_k$
-\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
-\State $\vecm{x}_k = \vecm{x}_k + \alpha_k \vecm{p}_k$
-\EndWhile
-\State \textbf{return with result } $\vecm{x}_k$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-\subsubsection{Steepest Descent}\label{sss:steepest-descent}
-The most obvious choice for the search direction $\vecm{p}_k$ at iteration $k$ is the negative gradient at the current iterate given by 
-\[
-    \vecm{p}_k = -\nabla f(\vecm{x}_k).
-\]
-
-\noindent This search direction is called the steepest descent direction. Using the steepest descent direction in Algorithm \ref{alg:line-search} 
-is called the steepest descent method. While simple, steepest descent exhibits poor performance, even for simple problems. 
-Its convergence rate is only linear and depends on the eigenvalue distribution of the Hessian $\nabla^2 f(\vecm{x}^*)$ at the local minimizer
-$\vecm{x}^*$. If the eigenvalue distribution is wide, steepest descent often requires an unacceptably large number of iterations to find a 
-stationary point.
-
-\subsubsection{Newton's Method}\label{sss:newton-method}
-It can be shown that any search direction $\vecm{p}_k$ that makes an angle of strictly less than $\pi/2$ radians with the steepest descent
-direction $\nabla f(\vecm{x}_k)$ is a descent direction as well. As long as $\vecm{p}_k$ does not get arbitrarily close to 
-orthogonal to $\nabla f(\vecm{x}_k)$, any such $\vecm{p}_k$ can be used in the line search framework. The so called Newton direction $\vecm{p}^N_k$ 
-is a popular choice. It is derived from the second-order Taylor series approximation to $f(\vecm{x}_k + \vecm{p})$ which is given by
-
-\begin{equation}\label{eq:newton-model}
-    f(\vecm{x}_k + \vecm{p}) \approx f(\vecm{x}_k) + \vecm{p}^T \nabla f(\vecm{x}_k) + \frac{1}{2}\vecm{p}^T \nabla^2 f(\vecm{x}_k) \vecm{p} \eqqcolon 
-    m_k(\vecm{p}).
-\end{equation}
-
-\noindent The model function $m_k$ has a unique minimizer if $\nabla^2 f(\vecm{x}_k)$ is positive definite. In this case, the Newton direction 
-is defined
-as the unique minimizer $\vecm{p}^N_k$ of $m_k$, which can be found by setting the derivative of $m_k(\vecm{p})$ to zero:
-
-\begin{equation}\label{eq:newton-diretion}
-    \vecm{p}^N_k = - (\nabla^2 f(\vecm{x}_k))^{-1} \nabla f(\vecm{x_k}).
-\end{equation}
-
-\noindent The better the quadratic model function $m_k(\vecm{p})$ approximates $f(\vecm{x}_k + \vecm{p})$ around $\vecm{x}_k$, the more reliable is the 
-Newton direction. 
-
-It is easy to show that $\vecm{p}^N_k$ is a descent direction, given that $\nabla^2 f(\vecm{x}_k)$ is positive definite. 
-Otherwise, the Newton direction is not guaranteed to exist, or to be a descent direction if it does. In such cases, the Newton direction cannot 
-be used without modification. Thus, in its naive form, the Newton's method is not globally convergent. However, if $\nabla^2 f(\vecm{x}^*)$ is positive
-definite at a local solution $\vecm{x}^*$ and $f$ is twice differentiable, then $\nabla^2 f(\vecm{x})$ is also positive definite for $\vecm{x} \in 
-\mathcal{N}$ for some neighborhood $\mathcal{N}$ of $\vecm{x}^*$. If we have $\vecm{x}_0 \in \mathcal{N}$ for the starting point of $\vecm{x}_0$
-of Newton's method and $\vecm{x}_0$ is sufficiently close to the solution $\vecm{x}^*$ it can be shown that Newton's method with step length
-$\alpha_k = 1$ converges to $\vecm{x}^*$ with a quadratic rate of convergence under mild conditions. Thus, Newton's method 
-has satisfactory convergence properties close to the solution $\vecm{x}^*$ and the Newton direction $\vecm{p}^N_k$ has a natural step size 
-$\alpha_k = 1$ associated with it. Since $\alpha_k = 1$ often does not satisfy the Wolfe conditions when the current iterate $\vecm{x}_k$ is still 
-far away from the solution $\vecm{x}^*$, line searches are still necessary in Newton's method. However, it is recommended to use $\alpha_k = 1$ as the
-initial guess as $\alpha_k = 1$ guarantees quadratic convergence once $\vecm{x}_k$ gets sufficiently close to $\vecm{x}^*$.
-
-A general overview over Newton's method is given in Algorithm \ref{alg:newton-method}. Note that practical implementations of Newton's method might deviate
-from the outlined algorithm. As an example, it is possible to apply positive definiteness fixes to the Hessian matrix $\nabla^2 f(\vecm{x}_k)$
-while computing its matrix factorization. \textcolor{red}{Point out issues with positive definiteness fixes and cite \cite{longva2023}}.
-
-\begin{algorithm}
-\caption{Newton's Method}\label{alg:newton-method}
-\begin{algorithmic}
-\State \textbf{require } $\epsilon > 0$
-\Procedure{newtonsMethod}{$\vecm{x}_0$, $\epsilon$}
-\State $\vecm{x}_k = \vecm{x}_0$
-\While{$\norm{\nabla f(\vecm{x}_k)} > \epsilon$}
-\State compute $\nabla^2 f(\vecm{x}_k)$
-\If{$\nabla^2 f(\vecm{x}_k)$ is not positive definite}
-\State apply positive definiteness fix to $\nabla^2 f(\vecm{x}_k)$
-\EndIf
-\State $\vecm{p}_k = -(\nabla^2 f(\vecm{x}_k))^{-1} \nabla f(\vecm{x}_k)$
-\State $\alpha_k = 1$
-\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
-\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
-\EndIf
-\State $\vecm{x}_k = \vecm{x}_k + \alpha_k \vecm{p}_k$
-\EndWhile
-\State \textbf{return with result } $\vecm{x}_k$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-Despite its favorable convergence properties, Newton's method comes with a couple of disadvantages. Firstly, computing the Hessian matrix
-$\nabla^2 f(\vecm{x}_k)$ during each iteration is often expensive. Secondly, deriving analytical expressions for the second derivatives of 
-the objective function is a common source of bugs. Lastly, a new system 
-
-\[
-    \nabla^2 f(\vecm{x}_k) \vecm{p}^N_k = - \nabla f(\vecm{x_k})
-\]
-
-\noindent needs to be solved at every iteration as the Hessian matrix changes with the current iterate $\vecm{x}_k$.
-If the Hessian $\nabla^2 f(\vecm{x}_k)$ is sparse, its factorization can be computed via sparse elimination techniques. However, there is no
-guarantee for the matrix factorization of a sparse matrix to be sparse itself in the general case.
-For these reasons, while a single
-Newton iteration often makes quite a lot of progress towards the solution, it takes a significant amount of time to compute. If $\vecm{x}_k
-\in \mathbb{R}^n$ for some large $n \in \mathbb{N}$, computing the exact Newton iteration can become infeasible, especially for real-time
-applications. Accordingly, the memory required to store the Hessian matrix of size $\mathcal{O}(n^2)$ becomes prohibitive.
-
-\subsubsection{Quasi-Newton Methods}\label{sss:quasi-newton}
-Due to the shortcomings of Newton's method mentioned in Section \ref{sss:quasi-newton}, it can be favorable to simply approximate the Newton 
-direction
-to find an effective search direction while keeping the cost of a single iteration low. Effective Newton approximations can be 
-computed without the need to compute the Hessian $\nabla^2 f(\vecm{x}_k)$ during each iteration. Often, multiple Quasi-Newton 
-iterations fit into the same time budget as a single Newton iteration. As a result, Quasi-Newton methods can sometimes converge to a 
-solution in a shorter amount of time than Newton's method, even though their search directions are not as effective as the exact 
-Newton direction.
-
-In Quasi-Newton methods, search directions of the following form are used
-
-\begin{equation}\label{eq:quasi-newton-direction}
-    \vecm{p}_k = -\matm{B}^{-1}_k \nabla f(\vecm{x}_k),
-\end{equation}
-
-\noindent where $\matm{B}_k \in \mathbb{R}^{n \times n}$ is positive definite. Note that the Newton direction is a special 
-case of 
-Equation \ref{eq:quasi-newton-direction} with $\matm{B}_k = \nabla^2 f(\vecm{x}_k)$. Just like for the Newton direction $\vecm{p}^N_k$ in
-Equation \ref{eq:newton-model}, a model function $m_k$ 
-that attains its minimum at $\vecm{p}_k  = -\matm{B}^{-1}_k \nabla f(\vecm{x}_k)$ can be defined via
-
-\begin{equation}\label{eq:quasi-newton-model}
-    m_k(\vecm{p}) = f(\vecm{x}_k)  + \nabla f(\vecm{x}_k)^T \vecm{p} + \frac{1}{2} \vecm{p}^T\matm{B}_k\vecm{p}.
-\end{equation}
-
-\noindent As $\matm{B}_k \neq \nabla^2 f(\vecm{x}_k)$, $m_k$ does not correspond to a second-order Taylor approximation of $f$ around 
-$\vecm{x}_k$ anymore. Instead, $\matm{B}_k$ is picked such that the gradient of $m_k$ matches the gradient of $f$ at the last two iterates 
-$\vecm{x}_k$ and $\vecm{x}_{k-1}$.
-Since $\nabla m_{k}(\vecm{0}) = \nabla f(\vecm{x}_k)$, the first condition is true independent of $\matm{B}_k$. The 
-second condition yields
-
-\[
-    \nabla m_{k}(-\alpha_{k-1}\vecm{p}_{k-1}) = \nabla f(\vecm{x}_k) - \alpha_{k-1}\matm{B}_{k}\vecm{p}_{k-1} = \nabla f(\vecm{x}_{k-1}).
-\]
-
-\noindent Rearranging gives
-
-\begin{equation}\label{eq:secant-equation}
-    \matm{B}_k \vecm{s}_{k-1} = \vecm{y}_{k-1},
-\end{equation}
-
-\noindent where $\vecm{s}_{k-1} = \vecm{x}_k - \vecm{x}_{k-1} = \alpha_{k-1}\vecm{p}_{k-1}$. This is called the secant equation. 
-Multiplying both sides from the left with $\vecm{s}_{k-1}^T$ yields the curvature condition given by
-
-\begin{equation}\label{eq:curvature-condition}
-    \vecm{s}_{k-1}^T \vecm{y}_{k-1} > 0,
-\end{equation}
-
-\noindent since $\matm{B}_k$ is positive definite. Note that the curvature condition is not satisfied for arbitrary $\vecm{x}_k, \vecm{x}_{k-1}$ 
-if $f$ is 
-not convex. However, it can be shown that the curvature condition always holds when the step size $\alpha_{k-1}$ satisfies the strong Wolfe 
-conditions. Thus, a proper line search strategy is vital for the viability of Quasi-Newton methods.
-
-Since $\matm{B}_k$ is positive definite, the secant equation can be written in terms of the inverse $\matm{H}_k \coloneqq \matm{B}^{-1}_k$ as
-
-\[
-    \matm{H}_k \vecm{y}_{k-1} = \vecm{s}_{k-1}
-\]
-
-\noindent and the formula for the new search direction becomes $-\matm{H}_k \nabla f(\vecm{x}_k)$. The secant equation is not enough to uniquely determine
-the entries of $\matm{H}_k$, even if $\matm{H}_k$ is required to be symmetric positive definite. Thus, the additional requirement that $\matm{H}_k$
-is closest to $\matm{H}_{k-1}$ according to some norm is imposed. In summary, $\matm{H}_k$ is picked such that it solves the following constrained
-minimization problem
-
-\begin{align*}
-    \min_{H} \norm{\matm{H} - \matm{H}_{k-1}} \text{, subject to } \matm{H} = \matm{H}^T \text{ and } \matm{H}\vecm{y}_{k-1} = \vecm{s}_{k-1}.
-\end{align*}
-
-Using a scale-invariant version of the weighted Frobenius norm gives rise to the popular Broyden-Fletcher-Goldfarb-Shanno (BFGS) algorithm.
-It is defined via the following update formula for $\matm{H}_k$
-
-\begin{equation}\label{eq:bfgs-update}
-    \matm{H}_k = (I - \rho_{k-1}\vecm{s}_{k-1}\vecm{y}^T_{k-1})\matm{H}_{k-1}(I - \rho_{k-1}\vecm{s}_{k-1}\vecm{y}^T_{k-1}) + \rho_{k-1}\vecm{s}_{k-1}\vecm{s}^T_{k-1},
-\end{equation}
-
-\noindent where $\rho_{k-1} = 1 / (\vecm{s}^T_{k-1}\vecm{y}_{k-1})$. Is is possible to give a similar update formula in terms of $\matm{B}_k$.
-Generally, using the formulation in terms of the inverse matrices $\matm{H}_k$ is preferrable since the computation of the new descent 
-direction can
-be achieved by simple matrix-vector multiplication instead of solving a linear system if $\matm{B}_k$ is maintained instead. An overview over the
-algorithm is given in Algorithm \ref{alg:bfgs}.
-
-\begin{algorithm}
-\caption{BFGS method}\label{alg:bfgs}
-\begin{algorithmic}
-\State \textbf{require } $\matm{H}_0$ symmetric positive definite, $\epsilon > 0$
-\Procedure{BFGS}{$\vecm{x}_0$, $\matm{H}_0$, $\epsilon$}
-\State $\vecm{x}_k, \vecm{x}_{k-1} = \vecm{x}_0, \matm{H}_k = \matm{H}_0 $
-\While{$\norm{\nabla f(\vecm{x}_k)} > \epsilon$}
-\State $\vecm{s} = \vecm{x}_k - \vecm{x}_{k-1}, \vecm{y} = \nabla f(\vecm{x}_k) - \nabla f(\vecm{x}_{k-1}), \rho = 1 / (\vecm{s}^T \vecm{y})$
-\State $\matm{H}_k = (I - \rho \vecm{s} \vecm{y}^T) \matm{H}(I - \rho \vecm{s} \vecm{y}^T) + \rho\vecm{s}\vecm{s}^T$
-\State $\vecm{p}_k = -\matm{H}_k \nabla f(\vecm{x}_k)$
-\State $\alpha_k = 1$
-\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
-\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
-\EndIf
-\State $\vecm{x}_{k-1} = \vecm{x_k}$
-\State $\vecm{x}_k = \vecm{x}_k + \alpha_k \vecm{p}_k$
-\EndWhile
-\State \textbf{return with result } $\vecm{x}_k$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-While global convergence of the BFGS method cannot be established for general nonlinear smooth functions, it is possible to show that it converges 
-superlinearly if the initial guess $\vecm{x}_0$ is close to the solution $\vecm{x}^*$ and $\alpha_k = 1$ for sufficiently large $k$ 
-under mild conditions. Thus, just like Newton's method (see Sec.\ \ref{sss:newton-method}), the BFGS method has a natural step length $\alpha=1$,
-which should be the initial guess for all line search algorithms. Typically, the BFGS method dramatically outperforms steepest 
-descent and performs comparably to Newton's method on many practical problems. 
-
-The behavior of the BFGS method depends on the choice of the initial inverse matrix $\matm{H}_0$. One obvious choice is $\matm{H}_0 = \nabla^2 
-f(\vecm{x}_0)$. However, there is no guarantee that $\nabla^2 f(\vecm{x}_0)$ is positive definite. Additionally, computing even a single inverse
-matrix can be prohibitively expensive for large problems. Thus, scaled versions of the identity matrix $\gamma I, \gamma \in \mathbb{R}^+$ are
-often used instead. There is no good general strategy for choosing $\gamma$, even though heuristic appraoches are popular. \textcolor{red}{Maybe
-explain one heuristic, if necessary down the line}.
-
-Even though BFGS iterations are typically faster to compute than Newton iterations, the BFGS method is still not suitable for large problems 
-in its naive form. Just like in Newton's method, either $\matm{H}_k$ or $\matm{B}_k$ needs to be stored explicitly, which can be infeasible for 
-large-scale problems. While the BFGS update formula using the inverse matrices $\matm{H}_k$ replaces the need for a matrix factorization with a simple 
-matrix-vector multiplication, $\matm{H}_k$ and $\matm{B}_k$ are generally dense, even if $\nabla^2 f(\vecm{x}_k)$ is sparse. This removes the possibility
-of alleviating storage requirements and speeding up computations via sparse matrix techniques when using the naive BFGS method.
-
-\subsubsection{Limited-Memory Quasi-Newton Methods}\label{sss:limited-memory-quasi-newton}
-\textcolor{red}{Fabian's Feedback: Although this is used to some extent by the PD papers, I think this section (possibly also the one before) 
-goes into a bit too much detail. If you want this written down for your own understanding maybe move it to an Appendix? But in general I 
-would recommend for the foundations to focus a bit more on what properties are relevant for what you are doing later.  What you need to 
-know about performance, complexity, convergence etc. Not so much how each step of the (L)BFGS algorithm works. In the end, it's just a 
-building block like a matrix factorization. Without knowing all the details I would say that something between a half and full page should 
-suffice on LBFGS (with references to 
-the details of course)}
-
-As discussed in Section \ref{sss:quasi-newton}, the BFGS method is unsuitable for large-scale problems due to the storage requirements of the 
-typically dense inverse Hessian approximation $\matm{H}_k$. This highlights the need for effective Hessian approximations that are not only
-cheap to compute, but also cheap to store. Just like Quasi-Newton methods use approximations of the Newton direction to keep 
-the computational cost of a single iteration low, limited-memory Quasi-Newton methods approximate Quasi-Newton directions with 
-the goal of reducing the memory footprint of a single iteration. This comes at the prize of inferior convergence properties. On the upside,
-limited-memory Quasi-Newton directions can sometimes be computed by using only a couple of vectors of size $n$, without the need to 
-explicitly form the inverse Hessian approximation $\matm{H}_k$. This can drop the space complexity of a single iteration to $\mathcal{O}(n)$ 
-compared to $\mathcal{O}(n^2)$ for the BFGS method.
-
-A popular limited-memory method called L-BFGS can be derived from the BFGS update formula for the inverse Hessian approximation 
-$\matm{H}_k$ (see Eq.\ \ref{eq:bfgs-update}). Note that the BFGS update in iteration $k$ is specified entirely 
-by the vector 
-pair $(\vecm{s}_n, \vecm{y}_n) \in \mathbb{R}^n$. Consequently, $\matm{H}_k$ can be constructed from the initial matrix $\matm{H}_0$ and the familiy 
-of vector pairs $((\vecm{s}_i, \vecm{y}_i))_{i \in [0, k-1]}$ by simply performing $k$ update steps according to $Equation \ref{eq:bfgs-update}$.
-The idea of L-BFGS is to only keep track of the most recent $m$ vector pairs and generate a modified version of the inverse Hessian 
-approximation from the BFGS method by applying the $m$ updates defined by $((\vecm{s}_i, \vecm{y}_i))_{i \in [k-m, k-1]}$ to the 
-initial matrix $\matm{H}_0$ at each iteration $k$.
-
-It is important to note that its not the L-BFGS Hessian approximation $\matm{H}_k$ itself, but the search direction $\vecm{p}_k = -\matm{H}_k 
-\nabla f(\vecm{x}_k)$ that is of interest. It turns out that the L-BFGS search direction $\vecm{p}_k$ can be computed without explicitly 
-constructing $\matm{H}_k$ using an algorithm called the L-BFGS two-loop recursion (\cref{alg:lbfgs-recursion}). This
-algorithm can be specified in terms of the initial Hessian approximation $\matm{B}_0$ with minor changes, as indicated by line 6. To 
-simplify the notation, the entire history of $\vecm{s} = (\vecm{s}_i)_{i \in [0, k]}, \vecm{y} = (\vecm{y}_i)_{i \in [0, k]}, \rho = 
-(\rho_i)_{i \in [0, k]}$
-is passed to \textsc{twoLoopRecursion}, even though at most the $m$ most recent values are needed.
-
-\begin{algorithm}
-\caption{L-BFGS two-loop Recursion}\label{alg:lbfgs-recursion}
-\begin{algorithmic}[1]
-\State \textbf{require } $\matm{H}_0$ or $\matm{B}_0$ symmetric positive definite
-\Procedure{twoLoopRecursion}{$\matm{H}_0 \text{ or } \matm{B}_0$, $\vecm{x}_k$, $\vecm{s}$, $\vecm{y}$, $\rho$, $m$, $k$}
-\State $m^* = \min(m, k), \vecm{t} = -\nabla f(\vecm{x}_k)$
-\For{$i = k-1, k-2, \ldots, k-m^*$}
-\State $\alpha_i = \rho_i \vecm{s}^T_i \vecm{t}$
-\State $\vecm{t} = \vecm{t} - \alpha_i \vecm{y}_i$
-\EndFor
-\State $\vecm{r} = \matm{H}_0 \vecm{t}$ or solve $\matm{B}_0 \vecm{r} = \vecm{t}$
-\For{$i = k-m^*, k-m^*+1, \ldots, k-1$}
-\State $\beta = \rho_i \vecm{y}^T_i \vecm{r}$
-\State $\vecm{r} = \vecm{r} + \vecm{s}_i(\alpha_i - \beta)$
-\EndFor
-\State \textbf{return with result } -$\matm{H}_k \nabla f(\vecm{x}_k) = \vecm{r}$.
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-Excluding the matrix-vector multiplication $\matm{H}_0 \vecm{t}$, the two-loop recursion scheme has time complexity $\mathcal{O}(nm)
-= \mathcal{O}(n)$ since $m << n$. Thus,
-if $\matm{H}_0$ is chosen to be diagonal, the entire L-BFGS iteration can be computed in $\mathcal{O}(n)$. Similarly, the space complexity
-of the L-BFGS iteration is $\mathcal{O}(n)$ if $\matm{H}_0$ is diagonal. Even if $\matm{H}_0$ is not diagonal, but sparse, the two-loop
-recursion can be significantly faster and more space efficient than a BFGS update where matrix-vector multiplication with a dense matrix
-is required in general. Note that the same is not necessarily true if $\matm{B}_0$ is sparse, but not diagonal. In this case, a factorization
-of $\matm{B}_k$ needs to be computed which is not guaranteed to stay sparse.
-
-An overview over the entire L-BFGS algorithm is given in Algorithm \ref{alg:lbfgs}, where the details of maintaining the history
-of $\vecm{s}, \vecm{y}, \rho$ are omitted for the sake of clarity.
-
-\begin{algorithm}
-\caption{L-BFGS method}\label{alg:lbfgs}
-\begin{algorithmic}
-\State \textbf{require } $\matm{H}_0$ symmetric positive definite, $\epsilon > 0$
-\Procedure{LBFGS}{$\vecm{x}_0$, $\matm{H}_0$, $m$, $\epsilon$}
-\State $\vecm{x}_k = \vecm{x}_0, \matm{H}_k = \matm{H}_0, k=0$
-\While{$\norm{\nabla f(\vecm{x}_k)} > \epsilon$}
-\State $\vecm{s_k} = \vecm{x}_k - \vecm{x}_{k-1}, \vecm{y}_k = \nabla f(\vecm{x}_k) - \nabla f(\vecm{x}_{k-1}), \rho_k = 1 / (\vecm{s}^T_k \vecm{y}_k)$
-\State $\vecm{p}_k = \text{\textsc{twoLoopRecursion}}(\matm{H}_0, \vecm{x_k}, \vecm{s}, \vecm{y}, \vecm{\rho}, m, k)$   (\cref{alg:lbfgs-recursion})
-\State $\alpha_k = 1$
-\If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
-\State compute $\alpha_k$ that satisfies the strong Wolfe conditions
-\EndIf
-\State $\vecm{x}_k = \vecm{x}_k + \alpha_k \vecm{p}_k, k = k + 1$
-\EndWhile
-\State \textbf{return with result } $\vecm{x}_k$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-L-BFGS shares many properties with the BFGS method discussed in Section \ref{sss:quasi-newton}. The performance of the L-BFGS method depends 
-on the choice of the initial matrix $\matm{H}_0$, with scaled diagonal matrices being popular choices. Again, there is no generally viable
-strategy for picking the scaling factor $\gamma \in \mathbb{R}$. Similarly, the initial guess for the step size $\alpha_k=1$ should be used.
-The window size $m$ is a parameter that needs to be tuned on a per-problem basis. While the L-BFGS algorithm is 
-generally less robust if
-$m$ is small, making $m$ arbitrarily large increases the amount of time required to perform the two-loop recursion. If the matrix-vector
-multiplication in Algorithm \ref{alg:lbfgs-recursion} is expensive to compute, the additional computational cost incurred by increasing $m$ is 
-usually overshadowed by the matrix-vector multiplication. Still, larger values of $m$ do not necessarily lead to better performance. 
-\cite{liu2017} suggest that curvature information from vector pairs $(\vecm{s}_i, \vecm{y}_i)$ from iterations i with $i << k$ can become 
-out of date, making moderately large values of $m$ more beneficial. The main weakness of the L-BFGS method is its slow convergence on 
-problems where the true Hessian matrices $\nabla^2 f(\vecm{x})_k$ are ill-conditioned.
-
-\subsubsection{Step Length Selection Algorithms}\label{sss:step-length-selection}
-In Section \ref{ss:line-search}, the need for step lengths $\alpha_k$ that satisfy the strong Wolfe conditions (see Eq.\ \ref{eq:wolfe1} and \ref{eq:wolfe2})
-for the convergence of line search methods was discussed. Appropriate step lengths are determined via step length selection algorithms. 
-These algorithms are typically
-split into two phases. The bracketing phase determines an interval $[\alpha_{\text{min}}, \alpha_{\text{min}}]$ that is 
-guaranteed to contain suitable step lengths. The selection phase is an iterative process that interpolates function values and gradients 
-from previous iterations to shrink the interval and eventually pick the final step length. For more details, the reader is 
-referred to Chapter 3 of. As step length algorithms are a common source of bugs, Nocedal and Wright recommend using publically 
-available implementations.
-
-To avoid the complexities of correct step length algorithms, the insight that the Armijo condition (see Eq.\ \ref{eq:wolfe1}) is always satisfied 
-once $\alpha$ is sufficiently close to zero (see Sec.\ \ref{ss:line-search}) can be exploited: If a good first estimate $\alpha = 
-\tilde{\alpha}$ is available,
-we check whether it satisfies the Armijo condition. Otherwise, $\alpha$ is gradually decreased until sufficient decrease is satisfied or until
-it falls below a predefined threshold. The idea is that the resulting step length will often satisfy the second Wolfe condition automatically 
-as long as the initial estimate $\tilde{\alpha}$ is a well-informed guess and step lengths are not decreased too rapidly. For Newton's method
-and Quasi-Newton methods, usually $\tilde{\alpha} = 1$ is used for the best results. This approach is known
-as backtracking and is outlined in Algorithm \ref{alg:backtracking}. Here, $c_1$ is the constant factor from the Armijo condition.
-
-\begin{algorithm}
-\caption{Backtracking Line Search}\label{alg:backtracking}
-\begin{algorithmic}
-\State \textbf{require } $\tilde{\alpha} > 0, c_1 \in (0, 1), \beta \in (0, 1), t \in (0, \tilde{\alpha})$
-\Procedure{backtrack}{$\vecm{x}_k$, $\vecm{p}_k$, $\tilde{\alpha}$, $\beta$, $t$}
-\State $\alpha = \tilde{\alpha}$
-\While{$f(\vecm{x}_k + \alpha \vecm{p}_k) \leq f(\vecm{x}_k) + c_1 \alpha \nabla f(\vecm{x}_k)^T \vecm{p}_k$ and $\alpha > t$}
-\State $\alpha = \beta \alpha$
-\EndWhile
-\State \textbf{return with } $\alpha_k = \alpha$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-
-Backtracking is much simpler to implement than correct step length algorithms. Additionally, each iteration of the backtracking algorithm
-only requires the computation of a single function evaluation. Thus, if function evaluations are cheaper than gradient evaluations 
-backtracking is also more efficient. However, backtracking does not provide a guarantee that the final step length satisfies the curvature
-condition. If the search direction $\vecm{p}_k$ is effective, e.g.\ when Newton's method is used, this tradeoff is often justifiable. 
-For less effective search directions, including search directions from most Quasi-Newton methods, backtracking might be less suitable.
-
-\section{Constrained Dynamic Simulation}\label{s:dynamic-simulation}
-Visually pleasing and physically accurate simulations of dynamical systems require modeling a wide range of materials and 
-interactions between participating bodies. Common requirements that prove challenging are the ability to simulate stiff materials
-and to enforce hard constraints on the positions of the simulated bodies. Among others, hard constraints involve attaching particles
-to a fixed point in space or to each other, implementing joints and resolving interpenetrations between bodies. Unfortunately, in their 
-naive form, the numerical integration schemes from Section \ref{ss:numerical-integration} are unsuitable for application to simulations 
-including these effects. The main difficulty lies in the fact that stiff materials and hard constraints introduce stiffness into 
-the simulated system, causing stability issues and numerical problems. This is obvious for stiff materials, where even small 
-deformations can cause large restorative forces. For hard constraints, note that to fit into the equations of motion in 
-Equation \ref{eq:equations-of-motion}, corresponding forces that ensure that the constraints stay satisfied at all times need to be defined. 
-It is possible to show that hard constraints are the physical limit of strong potential forces \cite{servin2006}, increasing the 
-stiffness of the equations of motion. 
-
-In this section, we focus on different strategies for modelling hard constraints in physical real-time simulations and discuss 
-their properties. Heavily inspired by Tournier et al.\ \cite{tournier2015}, the approaches covered in this section are analyzed 
-in the context of real-time adaptions of implicit Euler integration that only perform a single linear solve per time step 
-(see Sec.\ \ref{ss:numerical-integration-rt}). While both XPBD (see Sec.\ \ref{ss:xpbd-constraint-projection}) and PD (see Sec.\ \ref{s:pd}) differ significantly 
-from these methods, the challenges encountered in modelling hard constraints are largely transferrable. Handling hard constraints 
-via stiff penalty forces as outlined above is covered in more detail in Section \ref{ss:penalty-forces}. Adding hard constraints to the equations
-of motion without introducing stiff constraint forces via a Differential Algebraic Equation (DAE) is explored in Section \ref{ss:hard-constraints}.
-Finally, adding regularization to the resulting DAE in a physcially meaningful manner yields a method called compliant constraints. 
-Compliant constraints are introduced in Section \ref{ss:compliant-constraints}.
-
-\textcolor{red}{Probably best to skip generality and simplicitiy here. Don't distract from hard constraints. Make sure this is 
-mentioned in the discussion of XPBD, PD, etc.}
-
-\subsection{Penalty Forces}\label{ss:penalty-forces}
-As discussed in Section \ref{s:dynamic-simulation}, it is possible to show that hard constraints are the physical limit of strong potential 
-forces \cite{servin2006}. Thus, the simplest approach to modelling hard constraints is to introduce strong forces that enforce 
-that the constraints are satisfied at all times to the equations of motion and to perform integration via the linear implicit Euler
-stepper from Section \ref{ss:numerical-integration-rt}. We demonstrate the challenges of this method using the example of 
-a distance constraint.
-
-Consider a distance constraint $C_{\text{dist}}$ that 
-fixes the distance $l = \vert \vert \vecm{q}_i - \vecm{q}_j \vert \vert$ between two particles $\vecm{q}_i$ and $\vecm{q}_j$ to 
-some distance $d \in \mathbb{R}^+$. If $C_{\text{dist}}(\vecm{q}) = l - d$, then the constraint is satisfied if 
-$C_{\text{dist}}(\vecm{q}) = 0$. Next, we define the energy potential $\psi_\text{dist}(\vecm{q}) = \frac{k}{2}C_\text{dist}(\vecm{q})^2$,
-where $k \in \mathbb{R}^+$ is some large stiffness value. Since the energy potential is zero if $C_\text{dist}$ is satisfied
-and grows as the distance between $\vecm{q}_i$ and $\vecm{q}_j$ increases, the resulting force will drive the distance towards $d$.
-Upon closer inspection, $\psi_\text{dist}$ is exactly the potential energy of a Hookean spring with stiffness $k$. The forces 
-$\vecm{f}_i$ and $\vecm{f}_j$ applied to the particles $\vecm{q}_i$ and $\vecm{q}_j$ by the spring are given by 
-$\vecm{f}_i = -\vecm{f}_j = \beta (\vecm{q}_i - \vecm{q}_j) / l$, where $\beta = -\partial\psi_\text{dist}/\partial l = 
-kC_\text{dist}(\vecm{q})$. Since $\vert \vert \vecm{f}_i \vert \vert = \vert \vert \vecm{f}_j \vert \vert = \beta$,
-the restorative spring forces have infinite magnitude in the limit of infinite stiffness $k$ if $C_\text{dist}(\vecm{q}) \neq 0$. 
-
-Integration using the linear implicit Euler stepper is achieved by plugging the spring forces into 
-Equation \ref{eq:linear-implicit-stepper} and solving for the new velocities $\vecm{v}_{n+1}$. For the sake of convenience, we restate
-Equation \ref{eq:linear-implicit-stepper} below
-
-\[
-    (\matm{M} - h^2\matm{K})\vecm{v}_{n+1} = \matm{M}\vecm{v}_n + h\vecm{f}(\vecm{q}_n).
-\]
-
-\noindent Note that $\matm{K}$ is typically non-singular since elastic forces are invariant under rigid body transforms. When using 
-large stiffness values $k$, the entries of $\matm{K}$ are large (due to large restorative forces) and dominate the entries of the 
-system matrix 
-
-\begin{equation}\label{eq:system-H}
-    \matm{H} = \matm{M} - h^2\matm{K}.
-\end{equation}
-
-\noindent In these cases, $\matm{H}$ is almost non-singular as well, leading to numerical issues and poor convergence for many solvers. 
-
-In the example above, the potential energy $\psi_\text{dist}$ is defined in terms of the constraint function $C_\text{dist}$ via 
-$\psi_\text{spring}(\vecm{q}) = \frac{k}{2} C_\text{dist}(\vecm{q})^2$. However, it is possible to generalize this approach to other 
-geometric constraints $C$ yielding energy potentials of the form
-
-\begin{equation}\label{eq:penalty-forces}
-    \psi(\vecm{q}) = \frac{k}{2} C(\vecm{q})^2.
-\end{equation}
-
-\noindent The resulting forces are called penalty forces.
-
-By constructing different geometric displacement functions, various properties such as the bending angle between triangles and in-plane 
-shearing of triangles can be controlled via the corresponding quadratic energy potentials \cite{baraff1998}. Geometric displacement 
-functions with the desired effect are often intuitive and simple to define. However, as the corresponding energy potentials are not physically 
-derived, choosing stiffness parameters that correspond to measurable physical properties of the simulated material and orchestrating 
-multiple constraints becomes challenging \cite{servin2006, nealen2006}. Additionally, the generated penalty forces do not converge in the 
-limit of infinite stiffess, leading to oscillations unless the time step is reduced significantly \cite{rubin1957}. Finally, the numerical
-issues outlined for distance constraints generally apply to penalty forces derived from other geometric constraints as well.
-
-\textcolor{blue}{Maybe explain the challenges with penalty forces a bit better! Also read \cite{terz1987, nealen2006, rubin1957}. 
-I just skimmed over \cite{terz1987} for now, but want to make sure that I am citing this correctly. The term penalty forces is not used
-in the paper, I am just following the trail from \cite{servin2006}. \cite{nealen2006} is a review that might be intersting to read.
-\cite{rubin1957} would be really interesting to read for once, just to understand why strong penalty forces oscillate. Is this a
-general problem with penalty forces, or is it an issue with the solver?}
-
-\subsection{Hard Constraints}\label{ss:hard-constraints}
-The problem of maintaining hard distance constraints between particles can be formulated as a Differential Algebraic Equation (DAE)
-\cite{ascher1995, baraff1996}. In this framework, the equations of motion \textcolor{red}{(reference somewhere)} are handled together 
-with algebraic equations that model the constraints on the positions of the system. Distance constraints are typically implemented using 
-holonomic constraints 
-of the form $\vecm{\phi(x)} = 0$. Note that the distance constraint $\vecm{\phi}(x)$ is formulated in terms of the particle positions, 
-whereas the equations of motion work on velocities and accelerations. Consequently, the constraints need to be differentiated with 
-respect to time once or twice so that they can be 
-combined with the ODE in terms of velocties or accelerations, respectively. \textcolor{blue}{In XPBD, we go the other way! The ODE
-is tanslated so that it is in terms of positions, so that it can be handled together with the constraints. Is there a reason nobody 
-bothered to do this before?} \textcolor{red}{Fabian notes that the translation in terms of positions in XPBD is in fact just rewriting
-the implicit Euler integration in terms of positions. Thus, we have baked the integration method into the formulation in XPBD. In the DAE
-framework, there is more flexibility w.r.t.\ the integration scheme of choice}. Using $\matm{J} = \frac{\delta \vecm{\phi}}{\delta \vecm{x}}$, 
-where $\matm{J}$ is a $n_c \times n_d$ matrix and $n_c$ is the number of scalar constraints, this leads to the following constraint 
-formulations:
-
-\begin{align*}
-    \matm{J}\vecm{v} &= 0 \\
-    \matm{J}\vecm{a} &= \vecm{c}(\vecm{v})
-\end{align*}
-
-for some $\vecm{c}(\vecm{v})$. \textcolor{red}{If you check \cite{ascher1995}, see that $c(v)$ also depends on the positions $q$. That should 
-be indicated!} 
-Additionally, constraint forces \textcolor{red}{(use internal forces, more general and will be used throughout the thesis)} are 
-required to link the algebraic constraint equations with the ODE describing the motion of 
-the system. It can be shown that the constraint forces $\vecm{f_c}$ applied to the particles have to be in the following form to 
-avoid adding linear and angular momentum to the system \cite{baraff1996}:
-
-\begin{equation}\label{eq:constraint-forces}
-    \vecm{f_c} = \matm{J}^T \vecm{\lambda}
-\end{equation}
-
-where the $\lambda$ are the Lagrange multipliers of the constraints. With external forces $\vecm{f}_{\text{ext}}$, the DAE can now be 
-expressed as follows 
-\cite{ascher1995}:
-
-\[
-    \begin{pmatrix}
-        \matm{M} & -\matm{J}^T \\
-        \matm{J} & 0
-    \end{pmatrix}
-    \begin{pmatrix}
-        \vecm{a} \\
-        \vecm{\lambda}
-    \end{pmatrix}
-    =
-    \begin{pmatrix}
-        \vecm{f_e} \\
-        \vecm{c}(\vecm{v})
-    \end{pmatrix}
-\]
-
-Note that the lower block-row of the system drives towards accelerations that satisfy the constraints imposed by $\vecm{\phi(x)}$ (or, striclty 
-speaking, the differentiations thereof) exactly. This is indicated by the lower-right zero block in the system matrix in either formulation. 
-Thus, the system does not have a solution if constraints are contradictory. \textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ 
-also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}
-
-In \cite{ascher1995}, the DAE is approached by eliminating the $\lambda$ from the system entirely and constructing an ODE in terms of positions
-and velocities. In \cite{tournier2015}, the authors suggest applying implicit integration schemes to the system directly by constructing the 
-following Karush-Kuhn-Tucker (KKT) equation system:
-
-\[
-\begin{pmatrix}
-    \matm{M} & -\matm{J}^T \\
-    \matm{J} & 0
-\end{pmatrix}
-\begin{pmatrix}
-    \vecm{v}_{n+1} \\
-    \vecm{\mu}_{n+1}
-\end{pmatrix}
-=
-\begin{pmatrix}
-    \vecm{p} + h\vecm{f_e} \\
-    0
-\end{pmatrix}
-\]
-
-Here, the external forces $\vecm{f}_{\text{ext}}$ and the constraint gradients $\matm{J}$ are considered constant across the time step 
-and $\matm{J}(x_{n+1})$ 
-is not approximated using the Taylor expansion like it is in \cite{baraff1998}. If internal forces are taken into account, the upper-left 
-matrix $\matm{M}$ is replaced by the matrix $\matm{H}$ from Equation \ref{eq:system-H}.
-
-\textcolor{blue}{Reverse-engineering how the authors arrived at this system is quite enlightening. Start out from the equations of motion 
-\cite{ascher1995}
-    \begin{align*}
-        \dot{\vecm{v}} &= \matm{M}^{-1}(\vecm{f} - \matm{J}^T \vecm{\lambda})
-    \end{align*}
-    and perform implicit integration:
-    \begin{align*}
-        \vecm{v}_{n+1} &= \vecm{v}_n + h\matm{M}^{-1}(\vecm{f}_e(\vecm{X}_{n+1}) - \matm{J}^T(\vecm{x}_{n+1}) \vecm{\lambda}(\vecm{x}_{n+1})) \\
-        \matm{M}\vecm{v}_{n+1} &= \vecm{p} + h\vecm{f}_e(\vecm{x}_{n+1}) - h\matm{J}^T(\vecm{x}_{n+1})\vecm{\lambda}(\vecm{x}_{n+1}) \\
-        \matm{M}\vecm{v}_{n+1} + h \matm{J}^T(\vecm{x}_{n+1})\vecm{\lambda(\vecm{x}_{n+1})} &= \vecm{p} + h\vecm{f}_e(\vecm{x}_{n+1}) \\
-        \matm{M}\vecm{v}_{n+1} + \matm{J}^T(\vecm{x}_{n+1}) \vecm{\mu}(\vecm{x}_{n+1}) &= \vecm{p} + h\vecm{f}_e(\vecm{x}_{n+1})
-    \end{align*}
-}
-\textcolor{red}{If we assume that $\vecm{f_e}$ and the constraint gradients $\matm{J}$ are constant across the time step, we arrive at the 
-formulation from the paper. For the external forces, which are usually only comprised of gravitational forces, this is not a big 
-deal. For the constraint gradients, I am not sure what the ramifications are. In \cite{baraff1998}, the Taylor expansion is performed
-which requires the compution of second derivatives over the constraint functions. This is not happening here at all! Is this what 
-authors mean when they say that the constraints are effectively linearized during one solve, e.g. second page 
-of \cite{mueller2020}? Technically, speaking, even if the Taylor expansion is performed, the constraints are linearized, if I 
-understand correctly.}
-
-Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers to solve the system efficiently
-\cite{baraff1996}. Alternatively, the Schur complement can be constructed since the mass matrix in the upper left block is invertible.
-This leads to a smaller, albeit less sparse system \cite{tournier2015}:
-
-\[
-    \matm{J}\matm{M}^{-1}\matm{J}^T \vecm{\mu} = -\matm{J}\matm{M}^{-1}(\vecm{p}) + h \vecm{f}_e
-\]
-
-If the constraints are not redundant, $\matm{J}\matm{M}^{-1}\matm{J}^T$ is non-singular and symmetric positive definite \cite{baraff1996}, which are desirable
-properties for many solvers. According to \cite{servin2006}, the common approaches for linearizing the constraint forces and stabilizing 
-the constraints $\vecm{\phi(x)} = 0$ are notoriously unstable \textcolor{red}{(I need to look this up again. I do not understand what exactly 
-this means anymore)}. Additionally, instabilities in the traverse direction of the constraints occur when the tensile force with respect to 
-particle masses is large when using hard constraints \cite{tournier2015}.
-
-\subsection{Compliant Constraints}\label{ss:compliant-constraints}
-By combining ideas from hard constraints (see Sec.\ \ref{ss:hard-constraints}) and penalty forces (see Sec.\ \ref{ss:penalty-forces}), it is possible to 
-formulate the system matrix for hard constraints such that constraints do not have to be enforced exactly. In this approach, called compliant 
-constraints, the constraints are combined with Newton's ODE (see Eq.\ \ref{eq:equations-of-motion}) in a way that allows relaxation of constraints in a 
-physically meaningful manner \cite{servin2006}. The key insight is that constraints 
-of the form $C_j(\vecm{q})$ are the physical limit of strong forces from potentials of the form $\frac{k_j}{2}C_j(\vecm{q})^2$ with 
-high stiffness values $k_j$. It can be advantageous to express the system equations in terms of small inverse stiffnesses, also 
-called compliances, over working with large stiffness values directly. In particular, setting the compliance to zero often provides
-an elegant avenue for modelling infinite stiffness. 
-
-Let $\vecm{C} = [C_i, \ldots, C_r]^T$ be the vector function whose entries consist of the individual constraint 
-functions $C_j$. The potential energy for $\vecm{C}$ is then defined as:
-
-\begin{equation}\label{eq:compliant-potential}
-    \psi(\vecm{q}) = \frac{1}{2}\vecm{C}(\vecm{q})^T \matm{\alpha}^{-1}\vecm{C}(\vecm{q})
-\end{equation}
-
-\noindent where $\matm{\alpha}$ is a positive diagonal matrix given by $\text{diag}(1/k_1, \ldots, 1/k_r)$. The resulting forces are given by 
-
-\begin{equation}\label{eq:compliant-force}
-    \vecm{f_c} = \nabla \psi(\vecm{q}) = -\nabla \vecm{C}(\vecm{q})^T\matm{\alpha}^{-1} \vecm{C}(\vecm{q}).
-\end{equation}
-
-\noindent Next, artificial variables called Lagrange multipliers $\vecm{\lambda} = -\matm{\alpha}^{-1}\vecm{C}$ are introduced, yielding 
-
-\begin{equation}\label{eq:compliant-force-lambda}
-    \vecm{f}_c = \nabla \vecm{C}(\vecm{q})^T\vecm{\lambda}
-\end{equation}
-
-\noindent This leads to the following DAE:
-
-\begin{equation}\label{eq:compliant-dae}
-\begin{split}
-    \dot{\vecm{q}} &= \vecm{v} \\
-    \matm{M}\dot{\vecm{v}} &= \vecm{f}_{e} + \nabla \vecm{C}(\vecm{q})^T\vecm{\lambda} \\
-    \matm{\alpha}\vecm{\lambda}(\vecm{q}) &= -\vecm{C}(\vecm{q})
-\end{split}
-\end{equation}
-
-\noindent Note, that if $\matm{\alpha} = \matm{0}$, the formulation from hard constraints is recovered. 
-
-Usually, the DAE is solved by employing some numerical integration scheme (see Sec.\ \ref{ss:numerical-integration}) which eventually requires 
-the solution of a linear system of equations. Here, the goal is to arrive at a formulation where both the system matrix and the right 
-side of the resulting LSE do not contain references to the large stiffness values
-$\matm{\alpha}^{-1}$. This is achieved by treating $\vecm{\lambda} = -\matm{\alpha}^{-1}\vecm{C}(\vecm{q})$ as an unknown, 
-pulling it out of the system matrix and hiding all occurrences of the large $\matm{\alpha}^{-1}$ in there. To this end, it is often 
-necessary to make simplifying assumptions suitable for the problem at hand. As an example, if the DAE is solved via backward 
-differentiation, making the assumption that $\nabla \vecm{C}$ is constant across the time step allows pulling $\vecm{\lambda}$ out of 
-the system matrix entirely \cite{tournier2015}. The entries of the resulting system matrix and the corresponding right side
-are small, since they do not depend on the large stiffness terms. Backwards differentiation while assuming that $\nabla \vecm{C}$ is 
-constant across the time step yields
-
-\[
-    -\matm{\alpha\lambda}_{n+1} = \vecm{C}(\vecm{q}_n)\frac{\vecm{\mu}_{n+1}}{h} = -\vecm{C}(\vecm{q}_{n+1}) \approx -\vecm{C}(\vecm{q}_n) - h\nabla 
-    \vecm{C}(\vecm{q}_n) \vecm{v}_{n+1},
-\]
-
-\noindent leading to the following LSE \cite{tournier2015}
-
-\begin{equation}\label{eq:compliant-tournier}
-\begin{pmatrix}
-    \matm{M} & -\nabla \vecm{C}(\vecm{q}_n)^T \\
-    \nabla \vecm{C}(\vecm{q}_n) & \frac{1}{h^2}\matm{\alpha}
-\end{pmatrix}
-\begin{pmatrix}
-    \vecm{v}_{n+1} \\
-    \vecm{\mu}_{n+1}
-\end{pmatrix}
-=
-\begin{pmatrix}
-    \vecm{p} + h\vecm{f}_e \\
-    - \frac{1}{h}\vecm{C}(\vecm{q}_n)
-\end{pmatrix},
-\end{equation}
-
-\noindent where $\vecm{\mu} = h\vecm{\lambda}$.
-
-This formulation comes with a couple of advantages. Firstly, relaxing the constraints by keeping a finite but large penalty parameter helps
-counteracting numerical problems in the presence of over defined or degenerate constraints. In comparison to the system matrix that arises
-for hard constraints \textcolor{red}{(reference)}, the lower-right zero block is replaced by the compliance matrix $\matm{\alpha}$ in 
-Equation \ref{eq:compliant-tournier} which prevents the system matrix from becoming singular in the presence of redundant constraints. Thus, the 
-compliant 
-constraint formulation can be interpreted as a regularization of the hard constraint formulation in (\textcolor{red}{(reference to section)}) 
-\cite{tournier2015}. Secondly, setting $\matm{\alpha} = \matm{0}$ allows modelling infinite stiffness since $\matm{\alpha}^{-1}$ does not occur in
-Equation \ref{eq:compliant-tournier}. Additionally, Tournier et 
-al.\ \cite{tournier2015} claim that, in comparison to penalty forces where high stiffness makes the system matrix in 
-\textcolor{red}{(reference equation)} almost singular, decreasing the compliance terms in the lower-right block of the system matrix 
-in Equation \ref{eq:compliant-tournier} makes working with high stiffness numerically tractable. However, close inspection of the system matrix of 
-Equation \ref{eq:compliant-tournier} shows that it quickly becomes singular for high stiffnesses as well when the lower-right block containing the 
-corresponding compliances approaches zero. 
-
-\textcolor{red}{Fabian: Does it? Is it singular if a = 0? Isn't it possibly non-singular depending on grad C? Or am I missing something? 
-Maybe explain more "your close inspection".}
-
 \section{Position Based Dynamics}\label{s:pbd}
 As discussed in Section \ref{s:equations-of-motion}, classical approaches for dynamics simulation are force-based. Forces are accumulated and 
 resulting accelerations are computed based on Newton's second law. These accelerations are then integrated over time via numerical integration. 
@@ -1293,7 +568,7 @@ an equivalent non-negative energy potential $\psi^\prime$ can be constructed by 
     \psi^\prime(\vecm{q}) = \psi(\vecm{q}) + \vert b \vert.
 \end{equation}
 
-\noindent Note that this strategy does not work if $\psi$ does not have a lower bound. For example, the neohookean energy density from 
+\noindent Note that this strategy does not work if $\psi$ does not have a lower bound. For example, the Neohookean energy density from 
 Equation \ref{eq:neohookean-material-model} is unbounded from below due to the volume-preserving log terms. Consequently, it is imcompatible with the XPBD 
 solver.
 
@@ -1382,8 +657,8 @@ potential $\psi_j$ satisfies
 
 \noindent Here, $V_j$ is the volume of the undeformed tetrahedron, $\Psi_{\text{mat}}$ is the energy density of the material 
 model and $\matm{F}_j$ is the deformation gradient of the deformed tetrahedron. As discussed in Section \ref{ss:xpbd-properties}, this 
-cannot be achieved for the classical neohookean material model in Equation \ref{eq:neohookean-material-model}. In the following, we show 
-how to implement the strain material model (see Eq.\ \ref{eq:strain-material-model}) and the simplified neohookean material model 
+cannot be achieved for the classical Neohookean material model in Equation \ref{eq:neohookean-material-model}. In the following, we show 
+how to implement the strain material model (see Eq.\ \ref{eq:strain-material-model}) and the simplified Neohookean material model 
 (see Eq.\ \ref{eq:smith-neohookean-material-model}) in XPBD.
 
 \paragraph{Strain Material Model.}
@@ -1399,7 +674,7 @@ are the singular values of $\matm{F}_j$. Note that $k$ only appears in the compl
 $C_j$. Thus, the behavior of PBD can be recovered by setting $\alpha_j = 0$.
 
 \paragraph{Simplified Neohookean Material Model.}
-For the simplified neohookean material model in Equation \ref{eq:smith-neohookean-material-model}, constructing suitable constraints 
+For the simplified Neohookean material model in Equation \ref{eq:smith-neohookean-material-model}, constructing suitable constraints 
 $C_j$ and compliances $\alpha_j$ is more complicated. This is due to the fact that $\Psi_{\text{Smith}}$ can take on 
 negative values. First, we observe that $\Psi_{\text{Smith}}$ is bounded from below by rearranging terms as follows
 
@@ -1439,7 +714,7 @@ we set
     + \frac{\lambda}{x}\left(\text{det}(\matm{F}_j) - \left(1 + \frac{\mu}{\lambda}\right)\right)^2}.
 \]
 
-\noindent We refer to this type of constraint as the combined neohookean constraint. Note that $x$ does not only appear in the 
+\noindent We refer to this type of constraint as the combined Neohookean constraint. Note that $x$ does not only appear in the 
 compliance $\alpha_j$, but in the constraint $C_j$ as well. Thus, this formulation can only be applied directly if $\alpha_j \neq 0$. 
 Otherwise, we need to adjust $C_j$ in order to maintain consistency by either computing $C^\mu_j \coloneqq \lim_{\mu\to\infty}C_j$ 
 or $C^\lambda_j \coloneqq \lim_{\lambda\to\infty}C_j$. If $x = \mu$, then $C^\mu_j$ is undefined since $\lim_{\mu\to\infty}$ diverges. 
@@ -1453,7 +728,7 @@ However, if $x = \lambda$, it is easy to see that $C^\lambda_j$ must be
 \noindent Note that $C^\lambda_j$ only enforces that the volume of its tetrahedron is preserved. Still, it does not prevent stretching the 
 tetrahdron in one direction if compressing it in another direction balances out the change in volume. 
 
-Macklin et al.\ \cite{macklin2021} suggest a different way of implementing the simplified neohookean material model with XPBD. The trick is 
+Macklin et al.\ \cite{macklin2021} suggest a different way of implementing the simplified Neohookean material model with XPBD. The trick is 
 to introduce not one, but two constraints for each tetrahedral element. The authors construct separate constraints $C^D_j$ with compliance 
 $\alpha^D_j$ and $C^H_j$ with compliance $\alpha^H_j$ for the deviatoric and hydrostatic terms of $\Psi^\prime_{\text{Smith}}$, respectively, 
 given by 
@@ -1482,14 +757,14 @@ appears in both $\alpha^H_j = 0$ and $C^H_j$, it is necessary to adjust $C^H_j$ 
     \lim_{\lambda\to\infty}C^H_j(\vecm{q}) = \text{det}(\matm{F}_j) - 1,
 \]
 
-\noindent which is the same as what was observed for combined neohookean constraints in Equation \ref{eq:combined-neohookean-0-compliance}.
+\noindent which is the same as what was observed for combined Neohookean constraints in Equation \ref{eq:combined-neohookean-0-compliance}.
 However, this time, there is an independent deviatoric constraint $C^D_j$ that additionally drives the tetrahedron towards configurations 
 where the principal stretches of the deformation gradient $\matm{F}_j$ are not unevenly distributed. Note that setting $\alpha^D_j = 0$ is 
 impossible again, since $\lim_{\mu\to\infty}C^H_j$ diverges.
 
 On the other hand, constructing separate constraints for the deviatoric and hydrostatic terms also introduces problems. In 
-Section \ref{ss:material-models},
-we discussed that the hydrostatic term needs to be corrected to ensure the rest stability of the simplified neohookean material model. The 
+Section \ref{ss:simplified-neohookean-material}, we discussed that the hydrostatic term needs to be corrected to ensure the rest stability of the simplified 
+Neohookean material model. The 
 correction is chosen such that tetrahedral elements are artificially inflated by exactly the right amount to make up for the deflation caused 
 by the deviatoric term. The derivation of the correction term relies on the assumption that both the deviatoric and the hydrostatic term act 
 on the same positions simultaneously \cite{smith2018}. However, due to the nature of the Gauss-Seidel-type solver used in XPBD, the constraints 
@@ -1530,8 +805,9 @@ which is restated here again for the sake of convenience
 \mathbb{R}^{m \times 3}$ and $\matm{M} \in \mathbb{R}^{m \times m}$, where $m \in \mathbb{N}$ is the number of particles in the simulated
 body. In this section, we simply write $\matm{q}$ instead of $\matm{q}_{n+1}$ to improve legibility. The solution of this unconstrained 
 optimization problem corresponds to the particle positions of the simulated body at the next time
-step (see Sec.\ \ref{ss:numerical-integration}) and can be determined using one of the line search algorithms introduced in Section \ref{ss:line-search}.
-Naive application of line search methods can often lead to unfeasibly high runtimes for real-time applications. The core idea of PD
+step (see Sec.\ \ref{ss:numerical-integration}) and can be determined using general purpose algorithms for unconstrained optimization 
+such as Newton's method. Naive application of line search methods can often lead to unfeasibly high runtimes for real-time applications. 
+The core idea of PD
 is to speed up the optimization by restricting the energy potentials $\psi_j$ to a structure that allows for efficient minimization.
 This allows substituting the line search methods -- which are designed for the minimization of general nonlinear objective functions 
 -- with a specialized solver that exploits the structure of PD energy potentials. 
@@ -1771,12 +1047,18 @@ $x$-, $y$- and $z$-coordinates. This detail demonstrates that restricting to PD 
 Many arbitrary nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
 in terms of PD elastic potentials. Further, since PD energy potentials $\psi_j$ are defined in terms of a squared distance function $\d_j$, the 
 resulting forces are always proportional to the distance from the constraint manifold $\cman{C}_j$ \cite{overby2017}. Many classical energies 
-like the Neo-Hookean and St.\ Venant-Kirchhoff energies do not fit into the PD framework \cite{liu2017}. Additionally, there is no obvious way to 
-implement hard constraints since energy potentials with infinite stiffness cannot be formulated in terms of PD energy potentials. Making stiffness arbitrarily 
-large allows approximating hard constraints. However, this comes with adverse effects to the numerical properties of the system matrix (see 
-Section \ref{ss:penalty-forces}). On the other hand, the authors show that a variety of soft constraints, including strain constraints, bending constraints, 
-collisions and positional constraints can be expressed in terms of PD potentials and handled by the PD solver in a unified manner \cite{bouaziz2014}. 
-Where applicable, the constraints are derived from continuous energies, leaving them reasonably independent to the underlying meshing.
+like the Neohookean and St.\ Venant-Kirchhoff energies do not fit into the PD framework \cite{liu2017}.  On the other hand, the authors show that 
+a variety of constraints, including strain constraints, bending constraints, collisions and position constraints can be expressed in terms of PD 
+potentials and handled by the PD solver in a unified manner \cite{bouaziz2014}. Where applicable, the constraints are derived from continuous 
+energies, leaving them reasonably independent to the underlying meshing.
+
+\paragraph{Hard Constraints.}
+There is no obvious way to implement hard constraints with the PD solver since energy potentials with infinite stiffness cannot be formulated in terms of PD energy 
+potentials. Making stiffness arbitrarily large allows approximating hard constraints. However, this comes with adverse effects to the numerical properties of 
+the system matrix (see Section \ref{ss:penalty-forces}). Using position constraints with arbitrarily large stiffness values to move particles 
+away from their inertial positions is particular challenging in light of the fact that the position constraints need to overcome both competing constraints 
+and the time step dependent inertial penalty in Equation \ref{eq:variational-implicit}. This is particularly relevant for small time step sizes where the 
+inertial penalty is increased dramatically.
 
 \paragraph{Convergence.}
 While a simplified minimization problem is constructed by restricting to PD energy potentials, the solver attempts to find the 
@@ -1794,7 +1076,7 @@ to be refactorized. This can slow down the PD solver quite significantly and can
 context of real-time simulations.
 
 \subsection{Simulating Deformable Bodies using PD}\label{ss:pd-deformable-bodies}
-As discussed in Section \ref{ss:pd-properties}, classical material models such as the St.\ Venant-Kirchhoff and neohookean model cannot be expressed in 
+As discussed in Section \ref{ss:pd-properties}, classical material models such as the St.\ Venant-Kirchhoff and Neohookean model cannot be expressed in 
 terms of PD energy potentials and are incompatible with the PD solver as a result. However, we demonstrate how the strain material model in 
 Equation \ref{eq:strain-material-model} can be used with PD. For each tetrahedron in the tetrahedral mesh of the simulated body, we need to 
 construct a PD energy potential $\psi_i$ such that 
@@ -1876,8 +1158,8 @@ guaranteed to reduce the objective function until a local minimum is achieved. A
 is called the Newton direction and $\alpha_k \in \mathbb{R}^+$ is called the step size. If $\nabla^2 g(\matm{q}_k)$ is invertible and $\alpha_k$ is 
 sufficiently small, the Newton update is guaranteed to decrease the objective function. However, to ensure that each Newton update makes sufficient progress 
 towards a local minimum, it is desirable to keep $\alpha_k$ as large as possible. Newton's method exhibits favorable convergence properties, but the computation 
-of the inverse Hessian matrix $\nabla^2 g(\matm{q}_k)^{-1}$ is often prohibitively expensive. This gives rise to the so-called Quasi-Newton methods. There, the 
-Hessian matrix $\nabla^2 g(\matm{q}_k)$ is approximated by some matrix $\matm{B}_k$ that is faster to compute, but still yields suitable search directions 
+and storage of the inverse Hessian matrix $\nabla^2 g(\matm{q}_k)^{-1}$ is often prohibitively expensive. This gives rise to the so-called Quasi-Newton methods. 
+There, the Hessian matrix $\nabla^2 g(\matm{q}_k)$ is approximated by some matrix $\matm{B}_k$ that is faster to compute, but still yields suitable search directions 
 $\matm{r}_k$. The update formula for Quasi-Newton methods is given by
 
 \begin{equation}\label{eq:pd-qn-update}
@@ -1934,7 +1216,7 @@ bring performance improvements to the original PD solver and to design a natural
 into the original PD framework. Both are discussed in Section \ref{s:qn-rts}.
 
 \section{Quasi-Newton Methods for Physical Simulations}\label{s:qn-rts}
-In Section \ref{ss:pd-quasi-newton}, we discussed that the PD solver for the minimization problem Equation \ref{eq:pd-minimization}
+In Section \ref{ss:pd-quasi-newton}, we discussed that the PD solver for the minimization problem in Equation \ref{eq:pd-minimization}
 can be interpreted as a special case of a Quasi-Newton method with constant Hessian approximation and step size $\alpha = 1$
 applied to the corresponding minimization problem Equation \ref{eq:pd-minimization-q}. The formulation that is suitable for Quasi-Newton
 methods
@@ -1957,27 +1239,30 @@ update. This is in contrast to Newton's method, where the curvature of the objec
 matrix $\nabla^2 g(\matm{q}_k)$ and is used to find an effective search direction. Most Quasi-Newton methods aim at computing Hessian 
 approximations $\matm{B}_k$ that are as close to $\nabla^2 g(\matm{q}_k)$ as possible and capture the local curvature of the objective function 
 reasonably well as a result. The L-BFGS method is a Quasi-Newton method that achieves this by computing a Hessian approximation $\matm{B}_k$ 
-from some initial Hessian approximation $\matm{B}_0$ and the previous $l \in \mathbb{N}^+$ iterates $\matm{q}_{k-1}, \ldots, \matm{q}_{k-l}$ 
+from some initial Hessian approximation $\matm{B}_0$, the previous $l \in \mathbb{N}^+$ iterates $\matm{q}_{k-1}, \ldots, \matm{q}_{k-l}$ 
 and their gradients $\nabla g(\matm{q}_{k-1}), \ldots, \nabla g(\matm{q}_{k-l})$ \cite{nocedal2006}. The choice of the initial Hessian 
 approximation $\matm{B}_0$ has a strong impact on the performance of the L-BFGS method. Usually, a scaled version of the identity matrix is 
 used. Liu et al.\ \cite{liu2017} suggest that setting $\matm{B}_0 = \matm{S}$ combines the strengths of the PD solver and L-BFGS method 
 and gives rise to a powerful approach to implicit Euler integration when applied to the optimization problem in Equation \ref{eq:pd-minimization-q2}.
-In the rest of this thesis, we refer to the resulting solver as the QN solver. It is discussed in detail in Section \re{ss:qn-pd}.
+In the rest of this thesis, we refer to the resulting solver as the QN solver. It is discussed in detail in Section \ref{ss:qn-pd}.
 
 Since Quasi-Newton methods can be applied to the variational form of implicit Euler integration with general conservative energy potentials 
 (see Eq.\ \ref{eq:variational-implicit}), this suggests a natural extension of the approach mentioned above to energies that do not fit into 
 the original PD framework. However, if general conservative energy potentials are used, it is not obvious how to construct the initial Hessian 
 approximation $\matm{S}$ anymore. Liu et al.\ suggest a way to emulate the global system matrix $\matm{S}$ for energies that can be written in
-the Valanis-Landel form, which includes Neo-Hookean and St.\ Venant-Kirchhoff energies. This extension is covered in 
-Section \ref{ss:qn-valanis-landel}. 
+the Valanis-Landel form, which includes Neohookean and St.\ Venant-Kirchhoff energies. This extension is covered in Section 
+\ref{ss:qn-valanis-landel}. Finally, the properties of the QN solver are discussed in Section \ref{ss:properties-qn}.
+
 
 \subsection{Quasi-Newton Methods for PD Energy Potentials}\label{ss:qn-pd}
-An overview over the L-BFGS method with initial Hessian approximation $\matm{B}_0 = \matm{S}$ is given in \autoref{alg:pd-lbfgs}.
-
-Due to its favorable space complexity over the BFGS method for large-scale problems (see Sec.\ \ref{sss:limited-memory-quasi-newton}), 
-Liu et al.\ focus on the L-BFGS method with $\matm{B}_0 = \matm{S}$ \cite{liu2017}. This leads to the algorithm that is laid out in
-Algorithm \ref{alg:pd-lbfgs}. The occurrences of $f$ in the two-loop recursion (\cref{alg:lbfgs-recursion}) need to be replaced by $g$ 
-in the appropriate places. Again, the details of maintaining the history of $\matm{s}, \matm{y}, \rho$ are omitted for the sake of clarity.
+An overview over the L-BFGS method with initial Hessian approximation $\matm{B}_0 = \matm{S}$ applied to the optimization problem in Equation 
+\ref{eq:pd-minimization-q2} is given in Algorithm \ref{alg:pd-lbfgs}. For more details on the L-BFGS method, we again refer to the book 
+on numerical optimization by Nocedal and Wright \cite{nocedal2006}. To start off the L-BFGS solver, an initial guess $\matm{q}_0$ for a local 
+minimizer of the objective function in Equation \ref{eq:pd-minimization-q2} is required. In the QN solver, the initial guess is set to the 
+inertial positions, i.e.\ $\matm{q}_0 = \tilde{\matm{q}}$ (lines 3-4). For each iteration $k$, the search direction $\matm{p}_k = 
+-\matm{B}_k^{-1}\nabla g(\matm{q}_k)$ is computed in lines 6-7. In lines 8-12, an appropriate step size $\alpha_k$ for the current search 
+direction $\matm{p}_k$ is determined. Given the step size $\alpha_k$ and the search direction $\matm{p}_k$, the next iterate 
+is computed in line 12. Finally, the positions and the velocities for the next time step are updated after the last iteration in line 15.
 
 \begin{algorithm}
 \caption{L-BFGS method for PD energies}\label{alg:pd-lbfgs}
@@ -1987,7 +1272,7 @@ in the appropriate places. Again, the details of maintaining the history of $\ma
 \State $\tilde{\matm{q}} = \matm{q}_n + h\matm{v}_n + h^2\matm{M}^{-1}\matm{f}_{\text{ext}}$
 \State $\matm{q}_k = \tilde{\matm{q}}$
 \For{all iterations}
-\State $\matm{s_k} = \matm{q}_k - \matm{q}_{k-1}, \matm{y}_k = \nabla g(\matm{q}_k) - \nabla g(\matm{q}_{k-1}), \rho_k = 1 / (\matm{s}^T_k \matm{y}_k)$
+\State $\matm{s_k} = \matm{q}_k - \matm{q}_{k-1}, \matm{y}_k = \nabla g(\matm{q}_k) - \nabla g(\matm{q}_{k-1}), \rho_k = 1 / \text{tr}(\matm{s}^T_k \matm{y}_k)$
 \State $\matm{p}_k = \text{\textsc{twoLoopRecursion}}(\matm{S}, \matm{q}_k, \matm{s}, \matm{y}, \rho, m, k)$   (\cref{alg:lbfgs-recursion})
 \State $\alpha_k = 1$
 \If{$\alpha_k$ does not satisfy the strong Wolfe conditions}
@@ -2001,55 +1286,87 @@ in the appropriate places. Again, the details of maintaining the history of $\ma
 \end{algorithmic}
 \end{algorithm}
 
-Note that step-size $\alpha_k = 1$ is 
-used during each iteration of the Quasi-Newton version of the PD solver (\cref{alg:pd-qn}).
-While this works well for the constant Hessian approximation $\matm{S}$, it is not viable in L-BFGS. The step-size $\alpha_k = 1$
-is not guaranteed to satisfy the strong Wolfe conditions (see Eq.\ \ref{eq:wolfe1}, Eq.\ \ref{eq:wolfe2}) if the L-BFGS update is used. However,
-the strong Wolfe conditions are required to ensure that the curvature condition (see Eq.\ \ref{eq:curvature-condition}) is satisfied 
-and $\matm{H}_k$ stays symmetric positive definite. 
+The search direction $\matm{p}_k$ is computed using the two-loop recursion shown in Algorithm \ref{alg:lbfgs-recursion} \cite{nocedal2006, liu2017}.
+Here, the Hessian approximation used in the L-BFGS method $\matm{B}_k$ does not need to be stored or computed explicitly. Instead, the 
+search direction $\matm{p}_k$ can be calculated directly at the cost of $\mathcal{O}(l)$ inner products and vector additions (lines 3-5 and 8-10) 
+and solving an LSE with constant system matrix $\matm{S}$ (line 7). The quantities $\matm{s}_k, \matm{y}_k$ and $\rho_k$ are computed from the 
+positions and gradients from previous iterations and are stored over a window of $l$ iterations (see Alg.\ \ref{alg:pd-lbfgs}, line 6). This 
+enables capturing curvature information during the computation of the search direction $\matm{p}_k$ in the two-loop recursion. 
 
-While Liu et al.\ \cite{liu2017} show that always picking $\alpha_k = 1$ can lead to
-unstable simulations, they report that using backtracking (\cref{alg:backtracking}) yields satisfactory results, even though 
-the resulting step-size is not guaranteed to satisfy the second Wolfe condition. This is in contrast to Nocedal's and Wright's
-recommendation \cite{nocedal2006} to avoid backtracking in the context of  Quasi-Newton methods. One possible explanation why 
-backtracking seems to suffice could be that the inverse 
-Hessian approximations $\matm{H}_k$ that arise from the L-BFGS method with initial matrix $\matm{B}_0 = \matm{S}$ are better than
-Hessian approximations that arise when traditional initial matrices are used and make up for the inaccuracy in the step length
-algorithm.
+\begin{algorithm}
+\caption{L-BFGS two-loop Recursion}\label{alg:lbfgs-recursion}
+\begin{algorithmic}[1]
+\Procedure{twoLoopRecursion}{$\matm{B}_0$, $\matm{q}_k$, $\matm{s}$, $\matm{y}$, $\rho$, $l$, $k$}
+\State $l^* = \min(l, k), \matm{t} = -\nabla g(\matm{q}_k)$
+\For{$i = k-1, k-2, \ldots, k-l^*$}
+\State $\alpha_i = \rho_i \text{tr}(\matm{s}^T_i \matm{t})$
+\State $\matm{t} = \matm{t} - \alpha_i \matm{y}_i$
+\EndFor
+\State solve $\matm{B}_0 \matm{r} = \matm{t}$
+\For{$i = k-l^*, k-l^*+1, \ldots, k-1$}
+\State $\beta = \rho_i \text{tr}(\matm{y}^T_i \matm{r})$
+\State $\matm{r} = \matm{r} + \matm{s}_i(\alpha_i - \beta)$
+\EndFor
+\State \textbf{return with result } -$\matm{B}^{-1}_k \nabla g(\matm{q}_k) = \matm{r}$.
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+Step sizes $\alpha_k$ for the L-BFGS method are usually chosen such that they satisfy the Wolfe conditions, which ensures that sufficient progress 
+towards a local minimizer is made during each L-BFGS iteration (see \cite{nocedal2006}). Finding such step sizes typically requires the execution of 
+so-called step size selection algorithms. Instead, Liu et al.\ \cite{liu2017} opt for a simpler strategy called backtracking (see Alg.\ 
+\ref{alg:backtracking}). There, the natural step size associated with Newton's method $\alpha_k = 1$ is iteratively reduced by a factor of $\beta$ 
+until the first Wolfe condition is satisfied (lines 4-5). This is guaranteed to happen if $\matm{p}_k$ is a descent 
+direction and if $\alpha_k$ is sufficiently small. In practice, backtracking is stopped after $\alpha_k < t$ for some user defined threshold $t$ to 
+prevent pathologically small step sizes (line 4).
+
+\begin{algorithm}
+\caption{Backtracking Line Search}\label{alg:backtracking}
+\begin{algorithmic}[1]
+\State \textbf{require } $\tilde{\alpha} > 0, c_1 \in (0, 1), \beta \in (0, 1), t \in (0, \tilde{\alpha})$
+\Procedure{backtrack}{$\matm{q}_k$, $\matm{p}_k$, $\tilde{\alpha}$, $\beta$, $t$}
+\State $\alpha = \tilde{\alpha}$
+\While{$g(\matm{q}_k + \alpha \matm{p}_k) > g(\matm{q}_k) + c_1 \alpha \nabla g(\matm{q}_k)^T \matm{p}_k$ and $\alpha > t$}
+\State $\alpha = \beta \alpha$
+\EndWhile
+\State \textbf{return with } $\alpha_k = \alpha$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
 
 \subsection{Quasi-Newton Methods for Valanis-Landel Energies}\label{ss:qn-valanis-landel}
-To achieve satisfactory performance when applying the L-BFGS method to the general form of the implicit Euler integration 
+To achieve satisfactory performance when applying the L-BFGS method to the variational form of implicit Euler integration 
 (see Eq.\ \ref{eq:variational-implicit}) without the need to restrict energy potentials to the PD framework (see Eq.\ \ref{eq:pd-potentials}), a suitable
 candidate for the initial Hessian approximation $\matm{B}_0$ or its inverse $\matm{H}_0$ needs to be found. The choice $\matm{B}_0 = 
 \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{G}_j^T \matm{G}_j$ from Algorithm \ref{alg:pd-lbfgs} cannot be applied to the general setting 
 without modification as the matrices $\matm{G}_j$ are taken directly from the definitions of the individual PD energy potentials.
 
-We focus on the setting of 3-manifold simplicial complexes where energy potentials are defined for each tetrahedron and the
-energy of the entire body is the sum of the individual tetrahedral energies (see Sec.\ \ref{ss:deformable-bodies}).
-As shown in Section \ref{ss:pd-deformable-bodies}, the strain energy of a single tetrahedron can be emulated with special PD strain 
-potentials (see Eq.\ \ref{eq:pd-strain}). Here $\matm{G}_j = \matm{A}_j$, where $\matm{A}_j$ is the linear operator that maps $\matm{q}$ 
+We focus on the setting of tetrahedral meshes with energy potentials that are derived from one of the material models in Section \ref{ss:material-models} 
+for each tetrahedron. Here, the energy of the entire body is the sum of the individual tetrahedral energies (see Sec.\ \ref{ss:deformable-bodies}).
+As shown in Section \ref{ss:pd-deformable-bodies}, the energy of a single tetrahedron can be emulated using PD potentials when the strain material model is 
+used (see Eq.\ \ref{eq:pd-strain}). Here, $\matm{G}_j = \matm{A}_j$, where $\matm{A}_j$ is the linear operator that maps $\matm{q}$ 
 to the tranpose of the deformation gradient $\matm{F}^T_j$, $\cman{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
 volume of the undeformed tetrahedron and $k_j$ is a user-defined stiffness value. 
 Liu et al.\ suggest approximating more general tetrahedral energies with PD strain potentials and using the global system
 matrix $\matm{S}$ that arises as the initial Hessian approximation $\matm{B}_0$ given by
 
 \begin{equation}\label{eq:global-matrix-strain}
-    \matm{B}_0 = \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{M}_j^T \matm{A}_j.
+    \matm{B}_0 = \matm{S} = \frac{1}{h^2}\matm{M} + \sum_j w_j \matm{A}_j^T \matm{A}_j.
 \end{equation}
 
 Instead of using user-defined stiffness values $k_j$, a procedure for setting $k_j$ from the original, more general energy
 potential is required. The discussion is restricted to isotropic and world-space rotation invariant material models that 
 can be defined in terms of the singular 
 values $\sigma_1, \sigma_2, \sigma_3$ of $\matm{F_j}$ called the principal stretches \cite{sifakis2012}. Liu et al.\ 
-\cite{liu2017} present a strategy for the subclass of these material models that can be written in Valanis-Landel form
+\cite{liu2017} present a strategy for a subclass of these material models that can be written in Valanis-Landel form
 
 \begin{equation}\label{eq:valanis-landel}
     \Psi(\sigma_1, \sigma_2, \sigma_3) = a(\sigma_1) + a(\sigma_2) + a(\sigma_3) + b(\sigma_1 \sigma_2) 
     + b(\sigma_2 \sigma_3) + b(\sigma_1 \sigma_3)
 \end{equation}
 
-\noindent with $a, b, c : \mathbb{R} \to \mathbb{R}$. Many popular material models including St.\ Venant-Kirchhoff and 
-Neo-Hookean can be expressed in this form.
+\noindent with $a, b, c : \mathbb{R} \to \mathbb{R}$. Many popular material models including the St.\ Venant-Kirchhoff model and 
+the Neohookean model can be expressed in this form.
 
 The approach uses the insight that for linear materials that follow Hooke's law, the stiffness $k_j$ is given as the second 
 derivative of the energy potential. Computing first and second partial derivatives in the rest configuration $\sigma_1, 
@@ -2062,8 +1379,8 @@ derivative of the energy potential. Computing first and second partial derivativ
     &= a^{\prime\prime}(\sigma_i) + 2b^{\prime\prime}(\sigma_i) + c^{\prime\prime}(\sigma_i) \label{eq:valandis-landel-second},
 \end{align}
 
-\noindent where $i, j, k \in [1, 3], i \neq j \neq k$. Thus, first and second partial derivatives at the rest configuration are the same
-for each of the principal stretches, allowing for convenient representation of stiffness in a single scalar value. However,
+\noindent where $i, j, k \in [1, 3], i \neq j \neq k$. Thus, the first and second partial derivatives at the rest configuration are the same
+for each of the principal stretches, allowing for convenient representation of the material stiffness in a single scalar value. However,
 simply picking
 
 \[
@@ -2073,7 +1390,7 @@ simply picking
 
 \noindent runs into issues as the expression often evaluates to zero, even in common non-pathological cases. This issue arises because
 the second derivative in Equation \ref{eq:valandis-landel-second} is not representative of the stiffness behavior of the material in the 
-entire range of principal stretches $[\sigma_{\text{min}}, \sigma_{\text{max}}]$ that is expected to be encountered during simulation.
+entire range of principal stretches $[\sigma_{\text{min}}, \sigma_{\text{max}}]$ that is expected to be encountered during the simulation.
 
 To alleviate this, Liu et al.\ \cite{liu2017} propose approximating the rate of change of the first derivative Equation \ref{eq:valandis-landel-first}
 by computing the slope of its best linear approximation over the interval $[\sigma_{\text{min}}, \sigma_{\text{max}}]$. Formally, $k$ is 
@@ -2084,29 +1401,62 @@ defined by
     c^{\prime}(\sigma))^2 d\sigma
 \end{equation}
 
-\noindent Using these stiffness values in Equation \ref{eq:global-matrix-strain} yields a suitable initial Hessian approximation $\B_0 = S$ for
+\noindent Using these stiffness values in Equation \ref{eq:global-matrix-strain} yields a suitable initial Hessian approximation $\matm{B}_0 = S$ for
 the minimization of the variational form of the implicit Euler integration with Valanis-Landel materials via Algorithm \ref{alg:pd-lbfgs}. According
 to Liu et al.\ Algorithm \ref{alg:pd-lbfgs} is insensitive to the size of the interval $[\sigma_{\text{min}}, \sigma_{\text{max}}]$. It is important
 to note that while PD strain energies are used to approximate the original energy potentials when constructing $\matm{B}_0$, the function
 evaluations $g(\matm{q}_k)$ and gradients $\nabla g(\matm{q}_k)$ are computed from the original potential energies in Algorithm \ref{alg:pd-lbfgs}.
 
 \subsection{Properties of Quasi-Newton Methods for Physical Simulations}\label{ss:properties-qn}
-\begin{itemize}
-    \item Stability, some nice properties of PD are lost due to the L-BFGS update and step length algorithm / backtracking
-    \item Efficient structure ($\mathbb{R}^{m \times m}$ vs $\mathbb{R}^{3m \times 3m}$) that allows solving in parallel.
-    \item Gradients and function evaluations can be computed in parallel
-    \item Generally very few line searches required, but Armijo safeguard is essential
-    \item Considerations about window size
-    \item Convergence properties compared to regular PD, Newton's method, L-BFGS with classical initializations
-    \item Complexity compared to Newton's method (no second derivatives required)
-    \item Backtracking vs proper step length algorithm 
-    \item Comparison to QN methods with iterative solvers
-    \item Collisions
-    \item Numerical Damping
-    \item Issue: In Hooke's law, the derivatives are in terms of positions, but in our derivations the derivatives are in terms of the 
-        singular values!
-    \item How to write Neo-Hookean in Valanis-Landel form?
-\end{itemize}
+The QN solver described in Sections \ref{ss:qn-pd} and \ref{ss:qn-valanis-landel} emerges from combining ideas from PD and the L-BFGS method for 
+unconstrained optimization. As a result, the QN solver has superior convergence properties and is more general than the PD solver. We discuss the 
+properties of the QN solver below.
+
+\paragraph{Relation to the PD Solver.}
+As described in Section \ref{ss:pd-quasi-newton}, the PD solver can be interpreted as a Quasi-Newton method with constant step size and Hessian approximation 
+applied to the optimization problem in Equation \ref{eq:pd-minimization-q2}. The QN solver enhances the PD solver by applying L-BFGS updates that capture local
+curvature information to the constant Hessian approximation $\matm{S}$ and performing backtracking to find a step size that is guaranteed to at least satisfy 
+the first Wolfe condition. Experimental data provided by Liu et al.\ \cite{liu2017} suggests that this leads to 
+significantly improved convergence properties. This is in line with the fact that the convergence properties of Quasi-Newton methods benefit from Hessian 
+approximations $\matm{B}_k$ that are as close as possible to the true Hessian matrix $\nabla^2 g(\matm{q}_k)$ \cite{nocedal2006}. As described in Section 
+\ref{ss:qn-valanis-landel}, the QN solver can be applied to material models that can be written in the Valanis-Landel form. Thus, the QN solver is 
+more general than the PD solver.
+
+\paragraph{Step Size.}
+In our discussion of PD (see Sec.\ \ref{ss:pd-properties}), we pointed out that PD iterations are guaranteed to weakly decrease the objective function of 
+the variational form of implicit Euler integration. As such, using a constant step size of $\alpha_k = 1$ is a viable choice when the constant Hessian 
+approximation $\matm{B}_k = \matm{S}$ is chosen. In contrast, it is well known that search directions $\matm{p}_k$ produced by the L-BFGS method may not 
+be directions of descent if the step sizes $\alpha_k$ are not guaranteed to satisfy the Wolfe conditions \cite{nocedal2006}. In such settings, convergence 
+of the L-BFGS method 
+is not guaranteed. Since the step size $\alpha_k$ determined by backtracking (see Alg.\ \ref{alg:pd-lbfgs}) may not satisfy the second Wolfe 
+condition, this applies for the QN solver as well. However, Liu et al.\ \cite{liu2017} report that skipping more complicated step size selection algorithms 
+in favor of simple backtracking works well in practice. In contrast, leaving out backtracking all together and simply using $\alpha_k=1$ produces poor 
+results according to the authors. Thus, it is essential that step sizes at the very least satisfy the first Wolfe condition.
+
+\paragraph{Efficient Implementation.}
+The QN solver lends itself to efficient implementation. Firstly, the contributions of each tetrahedral element to the evaluations of the objective function $g$ 
+and its gradient $\nabla g$ can be computed independently and are easily parallelizable as a result. Secondly, the two-loop recursion (see Alg.\ 
+\ref{alg:lbfgs-recursion}) can be performed at the cost of $\mathcal{O}(l)$ inner products and vector additions (lines 3-5 and 8-10) and solving an LSE with 
+constant system matrix $\matm{S}$ (line 7). The total computational cost incurred by the inner products 
+and vector additions is only $\mathcal{O}(lm)$, where $m$ is the number of particles. Solving the LSE can be sped up by precomputing and storing a matrix 
+factorization of $\matm{S}$. Lastly, the LSE can be solved independently for $x$-, $y$- and $z$- coordinates since $\matm{t} \in \mathbb{R}^{m \times 3}$.
+
+\paragraph{Choice of L-BFGS History Window Size.}
+The user defined L-BFGS window size $l$ needs to be large enough to sufficiently capture local curvature information. On the other hand, L-BFGS performance can 
+be negatively affected by taking into account distant iterates if $l$ is too large. Liu et al.\ \cite{liu2017} recommend a window size of $l = 5$. Additionally, the 
+authors report that it may be useful to reduce the window size for simulations with frequent collisions.
+
+\paragraph{Changing Constraint Sets.}
+In PD, the system matrix $\matm{S}$ and its factorization need to be recomputed each time a constraint is added to or removed from the simulation. This is not the case 
+for the initial Hessian approximation $\matm{B}_0$ used in the QN solver \cite{liu2017}. When a new constraint is added, it is accounted for by the contribution of its 
+energy or energy gradient to the evalution of $g$ and $\nabla g$. Ignoring its contribution to the initial matrix approximation $\matm{B}_0$ can be interpreted as a more 
+aggressive Hessian approximation that might negatively affect the convergence rate of the solver. However, with an an appropriate step size selection algorithm in place, 
+the solver will still successfully decrease the objective function $g$. This suggests that it might be helpful to replace backtracking with a step size selection 
+algorithm that ensures that the step size $\alpha_k$ satisfies both Wolfe conditions during simulations with rapidly changing constraint sets. This includes collision 
+heavy simulations.
+
+\paragraph{Hard Constraints.}
+The challenges of implementing hard constraints with the QN solver are identical to those discussed for PD in Section \ref{ss:pd-properties}.
 
 \section{ADMM}\label{s:admm}
 \subsection{Properties of ADMM}\label{ss:admm-properties}
@@ -2137,7 +1487,7 @@ optimization problem and attempt to minimize the objective function of the varia
 In contrast to XPBD, all PD-style solvers contain a global optimization step that enables making compromises during the minimization of multiple 
 competing energies or constraints. The goal of this section is to provide experimental data that highlights how the differences between the solvers manifest themselves 
 in practice during the simulation of deformable 3-dimensional bodies. Starting from experiments using the simple strain material model, we extend our analysis to the more 
-complex neohookean material model and incompatible constraint sets. Here, we say that a set of constraints is incompatible if there are no particle positions 
+complex Neohookean material model and incompatible constraint sets. Here, we say that a set of constraints is incompatible if there are no particle positions 
 $\vecm{q}$ that simultaneously minimize all constraints from the set.
 
 The main tool for comparing solvers used in this report consists of setting up identical simulation states and analyzing the positions computed by the solvers during 
@@ -2146,10 +1496,11 @@ Section \ref{ss:experimental-setup} and discuss how insights on various solver p
 Section \ref{ss:analysis-solvers}. During our comparison of the solvers, we exclude PBD due to the fact that it is not derived from the equations of motion and does not produce 
 physically accurate results (see Sec.\ \ref{ss:pbd-properties}). We provide experimental data to justify this decision in Section \ref{ss:physical-pbd}. Additionally, before a meaningful 
 comparison of ADMM with other solvers is possible, suitable ADMM weights need to be determined (see Sec.\ \ref{s:admm}). We provide insights on choosing ADMM weights in Section \ref{ss:admm-weights}. 
-We start our comparison between XPBD and PD-style solvers on simulations using only tetrahedral constraints for the strain material model (see Sec.\ \ref{ss:material-models}) 
+We start our comparison between XPBD and PD-style solvers on simulations using only tetrahedral constraints for the strain material model (see Sec.\ \ref{ss:strain-material}) 
 in Section \ref{ss:untwisting-beam-strain}. The effects of adding position constraints that are incompatible with the material constraints are analyzed in 
-Section \ref{ss:twisting-beam-strain}. Finally, the experiments in Section \ref{ss:untwisting-beam-strain} are repeated for the neohookean material model (see Sec.\ \ref{ss:material-models}) 
-in Section \ref{ss:untwisting-beam-neohookean} to gain insights on the compatibility of the solvers with more complicated non-linear material models.
+Section \ref{ss:twisting-beam-strain}. Finally, the experiments in Section \ref{ss:untwisting-beam-strain} are repeated for the simplified Neohookean material model (see 
+Sec.\ \ref{ss:simplified-neohookean-material}) in Section \ref{ss:untwisting-beam-neohookean} to gain insights on the compatibility of the solvers with more complicated non-linear 
+material models.
 
 \subsection{Experimental Setup}\label{ss:experimental-setup}
 Experiments start from the deformed configuration of a cuboid beam that has been twisted in opposite directions at both ends (see Fig. \ref{fig:twisting-beam-setup}, left).
@@ -2172,11 +1523,11 @@ since they would converge towards distinct solutions. Secondly, soft position co
 finite and continuously differentiable. This allows for the computation of common metrics of deformed configurations such as the constraint 
 energy. 
 
-The elastic properties of the beam are modelled via the strain material model and the simplified neohookean 
-material model (see Sec.\ \ref{ss:material-models}). The strain model is supported by all solvers, whereas the simplified neohookean model is 
-not supported by PD. The simplified neohookean model is chosen over the original neohookean model because the log term in the original 
-neohookean energy potential makes it incompatible with XPBD (see Sec.\ \ref{ss:xpbd-deformable-bodies}). The experiments are run for time steps 
-\SI{1e-1}{\second}, \SI{1e-2}{\second}, \SI{1e-3}{\second} and \SI{1e-4}{\second}. For the strain and neohookean constraints, both 
+The elastic properties of the beam are modelled via the strain material model and the simplified Neohookean 
+material model (see Sec.\ \ref{ss:material-models}). The strain model is supported by all solvers, whereas the simplified Neohookean model is 
+not supported by PD. The simplified Neohookean model is chosen over the original Neohookean model because the log term in the original 
+Neohookean energy potential makes it incompatible with XPBD (see Sec.\ \ref{ss:xpbd-deformable-bodies}). The experiments are run for time steps 
+\SI{1e-1}{\second}, \SI{1e-2}{\second}, \SI{1e-3}{\second} and \SI{1e-4}{\second}. For the strain and Neohookean constraints, both 
 stiffness and Youngs modulus, respectively, are set to powers of ten ranging from \num{1e5} to \num{1e12}. The Poisson ratio is fixed 
 at 0.45 for all experiments, since we put the focus of our evalution on material stiffness over incompressibility. A representative subset of both twisting and untwisting 
 beam experiments using the strain material model are discussed in subsections \ref{ss:untwisting-beam-strain} and \ref{ss:twisting-beam-strain}, respectively. For the 
@@ -2353,7 +1704,7 @@ size and the material stiffness remain unchanged.
 \subsection{Untwisting Beam Simulations - Strain Material}\label{ss:untwisting-beam-strain}
 In the untwisting beam experiments using the strain material model, challenges due to incompatible constraint sets are avoided and the tetrahedral strain constraints are 
 easy to minimize due to the fact that corresponding restorative elastic forces are proportional to the distance between the deformation and its closest rigid-body 
-transform (see Sec.\ \ref{ss:material-models}). Thus, we use them as a starting point for highlighting differences between the different solvers.
+transform (see Sec.\ \ref{ss:strain-material}). Thus, we use them as a starting point for highlighting differences between the different solvers.
 
 \paragraph{Convergence Properties.}
 We start by analyzing the convergence properties of different solvers with time step size \SI{1e2}{\second} and stiffness \num{1e8} by plotting the objectives over the 

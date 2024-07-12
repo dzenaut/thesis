@@ -19,7 +19,9 @@ as an unconstrained optimization problem called the variational form of implicit
 Additional considerations for the numerical integration of the equations of motion in real-time settings are covered in 
 Section \ref{ss:numerical-integration-rt}. Simulating deformable bodies via numerical integration requires the computation of elastic forces from 
 deformed configurations. We describe how to achieve this in Section \ref{ss:deformable-bodies}. The exact elastic forces do not only depend on 
-the deformation of the body, but also its material. A brief introduction to relevant material models is provided in Section \ref{ss:material-models}.
+the deformation of the body, but also on its material. A brief introduction to relevant material models is provided in Section \ref{ss:material-models}.
+Lastly, it is often desirable to exert direct control over the positions of individual particles by imposing constraints on the simulation. Constrained 
+dynamical simulation is covered in Section \ref{s:dynamic-simulation}.
 
 \section{The Equations of Motion}\label{s:equations-of-motion}
 
@@ -91,9 +93,8 @@ One main criterion for evaluating numerical integration schemes is the global tr
 $(\vecm{q}^T_n, \vecm{v}^T_n)^T$ and $(\vecm{q}(t_n)^T, \vecm{v}(t_n)^T)^T$ incurred during $n$ applications of the update formula. The global 
 trunction error is the sum 
 of the local trunction error (the error that results in the application of the method over a single time step $h$) and the propagated truncation 
-error (the
-error resulting from the approximations produced during the previous steps). It can be shown that the global truncation error of explicit Euler 
-integration over $n$ iterations is $\mathcal{O}(nh)$. Thus, explicit Euler integration is a first-order method. 
+error (the error resulting from the approximations produced during the previous steps). It can be shown that the global truncation error of 
+explicit Euler integration over $n$ iterations is $\mathcal{O}(nh)$. Thus, explicit Euler integration is a first-order method. 
 
 The main drawback of explicit Euler integration is that its estimates $\vecm{q}_n$ and $\vecm{v}_n$ can often diverge with growing $n$ unless 
 prohibitely small time steps are used, even if the true functions $\vecm{q}$ and $\vecm{v}$ are bounded \cite{chapra2005}. Such integration schemes 
@@ -205,9 +206,9 @@ The solution preserves linear and angular momentum as long as the elastic potent
 Approaching implicit Euler integration in its variational form can often be advantageous. That is because the objective function of 
 Equation \ref{eq:variational-implicit} presents a natural merit function that can be employed to improve the step size along the search direction 
 that arises in common unconstrained optimization algorithms based on Newton's method \cite{nocedal2006}. As an example, the objective 
-function is used in many step length selection algorithms to ensure that step sizes satisfy the Armijo condition or both Wolfe conditions 
-(see Sec.\ \ref{sss:step-length-selection}). In fact, many algorithms for solving nonlinear systems of equations construct approximate merit functions 
-if the objective function from an equivalent optimization problem is not available \cite{nocedal2006}.
+function is used in many step length selection algorithms to ensure that step sizes satisfy the Wolfe conditions. In fact, many algorithms for 
+solving nonlinear systems of equations construct approximate merit functions if the objective function from an equivalent optimization problem 
+is not available \cite{nocedal2006}.
 
 
 \section{Considerations for Real-Time Simulations}\label{ss:numerical-integration-rt}
@@ -361,10 +362,10 @@ $\vecm{q}$, but treated the material-dependent energy density function $\Psi$ as
 models relevant for this thesis. Note that the material models covered here are isotropic, i.e. their energy density functions satisfy $\Psi(\matm{F}) = 
 \Psi(\matm{R}\matm{F})$ for any rotation matrix $\matm{R}$ \cite{sifakis2012}. Informally, this means that the response to a deformation is 
 independent of the orientation the deformation is applied in. Additionally, we focus on material models that generate elastic forces that are nonlinear 
-in the deformation gradient. In the following, we introduce the strain material model \cite{bouaziz2014}, the classical neohookean model and a simplified 
+in the deformation gradient. In the following, we introduce the strain material model \cite{bouaziz2014}, the classical Neohookean model and a simplified 
 variation thereof \cite{smith2018}.
 
-\paragraph{Strain Material Model.}
+\subsection{Strain Material Model}\label{ss:strain-material}
 The first material model, which we simply refer to as the strain material model \cite{bouaziz2014}, is given by
 
 \begin{equation}\label{eq:strain-material-model}
@@ -379,18 +380,18 @@ transform. Thus, Equation \ref{eq:strain-material-model} can be interpreted as a
 deformation function $\vecm{\phi}$ and its closest rigid-body transform as measured by the Frobenius norm of the difference of their deformation 
 gradients. 
 
-Since the PD solver cannot be applied to classical material models like the St.\ Venant-Kirchhoff and the neohookean model, the strain 
+Since the PD solver cannot be applied to classical material models like the St.\ Venant-Kirchhoff and the Neohookean model, the strain 
 material model is the main tool for achieving simulations of deformable bodies using PD (see Sec.\ \ref{s:pd}).
 While simple, the strain material model comes with a couple of disadvantages. Firstly, the computation of the singular value decomposition of 
 $\matm{F}$ is expensive. Secondly, the restorative elastic forces arising from the strain material model are proportional 
 to the aformentioned distance between the deformation and its closest rigid-body transform. As such, the strain material model is too 
 restrictive to model complex materials such as skin or flesh \cite{liu2017}. 
 
-\paragraph{Neohookean Material Model.}
-A popular material model that is more suitable for simulating biological materials is the neohookean material model and its variations 
+\subsection{Neohookean Material Model}\label{ss:neohookean-material}
+A popular material model that is more suitable for simulating biological materials is the Neohookean material model and its variations 
 \cite{smith2018}. Its popularity is reflected by the fact that it has been implemented with a variety of different solvers including 
 PBD \cite{bender2014}, XPBD \cite{macklin2021}, ADMM \cite{overby2017} and a quasi-Newton solver based on PD \cite{liu2017}.
-The classical version of the neohookean material model is given below
+The classical version of the Neohookean material model is given below
 
 \begin{equation}\label{eq:neohookean-material-model}
     \Psi_{\text{Neo}} = \frac{\mu}{2}(\text{tr}(\matm{F}^T\matm{F}) - 3) - \mu \text{log}(\text{det}(\matm{F})) 
@@ -402,15 +403,15 @@ happens if the deformed volume has collapsed to a single point. Note that $\text
 infitisemal local change in volume caused by the deformation $\vecm{\phi}$. Then, the last two terms can be interpreted as volume-preserving, 
 since $\text{log}(\text{det}(\matm{F}))$ approaches negative infinity as $\text{det}(\matm{F})$ approaches $0$. In particular, 
 the volume-preserving terms strongly counteract the compression of the modelled material encouraged by the first term. This way, the 
-classical neohookean model achieves rest stability.
+classical Neohookean model achieves rest stability.
 
-The main issue with the neohookean material model is that the volume-preserv-ing terms can grow unbounded when $\text{det}(\matm{F})$ approaches 
+The main issue with the Neohookean material model is that the volume-preserv-ing terms can grow unbounded when $\text{det}(\matm{F})$ approaches 
 $0$ and are infeasible for $\text{det}(\matm{F}) < 0$. Note that while configurations where $\text{det}(\matm{F}) < 0$ are theoretically 
 impossible to achieve, they can often occur in practice as a result of geometric constraints, instability of time integration techniques or 
 inadequate convergence of numerical solvers \cite{sifakis2012}. Thus, $\Psi_{\text{Neo}}$ is not inversion stable \cite{smith2018}.
 
-\paragraph{Simplified Neohookean Material Model.}
-To address the issues with the classical neohookean material model, Smith et al.\ propose a modified version of $\Psi_{\text{Neo}}$ where 
+\subsection{Simplified Neohookean Material Model}\label{ss:simplified-neohookean-material}
+To address the issues with the classical Neohookean material model, Smith et al.\ propose a modified version of $\Psi_{\text{Neo}}$ where 
 the volume-preserving terms are replaced by the bounded, well-defined and invertible term $\frac{\lambda}{2}(\text{det}(\matm{F}) - 1)^2$. 
 This yields the following energy density
 
@@ -433,9 +434,306 @@ elements are inflated again, yielding the following energy density
     \left(1 + \frac{\mu}{\lambda}\right)\right)^2.
 \end{equation}
 
-\noindent We refer to this material model as the simplified neohookean model.
+\noindent We refer to this material model as the simplified Neohookean model.
 
 Equipped with these energy density functions, we have all the tools available that are required to compute the elastic forces acting on the particles 
 of a deformed body as described in Section \ref{ss:deformable-bodies}. Note that the material models covered here are by no means exhaustive. Again, the 
 SIGGRAPH tutorial by Sifakis \cite{sifakis2012} is a good place to gain a better overview for the interested reader.
 
+\section{Constrained Dynamic Simulation}\label{s:dynamic-simulation}
+Visually pleasing and physically accurate simulations of dynamical systems require modeling a wide range of materials and 
+interactions between participating bodies. Common requirements that prove challenging are the ability to simulate stiff materials
+and to enforce hard constraints on the positions of the simulated bodies. Among others, hard constraints involve attaching particles
+to a fixed point in space or to each other, implementing joints and resolving interpenetrations between bodies. Unfortunately, in their 
+naive form, the numerical integration schemes from Section \ref{ss:numerical-integration} are unsuitable for application to simulations 
+including these effects. The main difficulty lies in the fact that stiff materials and hard constraints introduce stiffness into 
+the simulated system, causing stability issues and numerical problems. This is obvious for stiff materials, where even small 
+deformations can cause large restorative forces. For hard constraints, note that to fit into the equations of motion in 
+Equation \ref{eq:equations-of-motion}, corresponding forces that ensure that the constraints stay satisfied at all times need to be defined. 
+It is possible to show that hard constraints are the physical limit of strong potential forces \cite{servin2006}, increasing the 
+stiffness of the equations of motion. 
+
+In this section, we focus on different strategies for modelling hard constraints in physical real-time simulations and discuss 
+their properties. Heavily inspired by Tournier et al.\ \cite{tournier2015}, the approaches covered in this section are analyzed 
+in the context of real-time adaptions of implicit Euler integration that only perform a single linear solve per time step 
+(see Sec.\ \ref{ss:numerical-integration-rt}). While both XPBD (see Sec.\ \ref{ss:xpbd-constraint-projection}) and PD (see Sec.\ \ref{s:pd}) differ significantly 
+from these methods, the challenges encountered in modelling hard constraints are largely transferrable. Handling hard constraints 
+via stiff penalty forces as outlined above is covered in more detail in Section \ref{ss:penalty-forces}. Adding hard constraints to the equations
+of motion without introducing stiff constraint forces via a Differential Algebraic Equation (DAE) is explored in Section \ref{ss:hard-constraints}.
+Finally, adding regularization to the resulting DAE in a physcially meaningful manner yields a method called compliant constraints. 
+Compliant constraints are introduced in Section \ref{ss:compliant-constraints}.
+
+\textcolor{red}{Probably best to skip generality and simplicitiy here. Don't distract from hard constraints. Make sure this is 
+mentioned in the discussion of XPBD, PD, etc.}
+
+\subsection{Penalty Forces}\label{ss:penalty-forces}
+As discussed in Section \ref{s:dynamic-simulation}, it is possible to show that hard constraints are the physical limit of strong potential 
+forces \cite{servin2006}. Thus, the simplest approach to modelling hard constraints is to introduce strong forces that enforce 
+that the constraints are satisfied at all times to the equations of motion and to perform integration via the linear implicit Euler
+stepper from Section \ref{ss:numerical-integration-rt}. We demonstrate the challenges of this method using the example of 
+a distance constraint.
+
+Consider a distance constraint $C_{\text{dist}}$ that 
+fixes the distance $l = \vert \vert \vecm{q}_i - \vecm{q}_j \vert \vert$ between two particles $\vecm{q}_i$ and $\vecm{q}_j$ to 
+some distance $d \in \mathbb{R}^+$. If $C_{\text{dist}}(\vecm{q}) = l - d$, then the constraint is satisfied if 
+$C_{\text{dist}}(\vecm{q}) = 0$. Next, we define the energy potential $\psi_\text{dist}(\vecm{q}) = \frac{k}{2}C_\text{dist}(\vecm{q})^2$,
+where $k \in \mathbb{R}^+$ is some large stiffness value. Since the energy potential is zero if $C_\text{dist}$ is satisfied
+and grows as the distance between $\vecm{q}_i$ and $\vecm{q}_j$ increases, the resulting force will drive the distance towards $d$.
+Upon closer inspection, $\psi_\text{dist}$ is exactly the potential energy of a Hookean spring with stiffness $k$. The forces 
+$\vecm{f}_i$ and $\vecm{f}_j$ applied to the particles $\vecm{q}_i$ and $\vecm{q}_j$ by the spring are given by 
+$\vecm{f}_i = -\vecm{f}_j = \beta (\vecm{q}_i - \vecm{q}_j) / l$, where $\beta = -\partial\psi_\text{dist}/\partial l = 
+kC_\text{dist}(\vecm{q})$. Since $\vert \vert \vecm{f}_i \vert \vert = \vert \vert \vecm{f}_j \vert \vert = \beta$,
+the restorative spring forces have infinite magnitude in the limit of infinite stiffness $k$ if $C_\text{dist}(\vecm{q}) \neq 0$. 
+
+Integration using the linear implicit Euler stepper is achieved by plugging the spring forces into 
+Equation \ref{eq:linear-implicit-stepper} and solving for the new velocities $\vecm{v}_{n+1}$. For the sake of convenience, we restate
+Equation \ref{eq:linear-implicit-stepper} below
+
+\[
+    (\matm{M} - h^2\matm{K})\vecm{v}_{n+1} = \matm{M}\vecm{v}_n + h\vecm{f}(\vecm{q}_n).
+\]
+
+\noindent Note that $\matm{K}$ is typically non-singular since elastic forces are invariant under rigid body transforms. When using 
+large stiffness values $k$, the entries of $\matm{K}$ are large (due to large restorative forces) and dominate the entries of the 
+system matrix 
+
+\begin{equation}\label{eq:system-H}
+    \matm{H} = \matm{M} - h^2\matm{K}.
+\end{equation}
+
+\noindent In these cases, $\matm{H}$ is almost non-singular as well, leading to numerical issues and poor convergence for many solvers. 
+
+In the example above, the potential energy $\psi_\text{dist}$ is defined in terms of the constraint function $C_\text{dist}$ via 
+$\psi_\text{spring}(\vecm{q}) = \frac{k}{2} C_\text{dist}(\vecm{q})^2$. However, it is possible to generalize this approach to other 
+geometric constraints $C$ yielding energy potentials of the form
+
+\begin{equation}\label{eq:penalty-forces}
+    \psi(\vecm{q}) = \frac{k}{2} C(\vecm{q})^2.
+\end{equation}
+
+\noindent The resulting forces are called penalty forces.
+
+By constructing different geometric displacement functions, various properties such as the bending angle between triangles and in-plane 
+shearing of triangles can be controlled via the corresponding quadratic energy potentials \cite{baraff1998}. Geometric displacement 
+functions with the desired effect are often intuitive and simple to define. However, as the corresponding energy potentials are not physically 
+derived, choosing stiffness parameters that correspond to measurable physical properties of the simulated material and orchestrating 
+multiple constraints becomes challenging \cite{servin2006, nealen2006}. Additionally, the generated penalty forces do not converge in the 
+limit of infinite stiffess, leading to oscillations unless the time step is reduced significantly \cite{rubin1957}. Finally, the numerical
+issues outlined for distance constraints generally apply to penalty forces derived from other geometric constraints as well.
+
+\textcolor{blue}{Maybe explain the challenges with penalty forces a bit better! Also read \cite{terz1987, nealen2006, rubin1957}. 
+I just skimmed over \cite{terz1987} for now, but want to make sure that I am citing this correctly. The term penalty forces is not used
+in the paper, I am just following the trail from \cite{servin2006}. \cite{nealen2006} is a review that might be intersting to read.
+\cite{rubin1957} would be really interesting to read for once, just to understand why strong penalty forces oscillate. Is this a
+general problem with penalty forces, or is it an issue with the solver?}
+
+\subsection{Hard Constraints}\label{ss:hard-constraints}
+The problem of maintaining hard distance constraints between particles can be formulated as a Differential Algebraic Equation (DAE)
+\cite{ascher1995, baraff1996}. In this framework, the equations of motion \textcolor{red}{(reference somewhere)} are handled together 
+with algebraic equations that model the constraints on the positions of the system. Distance constraints are typically implemented using 
+holonomic constraints 
+of the form $\vecm{\phi(x)} = 0$. Note that the distance constraint $\vecm{\phi}(x)$ is formulated in terms of the particle positions, 
+whereas the equations of motion work on velocities and accelerations. Consequently, the constraints need to be differentiated with 
+respect to time once or twice so that they can be 
+combined with the ODE in terms of velocties or accelerations, respectively. \textcolor{blue}{In XPBD, we go the other way! The ODE
+is tanslated so that it is in terms of positions, so that it can be handled together with the constraints. Is there a reason nobody 
+bothered to do this before?} \textcolor{red}{Fabian notes that the translation in terms of positions in XPBD is in fact just rewriting
+the implicit Euler integration in terms of positions. Thus, we have baked the integration method into the formulation in XPBD. In the DAE
+framework, there is more flexibility w.r.t.\ the integration scheme of choice}. Using $\matm{J} = \frac{\delta \vecm{\phi}}{\delta \vecm{x}}$, 
+where $\matm{J}$ is a $n_c \times n_d$ matrix and $n_c$ is the number of scalar constraints, this leads to the following constraint 
+formulations:
+
+\begin{align*}
+    \matm{J}\vecm{v} &= 0 \\
+    \matm{J}\vecm{a} &= \vecm{c}(\vecm{v})
+\end{align*}
+
+for some $\vecm{c}(\vecm{v})$. \textcolor{red}{If you check \cite{ascher1995}, see that $c(v)$ also depends on the positions $q$. That should 
+be indicated!} 
+Additionally, constraint forces \textcolor{red}{(use internal forces, more general and will be used throughout the thesis)} are 
+required to link the algebraic constraint equations with the ODE describing the motion of 
+the system. It can be shown that the constraint forces $\vecm{f_c}$ applied to the particles have to be in the following form to 
+avoid adding linear and angular momentum to the system \cite{baraff1996}:
+
+\begin{equation}\label{eq:constraint-forces}
+    \vecm{f_c} = \matm{J}^T \vecm{\lambda}
+\end{equation}
+
+where the $\lambda$ are the Lagrange multipliers of the constraints. With external forces $\vecm{f}_{\text{ext}}$, the DAE can now be 
+expressed as follows 
+\cite{ascher1995}:
+
+\[
+    \begin{pmatrix}
+        \matm{M} & -\matm{J}^T \\
+        \matm{J} & 0
+    \end{pmatrix}
+    \begin{pmatrix}
+        \vecm{a} \\
+        \vecm{\lambda}
+    \end{pmatrix}
+    =
+    \begin{pmatrix}
+        \vecm{f_e} \\
+        \vecm{c}(\vecm{v})
+    \end{pmatrix}
+\]
+
+Note that the lower block-row of the system drives towards accelerations that satisfy the constraints imposed by $\vecm{\phi(x)}$ (or, striclty 
+speaking, the differentiations thereof) exactly. This is indicated by the lower-right zero block in the system matrix in either formulation. 
+Thus, the system does not have a solution if constraints are contradictory. \textcolor{blue}{Aren't $\dot{q} = v$ and $\dot{v} = a$ 
+also part of the differential equation? Because $c(v)$ and $f_e$ also depend on $q$!}
+
+In \cite{ascher1995}, the DAE is approached by eliminating the $\lambda$ from the system entirely and constructing an ODE in terms of positions
+and velocities. In \cite{tournier2015}, the authors suggest applying implicit integration schemes to the system directly by constructing the 
+following Karush-Kuhn-Tucker (KKT) equation system:
+
+\[
+\begin{pmatrix}
+    \matm{M} & -\matm{J}^T \\
+    \matm{J} & 0
+\end{pmatrix}
+\begin{pmatrix}
+    \vecm{v}_{n+1} \\
+    \vecm{\mu}_{n+1}
+\end{pmatrix}
+=
+\begin{pmatrix}
+    \vecm{p} + h\vecm{f_e} \\
+    0
+\end{pmatrix}
+\]
+
+Here, the external forces $\vecm{f}_{\text{ext}}$ and the constraint gradients $\matm{J}$ are considered constant across the time step 
+and $\matm{J}(x_{n+1})$ 
+is not approximated using the Taylor expansion like it is in \cite{baraff1998}. If internal forces are taken into account, the upper-left 
+matrix $\matm{M}$ is replaced by the matrix $\matm{H}$ from Equation \ref{eq:system-H}.
+
+\textcolor{blue}{Reverse-engineering how the authors arrived at this system is quite enlightening. Start out from the equations of motion 
+\cite{ascher1995}
+    \begin{align*}
+        \dot{\vecm{v}} &= \matm{M}^{-1}(\vecm{f} - \matm{J}^T \vecm{\lambda})
+    \end{align*}
+    and perform implicit integration:
+    \begin{align*}
+        \vecm{v}_{n+1} &= \vecm{v}_n + h\matm{M}^{-1}(\vecm{f}_e(\vecm{X}_{n+1}) - \matm{J}^T(\vecm{x}_{n+1}) \vecm{\lambda}(\vecm{x}_{n+1})) \\
+        \matm{M}\vecm{v}_{n+1} &= \vecm{p} + h\vecm{f}_e(\vecm{x}_{n+1}) - h\matm{J}^T(\vecm{x}_{n+1})\vecm{\lambda}(\vecm{x}_{n+1}) \\
+        \matm{M}\vecm{v}_{n+1} + h \matm{J}^T(\vecm{x}_{n+1})\vecm{\lambda(\vecm{x}_{n+1})} &= \vecm{p} + h\vecm{f}_e(\vecm{x}_{n+1}) \\
+        \matm{M}\vecm{v}_{n+1} + \matm{J}^T(\vecm{x}_{n+1}) \vecm{\mu}(\vecm{x}_{n+1}) &= \vecm{p} + h\vecm{f}_e(\vecm{x}_{n+1})
+    \end{align*}
+}
+\textcolor{red}{If we assume that $\vecm{f_e}$ and the constraint gradients $\matm{J}$ are constant across the time step, we arrive at the 
+formulation from the paper. For the external forces, which are usually only comprised of gravitational forces, this is not a big 
+deal. For the constraint gradients, I am not sure what the ramifications are. In \cite{baraff1998}, the Taylor expansion is performed
+which requires the compution of second derivatives over the constraint functions. This is not happening here at all! Is this what 
+authors mean when they say that the constraints are effectively linearized during one solve, e.g. second page 
+of \cite{mueller2020}? Technically, speaking, even if the Taylor expansion is performed, the constraints are linearized, if I 
+understand correctly.}
+
+Note that the system matrix is sparse, which can be exploited by sparse-matrix solvers to solve the system efficiently
+\cite{baraff1996}. Alternatively, the Schur complement can be constructed since the mass matrix in the upper left block is invertible.
+This leads to a smaller, albeit less sparse system \cite{tournier2015}:
+
+\[
+    \matm{J}\matm{M}^{-1}\matm{J}^T \vecm{\mu} = -\matm{J}\matm{M}^{-1}(\vecm{p}) + h \vecm{f}_e
+\]
+
+If the constraints are not redundant, $\matm{J}\matm{M}^{-1}\matm{J}^T$ is non-singular and symmetric positive definite \cite{baraff1996}, which are desirable
+properties for many solvers. According to \cite{servin2006}, the common approaches for linearizing the constraint forces and stabilizing 
+the constraints $\vecm{\phi(x)} = 0$ are notoriously unstable \textcolor{red}{(I need to look this up again. I do not understand what exactly 
+this means anymore)}. Additionally, instabilities in the traverse direction of the constraints occur when the tensile force with respect to 
+particle masses is large when using hard constraints \cite{tournier2015}.
+
+\subsection{Compliant Constraints}\label{ss:compliant-constraints}
+By combining ideas from hard constraints (see Sec.\ \ref{ss:hard-constraints}) and penalty forces (see Sec.\ \ref{ss:penalty-forces}), it is possible to 
+formulate the system matrix for hard constraints such that constraints do not have to be enforced exactly. In this approach, called compliant 
+constraints, the constraints are combined with Newton's ODE (see Eq.\ \ref{eq:equations-of-motion}) in a way that allows relaxation of constraints in a 
+physically meaningful manner \cite{servin2006}. The key insight is that constraints 
+of the form $C_j(\vecm{q})$ are the physical limit of strong forces from potentials of the form $\frac{k_j}{2}C_j(\vecm{q})^2$ with 
+high stiffness values $k_j$. It can be advantageous to express the system equations in terms of small inverse stiffnesses, also 
+called compliances, over working with large stiffness values directly. In particular, setting the compliance to zero often provides
+an elegant avenue for modelling infinite stiffness. 
+
+Let $\vecm{C} = [C_i, \ldots, C_r]^T$ be the vector function whose entries consist of the individual constraint 
+functions $C_j$. The potential energy for $\vecm{C}$ is then defined as:
+
+\begin{equation}\label{eq:compliant-potential}
+    \psi(\vecm{q}) = \frac{1}{2}\vecm{C}(\vecm{q})^T \matm{\alpha}^{-1}\vecm{C}(\vecm{q})
+\end{equation}
+
+\noindent where $\matm{\alpha}$ is a positive diagonal matrix given by $\text{diag}(1/k_1, \ldots, 1/k_r)$. The resulting forces are given by 
+
+\begin{equation}\label{eq:compliant-force}
+    \vecm{f_c} = \nabla \psi(\vecm{q}) = -\nabla \vecm{C}(\vecm{q})^T\matm{\alpha}^{-1} \vecm{C}(\vecm{q}).
+\end{equation}
+
+\noindent Next, artificial variables called Lagrange multipliers $\vecm{\lambda} = -\matm{\alpha}^{-1}\vecm{C}$ are introduced, yielding 
+
+\begin{equation}\label{eq:compliant-force-lambda}
+    \vecm{f}_c = \nabla \vecm{C}(\vecm{q})^T\vecm{\lambda}
+\end{equation}
+
+\noindent This leads to the following DAE:
+
+\begin{equation}\label{eq:compliant-dae}
+\begin{split}
+    \dot{\vecm{q}} &= \vecm{v} \\
+    \matm{M}\dot{\vecm{v}} &= \vecm{f}_{e} + \nabla \vecm{C}(\vecm{q})^T\vecm{\lambda} \\
+    \matm{\alpha}\vecm{\lambda}(\vecm{q}) &= -\vecm{C}(\vecm{q})
+\end{split}
+\end{equation}
+
+\noindent Note, that if $\matm{\alpha} = \matm{0}$, the formulation from hard constraints is recovered. 
+
+Usually, the DAE is solved by employing some numerical integration scheme (see Sec.\ \ref{ss:numerical-integration}) which eventually requires 
+the solution of a linear system of equations. Here, the goal is to arrive at a formulation where both the system matrix and the right 
+side of the resulting LSE do not contain references to the large stiffness values
+$\matm{\alpha}^{-1}$. This is achieved by treating $\vecm{\lambda} = -\matm{\alpha}^{-1}\vecm{C}(\vecm{q})$ as an unknown, 
+pulling it out of the system matrix and hiding all occurrences of the large $\matm{\alpha}^{-1}$ in there. To this end, it is often 
+necessary to make simplifying assumptions suitable for the problem at hand. As an example, if the DAE is solved via backward 
+differentiation, making the assumption that $\nabla \vecm{C}$ is constant across the time step allows pulling $\vecm{\lambda}$ out of 
+the system matrix entirely \cite{tournier2015}. The entries of the resulting system matrix and the corresponding right side
+are small, since they do not depend on the large stiffness terms. Backwards differentiation while assuming that $\nabla \vecm{C}$ is 
+constant across the time step yields
+
+\[
+    -\matm{\alpha\lambda}_{n+1} = \vecm{C}(\vecm{q}_n)\frac{\vecm{\mu}_{n+1}}{h} = -\vecm{C}(\vecm{q}_{n+1}) \approx -\vecm{C}(\vecm{q}_n) - h\nabla 
+    \vecm{C}(\vecm{q}_n) \vecm{v}_{n+1},
+\]
+
+\noindent leading to the following LSE \cite{tournier2015}
+
+\begin{equation}\label{eq:compliant-tournier}
+\begin{pmatrix}
+    \matm{M} & -\nabla \vecm{C}(\vecm{q}_n)^T \\
+    \nabla \vecm{C}(\vecm{q}_n) & \frac{1}{h^2}\matm{\alpha}
+\end{pmatrix}
+\begin{pmatrix}
+    \vecm{v}_{n+1} \\
+    \vecm{\mu}_{n+1}
+\end{pmatrix}
+=
+\begin{pmatrix}
+    \vecm{p} + h\vecm{f}_e \\
+    - \frac{1}{h}\vecm{C}(\vecm{q}_n)
+\end{pmatrix},
+\end{equation}
+
+\noindent where $\vecm{\mu} = h\vecm{\lambda}$.
+
+This formulation comes with a couple of advantages. Firstly, relaxing the constraints by keeping a finite but large penalty parameter helps
+counteracting numerical problems in the presence of over defined or degenerate constraints. In comparison to the system matrix that arises
+for hard constraints \textcolor{red}{(reference)}, the lower-right zero block is replaced by the compliance matrix $\matm{\alpha}$ in 
+Equation \ref{eq:compliant-tournier} which prevents the system matrix from becoming singular in the presence of redundant constraints. Thus, the 
+compliant 
+constraint formulation can be interpreted as a regularization of the hard constraint formulation in (\textcolor{red}{(reference to section)}) 
+\cite{tournier2015}. Secondly, setting $\matm{\alpha} = \matm{0}$ allows modelling infinite stiffness since $\matm{\alpha}^{-1}$ does not occur in
+Equation \ref{eq:compliant-tournier}. Additionally, Tournier et 
+al.\ \cite{tournier2015} claim that, in comparison to penalty forces where high stiffness makes the system matrix in 
+\textcolor{red}{(reference equation)} almost singular, decreasing the compliance terms in the lower-right block of the system matrix 
+in Equation \ref{eq:compliant-tournier} makes working with high stiffness numerically tractable. However, close inspection of the system matrix of 
+Equation \ref{eq:compliant-tournier} shows that it quickly becomes singular for high stiffnesses as well when the lower-right block containing the 
+corresponding compliances approaches zero. 
+
+\textcolor{red}{Fabian: Does it? Is it singular if a = 0? Isn't it possibly non-singular depending on grad C? Or am I missing something? 
+Maybe explain more "your close inspection".}
