@@ -245,7 +245,7 @@ respectively. To quantify the progress that other solvers achieve during the num
 \end{equation}
 
 \noindent where $\vecm{q}_k$ are the positions after iteration $k$ and $\vecm{q}^*$ are the positions with minimal objective value
-achieved by any of the solvers. The relative errors are shown in Figure \ref{fig:rel-errors}. Note that the relative error of ADMM is only 
+achieved by any of the solvers. The relative errors are shown in Table \ref{tbl:rel-errors}. Note that the relative error of ADMM is only 
 0.4 \% by the time QN has converged, while the errors achieved by PD and XPBD are still substantial. Additionally, even after a 1000 iterations, XPBD's relative error 
 is still at 1.8 \%.
 
@@ -264,7 +264,7 @@ is still at 1.8 \%.
 \end{tabular}
 \caption{Relative errors (see Eq.\ \ref{eq:rel-error}) in \% achieved by solvers after 40, 60, 260 and 1000 iterations for the untwisting beam experiment from 
 Figure \ref{fig:strain-beam-untwist-objectives}.}
-\label{fig:rel-errors}
+\label{tbl:rel-errors}
 \end{table}
 
 The data suggests that ADMM, PD and QN converge towards a solution that is closer to the true implicit positions at the next time step than XPBD. This is expected, 
@@ -593,9 +593,9 @@ the objective value compared to the initial objective value during the first 100
 and stiffness value. As indicated by the data in  Figure \ref{fig:strain-beam-twist-typical-objectives}, this is not always the case for the twisting beam experiments. 
 For various combinations of time step sizes and stiffness values, the positions computed by XPBD after 1000 iterations yield a higher objective function 
 value than the initial objective value. We say that XPBD fails for such parameters. For each time step, the stiffness values for which XPBD fails are listed in 
-Figure \ref{fig:strain-beam-twist-xpbd-failures}. Note that the results are identical when restricting to the constraint term of the objective function. 
+Table \ref{tbl:strain-beam-twist-xpbd-failures}. Note that the results are identical when restricting to the constraint term of the objective function. 
 In other words, the settings in which XPBD fails to decrease the objective are exactly those for which the solver iterations cause the constraint 
-term to increase. Figure \ref{fig:strain-beam-twist-xpbd-failures} shows that XPBD fails in settings where large stiffness 
+term to increase. Table \ref{tbl:strain-beam-twist-xpbd-failures} shows that XPBD fails in settings where large stiffness 
 values are used. In particular, XPBD always fails once the stiffness is larger than some time step dependent threshold. This threshold 
 increases with increasing time step size.
 
@@ -612,7 +612,7 @@ increases with increasing time step size.
         XPBD fails for all tested stiffnesses $k^\prime$ such that $k^\prime > k$. Identical results are obtained when restricting to the constraint 
         term of the objective function.
     }
-\label{fig:strain-beam-twist-xpbd-failures}
+\label{tbl:strain-beam-twist-xpbd-failures}
 \end{table}
 
 As discussed before, the large constraint terms that are observed when XPBD fails are most likely caused by a combination of the simplifying 
@@ -623,7 +623,7 @@ strain constraints are satisfied at the same time, individual constraint project
 On the other hand, all strain constraints are satisfied in the reference configuration of the beam in the untwisting beam scenario. It is natural to 
 assume that the former scenario is more challenging for Gauss-Seidel-type solvers. Secondly, the severity of the oscillations is expected to increase with both 
 time step size and stiffness values since both factors enable larger position updates during individual constraint projections. This is in line with the 
-data presented in Figure \ref{fig:strain-beam-twist-xpbd-failures}.
+data presented in Table \ref{tbl:strain-beam-twist-xpbd-failures}.
 
 To get a feeling for the visual effects resulting from the large (constraint) objective value achieved when XPBD fails, we take a closer look at the 
 geometry of a twisting strain beam after 1000 XPBD iterations over a time step of \SI{1e2}{\second} with constraint stiffness \num{1e12} in 
@@ -671,17 +671,17 @@ to their reference positions when using the QN solver.
     \end{tabular}
 \caption{Combinations of time step sizes and stiffness values for which the inertial term of XPBD is larger than the inertial term of the QN solver after 
 1000 iterations.}
-\label{fig:strain-beam-twist-xpbd-large-inertial-terms}
+\label{tbl:strain-beam-twist-xpbd-large-inertial-terms}
 \end{table}
 
 The fact that the XPBD solver is more liberal with moving particles at the ends of the beam towards the reference positions of the position constraints 
-should be reflected in a larger inertial term compared to the QN solver. In Figure \ref{fig:strain-beam-twist-xpbd-large-inertial-terms}, we list combinations 
+should be reflected in a larger inertial term compared to the QN solver. In Table \ref{tbl:strain-beam-twist-xpbd-large-inertial-terms}, we list combinations 
 of time step sizes and stiffness values for which the inertial term after 1000 XPBD iterations is larger than the inertial term achieved at the converged 
 QN configuration. The results show that XPBD's inertial term is always smaller when a time step of \SI{1e-1}{\second} is used, but almost always larger for 
 time step sizes larger than or equal to \SI{1e-2}{\second}. The only exception occurs for small stiffness values when a time step of \SI{1e-4}{\second} is 
 used.
 
-The results are in line with the observations from the previous experiments. In particular, Figure \ref{fig:strain-beam-twist-xpbd-large-inertial-terms} shows 
+The results are in line with the observations from the previous experiments. In particular, Table \ref{tbl:strain-beam-twist-xpbd-large-inertial-terms} shows 
 that the inertial term achieved by XPBD is larger than the inertial term achieved by QN for the parameters used in 
 Figure \ref{fig:twisting-beam-xpbd-failure-geometry} (time step \SI{1e-2}{\second}, stiffness \num{1e12}). The observation that the inertial term achieved by 
 the QN solver is larger for the large time step \SI{1e-1}{\second} matches that the inertial penalty taken into account by the QN solver 
@@ -790,11 +790,11 @@ of terminating the ADMM solver before convergence is achieved: Early termination
     \end{tabular}
 \caption{Combinations of time step sizes and stiffness values for which the ADMM solver converges to the global minimum during the twisting beam experiments using 
 the strain material model.}
-\label{fig:strain-beam-twist-admm-artificial}
+\label{tbl:strain-beam-twist-admm-artificial}
 \end{table}
 
 For each time step size, we list the stiffness values for which ADMM converges to the global minimum in the twisting beam experiments in 
-Figure \ref{fig:strain-beam-twist-admm-artificial}. For the large time step \SI{1e-1}{\second}, the ADMM solver converges to the global minimum for stiffness values as 
+Table \ref{tbl:strain-beam-twist-admm-artificial}. For the large time step \SI{1e-1}{\second}, the ADMM solver converges to the global minimum for stiffness values as 
 low as \num{1e6}. As the time step size is decreased, larger stiffness values are required. Since achieving the global minimum requires moving particles far away 
 from their inertial positions, it is expected that such aggressive minimizations of the constraint energies are favored by large stiffness values and large time steps
 (see Sec.\ \ref{ss:variational-implicit-euler}). Still, it is likely that the choice of the ADMM weights has a strong impact on whether the ADMM solver converges to the 
@@ -815,7 +815,7 @@ time step size \SI{1e-1}{\second} and stiffness \num{1e10} and timestep size \SI
 
 Together with the results discussed above, the data from Figure \ref{fig:strain-beam-twist-objectives-admm-failure} suggests that ADMM drives particle 
 positions towards the global minimum of the objective function, but eventually undoes its progress once the particle positions get too close. It is not clear why 
-this failure to converge occurs for the parameters listed above, but not for the parameters in Figure \ref{fig:strain-beam-twist-admm-artificial}. Again, the choice 
+this failure to converge occurs for the parameters listed above, but not for the parameters in Table \ref{tbl:strain-beam-twist-admm-artificial}. Again, the choice 
 of the ADMM weights most likely plays an important role here. Recall that ADMM weights used during the twisting beam experiments were adopted from the corresponding 
 parameter screens for the untwisting beam experiments (see Sec.\ \ref{ss:admm-weights}). In light of the similarities between PD and ADMM with weights $w_i = \sqrt{k}$, 
 it is reasonable to assume that convergence could be achieved with more appropriate ADMM weights. As a result, it might be necessary to fine-tune ADMM weights for 
