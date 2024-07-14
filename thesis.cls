@@ -152,8 +152,17 @@
 \makeTitle
 \begin{abstract}
     \paragraph{Abstract.}
-    XPBD and Projective Dynamics (PD) are popular methods for physics-based simulation in real-time settings. While XPBD 
-\end{abstract}
+    In computer graphics, physics-based simulation is an essential tool for accurately capturing the behavior of non-linear materials 
+    like rubber and biological tissue. Simulation methods that are suitable for real-time applications trade accuracy and generality for speed. 
+    These tradeoffs often make it difficult to achieve robust simulations for challenging scenarios with large material stiffness and when 
+    direct control over individual particle positions is required. Popular methods for real-time physics-based simulation are XPBD \cite{macklin2016},
+    Projective Dynamics (PD) \cite{bouaziz2014} and its extensions using Quasi-Newton methods (QN) \cite{liu2017} and the Alternating Direction 
+    Method of Multipliers (ADMM) \cite{overby2017}. Despite their popularity, comparisons between simulation methods are usually only conducted for 
+    simple material models and low material stiffness. We address this gap by providing a detailed comparison between XPBD and PD-style simulation 
+    methods across a variety of settings using a wide range of material models, material stiffness values and time step sizes. Most importantly, we 
+    show that PD-style simulation methods are more robust than XPBD for simulations with competing energy terms and that robust simulations using 
+    stiff Neohookean materials can only be achieved using the QN method.
+    \end{abstract}
 \cleardoublepage
 {%
 \pagestyle{plain}
