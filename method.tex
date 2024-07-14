@@ -1,14 +1,12 @@
 \chapter{Methods}\label{ch:method}
 
-The goal of this thesis is to provide a comparison between two popular approaches for real-time physics-based simulation called XPBD \cite{macklin2016}
-and Projective Dynamics (PD) \cite{bouaziz2014}. PD can be extended by interpreting it through the lense of the Alternating 
-Direction Method of Multipliers (ADMM) for constrained optimization \cite{overby2017} and Quasi-Newton (QN) methods for unconstrained 
-optimization \cite{liu2017}, without sacrificing the efficiency of the original PD algorithm. In this chapter, we provide a detailed 
-description of the simulation methods listed above together with a thorough analysis of their theoretical properties. Where applicable, 
-we highlight how different simulation methods are related to each other. Additionally, we discuss if and how geometric constraints and the 
-non-linear material models in Section \ref{ss:material-models} can be implemented using each of the simulation methods. XPBD and its 
-predecessor PBD are covered in Section \ref{s:pbd}. PD and the QN and ADMM methods built on top of it are examined in Sections \ref{s:pd}, 
-\ref{s:qn-rts} and \ref{s:admm}, respectively.
+The goal of this thesis is to provide a comparison between XPBD \cite{macklin2016} and PD-style methods including the original 
+PD algorithm \cite{bouaziz2014} and its extensions using ADMM \cite{overby2017} and Quasi-Newton methods \cite{liu2017} for real-time 
+physics-based simulation. In this chapter, we provide a detailed description of the simulation methods listed above together with a 
+thorough analysis of their theoretical properties. Where applicable, we highlight how different simulation methods are related to each other. 
+Additionally, we discuss if and how geometric constraints and the non-linear material models in Section \ref{ss:material-models} can be 
+implemented using each of the simulation methods. XPBD and its predecessor PBD are covered in Section \ref{s:pbd}. PD and the QN and ADMM 
+methods built on top of it are examined in Sections \ref{s:pd}, \ref{s:qn-rts} and \ref{s:admm}, respectively.
 
 \section{Position Based Dynamics}\label{s:pbd}
 As discussed in Section \ref{s:equations-of-motion}, classical approaches for dynamics simulation are force-based. Forces are accumulated and 
@@ -139,24 +137,6 @@ Plugging into Equation \ref{eq:pbd-delta} and approximating by first-order Taylo
 
 \noindent For the position of a single point $\vecm{p}_i$, this gives the update
 
-\begin{equation}\label{eq:pbd-update-individual}
-    \Delta \vecm{p}_i = -\frac{C(\vecm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\vecm{p}_i}C(\vecm{p}) \vert^2 } 
-    w_i \nabla_{\vecm{p}_i} C(\vecm{p})
-\end{equation}
-
-Finally, the stiffness $k_c$ of the constraint needs to be taken into account. The simplest way is to simply multiply the projection update
-$\Delta \vecm{p}$ by $k_c$. However, after multiple iterations of the solver, the effect of the stiffness on the update is nonlinear. Consider
-a distance constraint with rest length 0 acting on predictions $\vecm{p}_{i_1}, \vecm{p}_{i_2}$ given by
-
-\begin{equation}\label{eq:pbd-distance}
-    C_{\text{dist}}(\vecm{p}) = \vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert.
-\end{equation}
-
-\noindent Then, after $n_s$ solver iterations the remaining error is going to be $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)^{n_s}$. Müller et al.\ 
-suggest establishing a linear relationship by multiplying corrections by $k^{\prime} = 1 - (1-k)^{1/n_s}$. This way, the error becomes
-$\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iterations. A summary of the constraint solver is given in Algorithm 
-\ref{alg:pbd-solver}.
-
 \begin{algorithm}[H]
 \caption{PBD Constraint Solver}\label{alg:pbd-solver}
 \begin{algorithmic}[1]
@@ -178,6 +158,25 @@ C_j(\vecm{p}) \vert^2 } w_i \nabla_{\vecm{p}_i} C_j(\vecm{p})$
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
+
+\begin{equation}\label{eq:pbd-update-individual}
+    \Delta \vecm{p}_i = -\frac{C(\vecm{p})}{\sum_{i \in \{ i_1, \ldots, i_{n_c} \}} w_i \vert \nabla_{\vecm{p}_i}C(\vecm{p}) \vert^2 } 
+    w_i \nabla_{\vecm{p}_i} C(\vecm{p})
+\end{equation}
+
+Finally, the stiffness $k_c$ of the constraint needs to be taken into account. The simplest way is to simply multiply the projection update
+$\Delta \vecm{p}$ by $k_c$. However, after multiple iterations of the solver, the effect of the stiffness on the update is nonlinear. Consider
+a distance constraint with rest length 0 acting on predictions $\vecm{p}_{i_1}, \vecm{p}_{i_2}$ given by
+
+\begin{equation}\label{eq:pbd-distance}
+    C_{\text{dist}}(\vecm{p}) = \vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert.
+\end{equation}
+
+\noindent Then, after $n_s$ solver iterations the remaining error is going to be $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)^{n_s}$. Müller et al.\ 
+suggest establishing a linear relationship by multiplying corrections by $k^{\prime} = 1 - (1-k)^{1/n_s}$. This way, the error becomes
+$\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iterations. A summary of the constraint solver is given in Algorithm 
+\ref{alg:pbd-solver}.
+
 
 \subsection{Properties of PBD}\label{ss:pbd-properties}
 Due to its simplicity and controllability, PBD is a popular choice for real-time simulations where visually plausible results are sufficient. 
