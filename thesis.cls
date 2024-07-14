@@ -150,6 +150,10 @@
 \newcommand{\makeFrontMatter}{
 \frontmatter
 \makeTitle
+\begin{abstract}
+    \paragraph{Abstract.}
+    XPBD and Projective Dynamics (PD) are popular methods for physics-based simulation in real-time settings. While XPBD 
+\end{abstract}
 \cleardoublepage
 {%
 \pagestyle{plain}
