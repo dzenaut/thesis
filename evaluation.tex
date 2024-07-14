@@ -24,9 +24,8 @@ material models. Finally, we summarize our findings in Section \ref{s:discussion
 
 \section{Experimental Setup}\label{ss:experimental-setup}
 Experiments start from the deformed configuration of a cuboid beam that has been twisted in opposite directions at both ends (see Fig. \ref{fig:twisting-beam-setup}, left).
-This initial deformed configuration is determined by simulating the twisting motion of the beam using the QN solver with a large number 
-of iterations. Twisting is achieved by in-plane rotation of the reference positions 
-of position constraints acting on particles at the ends of the beam. 
+This initial deformed configuration is determined by simulating the twisting motion of the beam using the QN solver with a large number of iterations. Twisting is achieved by 
+in-plane rotation of the reference positions of position constraints acting on particles at the ends of the beam. 
 
 Starting from this configuration, we investigate the behavior of the 
 solvers during the next time step in two settings: In the first, the position constraints at the ends of the beam are released, causing the 
@@ -49,12 +48,12 @@ not supported by PD. The simplified Neohookean model is chosen over the original
 Neohookean energy potential makes it incompatible with XPBD (see Sec.\ \ref{ss:xpbd-deformable-bodies}). The experiments are run for time steps 
 \SI{1e-1}{\second}, \SI{1e-2}{\second}, \SI{1e-3}{\second} and \SI{1e-4}{\second}. For the strain and Neohookean constraints, both 
 stiffness and Youngs modulus, respectively, are set to powers of ten ranging from \num{1e5} to \num{1e12}. The Poisson ratio is fixed 
-at 0.45 for all experiments, since we put the focus of our evalution on material stiffness over incompressibility. A representative subset of both twisting and untwisting 
+at 0.45 for all experiments, since we put the focus of our evaluation on material stiffness over incompressibility. A representative subset of both twisting and untwisting 
 beam experiments using the strain material model are discussed in Sections \ref{ss:untwisting-beam-strain} and \ref{ss:twisting-beam-strain}, respectively. For the 
 Neohookean material model, we focus on the untwisting beam experiment in order to isolate the effects caused by applying solvers to a more complicated non-linear material 
 model from artifacts caused by incompatible constraints. A representative set of experiments is discussed in Section \ref{ss:untwisting-beam-neohookean}.
 
-\begin{figure}[h]
+\begin{figure}[tb]
     \centering
     \begin{tikzpicture}
     \node[inner sep=0pt] (twisted) at (0,-1.625)
@@ -161,12 +160,13 @@ is used. Of course, the behavior of the PBD solver is not physically plausible. 
 a single additional variable per constraint leads us to the decision to exclude PBD from the remaining experiments in this thesis and to focus on analyzing the properties of 
 XPBD, ADMM, PD and the QN solver instead.
 
-\begin{figure}
-    \begin{subfigure}{0.49\textwidth}
+\begin{figure}[b]
+    \begin{subfigure}{0.44\textwidth}
     \includegraphics[width=\textwidth, trim={0 5.0cm 0 2.5cm}, clip]{figures/strain_pbd_1e-2.png}
     \subcaption{time step \SI{1e-2}{\second}}
     \end{subfigure}
-    \begin{subfigure}{0.49\textwidth}
+    \hfill
+    \begin{subfigure}{0.44\textwidth}
     \includegraphics[width=\textwidth, trim={0 5.0cm 0 2.5cm}, clip]{figures/strain_pbd_1e-3.png}
     \subcaption{time step \SI{1e-3}{\second}}
     \end{subfigure}
@@ -174,7 +174,6 @@ XPBD, ADMM, PD and the QN solver instead.
     and \SI{1e-3}{\second} (right) using PBD (red) and QN (cyan).}
     \label{fig:strain-pbd}
 \end{figure}
-
 
 \section{ADMM Weights}\label{ss:admm-weights}
 As stated in Section \ref{ss:admm-properties}, there is no generally valid method for determining ADMM weights that ensures acceptable convergence properties.
@@ -196,7 +195,7 @@ $w_i = 0.3\sqrt{k}$. Thus, $w_i = 0.3\sqrt{k}$ is an excellent weight for time s
 can be seen that more aggressive reductions of the ADMM weights without jeopardizing convergence are possible when a larger time step is used. Qualitatively equivalent results 
 can be observed for other stiffness values. 
 
-In Section \ref{ss:admm-properties}, we hypothesized that it might be preferrable to use smaller ADMM weights if the constraint energy $\Psi$ is significantly smaller at the true 
+In Section \ref{ss:admm-properties}, we hypothesized that it might be preferable to use smaller ADMM weights if the constraint energy $\Psi$ is significantly smaller at the true 
 implicit positions $\vecm{q}^*$ than at the initial positions $\vecm{q}_0$, whereas larger weights might be more appropriate when $\Psi(\vecm{q}^*) \approx \Psi(\vecm{q}_0)$.
 The time step dependence of ADMM weights can be explained by combining this insight with the fact that the extent to which a single application of implicit Euler integration 
 reduces the constraint energy of a deformed body generally grows with increasing time step size. Thus, for smaller time steps it is 
@@ -249,7 +248,32 @@ achieved by any of the solvers. The relative errors are shown in Table \ref{tbl:
 0.4 \% by the time QN has converged, while the errors achieved by PD and XPBD are still substantial. Additionally, even after a 1000 iterations, XPBD's relative error 
 is still at 1.8 \%.
 
-\begin{table}[h]
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives.pdf}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time 
+        step of size \SI{1e-2}{\second} for an untwisting beam using strain constraints with stiffness \num{1e8}.}
+    \label{fig:strain-beam-untwist-objectives}
+\end{figure}
+
+The data suggests that ADMM, PD and QN converge towards a solution that is closer to the true implicit positions at the next time step than XPBD. This is expected, 
+as XPBD only approximates a solution to the implicit equations of motion due to the simplifying assumptions made during its derivation (see Sec.\ \ref{ss:xpbd-properties}).
+Due to the second assumption (see Eq.\ \ref{eq:xpbd-assumption-2}) in particular, there is no penalty for moving vertex positions away from their inertial positions during 
+the XPBD constraint projections (see Sec.\ \ref{ss:xpbd-properties}), even though it increases the objective function. Additionally,
+it is not clear whether the Gauss-Seidel solver at the core of XPBD is able to minimize the constraint energies sufficiently via local constraint projections only.
+Since constraints are projected independently one-by-one, later constraint projections can undo some of the work achieved by previous projections. Bouaziz et al.\ 
+\cite{bouaziz2014} describe this phenomenon as an oscillation between different constraints. On the other hand ADMM, PD and QN aim to solve the implicit equations 
+of motion exactly. The difference in the rate of convergence between ADMM and PD goes in line 
+with experimental data provided by Overby et al.\ \cite{overby2017}. There, the authors show that ADMM with a weight of $\sqrt{k}$, where $k$ is the stiffness of the 
+strain constraints, is almost equivalent to PD and that the convergence rate can often be improved by reducing the weight. As discussed in 
+Section \ref{ss:admm-properties}, this is due to the fact that lower weights allow faster progress towards positions that reduce the constraint energy, which is particularly 
+useful for simulations with larger time steps. Similarly, the faster convergence rate of QN compared to PD is expected in light of the observation that PD is a quasi-Newton method 
+with constant Hessian approximation (see \cite{liu2017}, Sec.\ \ref{ss:pd-quasi-newton}). The QN solver augments the PD solver with a line-search algorithm and L-BFGS updates to 
+the constant Hessian approximation from PD that take into account curvature information from previous iterations to better approximate the true Hessian matrix. Both
+of these measures help improve the convergence rate of QN in comparison to PD. Again, this is in line with results presented by Liu et al.\ \cite{liu2017}. The comparably
+slow convergence rate of XPBD could again be explained by the simplifying assumptions made during the XPBD derivation and the aforementioned oscillations of Gauss-Seidel
+solvers. 
+
+\begin{table}[t]
 \centering
 \begin{tabular}{ |r||c|c|c|c| } 
  \hline
@@ -266,32 +290,6 @@ is still at 1.8 \%.
 Figure \ref{fig:strain-beam-untwist-objectives}.}
 \label{tbl:rel-errors}
 \end{table}
-
-The data suggests that ADMM, PD and QN converge towards a solution that is closer to the true implicit positions at the next time step than XPBD. This is expected, 
-as XPBD only approximates a solution to the implicit equations of motion due to the simplifying assumptions made during its derivation (see Sec.\ \ref{ss:xpbd-properties}).
-Due to the second assumption (see Eq.\ \ref{eq:xpbd-assumption-2}) in particular, there is no penalty for moving vertex positions away from their inertial positions during 
-the XPBD constraint projections (see Sec.\ \ref{ss:xpbd-properties}), even though it increases the objective function. Additionally,
-it is not clear whether the Gauss-Seidel solver at the core of XPBD is able to minimize the constraint energies sufficiently via local constraint projections only.
-Since constraints are projected independently one-by-one, later constraint projections can undo some of the work achieved by previous projections. Bouaziz et al.\ 
-\cite{bouaziz2014} describe this phenomenon as an oscillation between different constraints. On the other hand ADMM, PD and QN aim to solve the implicit equations 
-of motion exactly. The difference in the rate of convergence between ADMM and PD goes in line 
-with experimental data provided by Overby et al.\ \cite{overby2017}. There, the authors show that ADMM with a weight of $\sqrt{k}$, where $k$ is the stiffness of the 
-strain constraints, is almost equivalent to PD and that the convergence rate can often be improved by reducing the weight. As discussed in 
-Section \ref{ss:admm-properties}, this is due to the fact that lower weights allow faster progress towards positions that reduce the constraint energy, which is particularly 
-useful for simulations with larger timesteps. Similarly, the faster convergence rate of QN compared to PD is expected in light of the observation that PD is a quasi-Newton method 
-with constant Hessian approximation (see \cite{liu2017}, Sec.\ \ref{ss:pd-quasi-newton}). The QN solver augments the PD solver with a line-search algorithm and LBFGS-updates to 
-the constant Hessian approximation from PD that take into account curvature information from previous iterations to better approximate the true Hessian matrix. Both
-of these measures help improve the convergence rate of QN in comparison to PD. Again, this is in line with results presented by Liu et al.\ \cite{liu2017}. The comparably
-slow convergence rate of XPBD could again be explained by the simplifying assumptions made during the XPBD derivation and the aforementioned oscillations of Gauss-Seidel
-solvers. 
-
-\begin{figure}[h]
-    \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives.pdf}
-    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time 
-        step of size \SI{1e-2}{\second} for an untwisting beam using strain constraints with stiffness \num{1e8}.}
-    \label{fig:strain-beam-untwist-objectives}
-\end{figure}
-
 
 To better understand the main factor for XPBD's unfavorable convergence properties, it is helpful to plot the inertial term and the constraint term of the objective 
 function separately. The resulting plots are shown in Figure \ref{fig:strain-beam-untwist-objectives-split}. 
@@ -327,11 +325,11 @@ it is not clear whether the constraint energy would be decreased further than it
 
 The fact that the constraint energy is higher for the final state of the XPBD solver is also perceptible when comparing its geometry with the final geometries computed 
 by PD-style solvers. The geometries achieved after 1000 XPBD and QN iterations are shown in Figure \ref{fig:strain-beam-untwist-geometries} a. 
-The corresponding geometries for PD and ADMM are ommitted since they are visually indistinguishable from the geometry computed by the QN solver. The image shows 
+The corresponding geometries for PD and ADMM are omitted since they are visually indistinguishable from the geometry computed by the QN solver. The image shows 
 that the QN solver untwists the beam further towards its undeformed rest configuration than XPBD. Since the constraint energies obtain a minimum at the reference 
 configuration, this is in line with the observation that QN is more successful than XPBD at reducing the constraint term of the objective function. We point out that 
 the surface of the XPBD geometry is smooth. In the discussion of Figure \ref{fig:strain-beam-untwist-geometries} b and Figure \ref{fig:twisting-beam-xpbd-failure-geometry},
-we suggest that oscillations of the Gauss-Seidel-type solver manifest themselves in noticable geometric artifacts on the beam surface. Thus, it is likely that 
+we suggest that oscillations of the Gauss-Seidel-type solver manifest themselves in noticeable geometric artifacts on the beam surface. Thus, it is likely that 
 the comparably large constraint term after 1000 XPBD iterations is caused by the simplifying assumptions during the XPBD derivation instead of the local nature of 
 the XPBD solver.
 
@@ -340,32 +338,9 @@ by the converged state of the XPBD solver is smaller than the final inertial ter
 their inertial positions in the untwisting beam experiment are the elastic energies due to the deformation of the beam. One possible explanation for the low inertial 
 term for XPBD might be that the particles do not move far away from their inertial positions simply because the XPBD constraint solver is not as successful at 
 minimizing the constraint energies. Lastly, the penalty for moving particles from their inertial positions is quite low for PD-style solvers if a time step as large 
-as \SI{1e-2}{\second} is used. However, the inertial term achieved by XPBD remains smaller than its counterparts, even if the timestep is decreased.
+as \SI{1e-2}{\second} is used. However, the inertial term achieved by XPBD remains smaller than its counterparts, even if the time step is decreased.
 
-\subsection{Conversion of Constraint Energy Into Kinetic Energy}\label{ss:conversion-constraint-kinetic}
-In the light of the observation that the inertial term of the objective function of the variational form of implicit Euler integration can be interpreted as the kinetic 
-energy of the beam (see Sec.\ \ref{ss:analysis-solvers}), the results in Figure \ref{fig:strain-beam-untwist-objectives-split} suggest that some of the 
-constraint energy stored in the deformed beam is converted into kinetic energy during most solver iterations. Additionally, solvers with a 
-faster convergence rate appear to be able to convert a larger share of the elastic energy into kinetic energy during a single iteration. 
-
-\subsection{Effects of Early Termination}\label{ss:early-termination}
-In the context of real-time applications, the number of solver iterations is often capped to ensure that the computations fit into the time budget allocated 
-for the simulation of the next frame. A closer look at Figure \ref{fig:strain-beam-untwist-objectives-split} shows that all of the solvers are still in the process of 
-converting the constraint energy stored in the twisted beam into kinetic energy after the first 10 iterations. Accordingly, none of the solvers have reduced the 
-objective function to the minimum achieved by the PD-style solvers yet (see Fig. \ref{fig:strain-beam-untwist-objectives}). After 10 iterations, the QN solver has reduced 
-the objective function the most, followed by ADMM, PD and XPBD. 
-
-To gain a better understanding of the effects caused by terminating solvers before the objective function is minimized, we take a 
-closer look at the geometries that the XPBD, PD and ADMM solvers arrive at after 10 solver iterations in Figure \ref{fig:strain-beam-untwist-geometries} b-d. The 
-corresponding QN geometry is given as a reference in each panel. Figure \ref{fig:strain-beam-untwist-geometries} b-d shows that the solvers untwist the beam to 
-different extents after the first 10 solver iterations. The QN geometry gets closest to the beam's reference configuration, again followed by ADMM, PD and, lastly, 
-XPBD. Note that the degree to which solvers untwist the beam goes hand-in-hand with the extent to which they minimize the objective function and particularly its 
-constraint energy. In summary, terminating the solvers after a small number of iterations can cause the motion of simulated bodies to appear slowed down. 
-This effect is more noticable for solvers that have inferior convergence properties, such as PD and XPBD. Note that Bouaziz et al.\ \cite{bouaziz2014} report 
-the same observation in the discussion of the PD solver and state that this is due to the fact that forces may not be able to fully propagate through the mesh 
-if the optimization is not run long enough. 
-
-\begin{figure}
+\begin{figure}[h]
     \centering
     \begin{subfigure}{0.49\textwidth}
         \includegraphics[width=\textwidth, trim={0 5.0cm 0 2.5cm}, clip]{figures/strain_beam_untwist_QN_vs_XPBD.png}
@@ -391,7 +366,30 @@ if the optimization is not run long enough.
     \label{fig:strain-beam-untwist-geometries}
 \end{figure}
 
-Closer inspection of Figure \ref{fig:strain-beam-untwist-geometries} b shows that the XPBD geometry is noticably rugged compared to the geometries of the PD-type 
+\subsection{Conversion of Constraint Energy Into Kinetic Energy}\label{ss:conversion-constraint-kinetic}
+In the light of the observation that the inertial term of the objective function of the variational form of implicit Euler integration can be interpreted as the kinetic 
+energy of the beam (see Sec.\ \ref{ss:analysis-solvers}), the results in Figure \ref{fig:strain-beam-untwist-objectives-split} suggest that some of the 
+constraint energy stored in the deformed beam is converted into kinetic energy during most solver iterations. Additionally, solvers with a 
+faster convergence rate appear to be able to convert a larger share of the elastic energy into kinetic energy during a single iteration. 
+
+\subsection{Effects of Early Termination}\label{ss:early-termination}
+In the context of real-time applications, the number of solver iterations is often capped to ensure that the computations fit into the time budget allocated 
+for the simulation of the next frame. A closer look at Figure \ref{fig:strain-beam-untwist-objectives-split} shows that all of the solvers are still in the process of 
+converting the constraint energy stored in the twisted beam into kinetic energy after the first 10 iterations. Accordingly, none of the solvers have reduced the 
+objective function to the minimum achieved by the PD-style solvers yet (see Fig. \ref{fig:strain-beam-untwist-objectives}). After 10 iterations, the QN solver has reduced 
+the objective function the most, followed by ADMM, PD and XPBD. 
+
+To gain a better understanding of the effects caused by terminating solvers before the objective function is minimized, we take a 
+closer look at the geometries that the XPBD, PD and ADMM solvers arrive at after 10 solver iterations in Figure \ref{fig:strain-beam-untwist-geometries} b-d. The 
+corresponding QN geometry is given as a reference in each panel. Figure \ref{fig:strain-beam-untwist-geometries} b-d shows that the solvers untwist the beam to 
+different extents after the first 10 solver iterations. The QN geometry gets closest to the beam's reference configuration, again followed by ADMM, PD and, lastly, 
+XPBD. Note that the degree to which solvers untwist the beam goes hand-in-hand with the extent to which they minimize the objective function and particularly its 
+constraint energy. In summary, terminating the solvers after a small number of iterations can cause the motion of simulated bodies to appear slowed down. 
+This effect is more noticeable for solvers that have inferior convergence properties, such as PD and XPBD. Note that Bouaziz et al.\ \cite{bouaziz2014} report 
+the same observation in the discussion of the PD solver and state that this is due to the fact that forces may not be able to fully propagate through the mesh 
+if the optimization is not run long enough. 
+
+Closer inspection of Figure \ref{fig:strain-beam-untwist-geometries} b shows that the XPBD geometry is noticeably rugged compared to the geometries of the PD-type 
 solvers, which 
 appear mostly smooth at the surface. Thus, in contrast to the PD-style solvers, terminating the simulation early does not only manifest itself in slowing down 
 the motion of the simulated body but also in visible geometric artifacts. This matches the observation that the constraint objective value achieved after 10 XPBD iterations 
@@ -418,7 +416,7 @@ of time than XPBD and PD, but ADMM and PD appear in a more favorable light compa
 
 \subsection{Convergence Properties With Large Time Steps and Stiffnesses}\label{ss:untwisting-beam-strain-convergence-large-ts}
 Figure \ref{fig:strain-beam-untwist-objectives} shows data for time step \SI{1e-2}{\second} and constraint stiffness \num{1e8}. While the results are qualitatively 
-the same for a wide range of time steps and stiffness values, noticable differences arise when a combination of large time steps and large stiffness values is used.
+the same for a wide range of time steps and stiffness values, noticeable differences arise when a combination of large time steps and large stiffness values is used.
 Consider the corresponding plot with time step \SI{1e-1}{\second} and constraint stiffness \num{1e9} in Figure \ref{fig:strain-beam-untwist-objectives-large-ts}. Again,
 QN makes the fastest progress towards decreasing the objective, followed by ADMM, PD and XPBD. However, from 680 iterations onwards the objective value achieved by the XPBD 
 solver is lower than the objective value achieved by the PD solver. In this setting, QN, ADMM and XPBD converge to configurations that achieve roughly the same objective 
@@ -426,6 +424,11 @@ function value, while it is PD whose final objective is larger than the other so
 of approx.\ 0.02 \%. While this appears negligible, it is worth noting that the minimal objective value that PD arrives at is still approx.\ 2.3 
 times larger than the minimal value achieved by the other solvers.
 
+As discussed in Section \ref{ss:pd-properties}, each PD iteration is guaranteed to weakly reduce the objective function. However, this only ensures that the objective function 
+at the configuration PD converges to is never higher than the initial objective value. There is no guarantee that 
+PD converges to the true implicit positions. Thus, the observation that PD can fail at reducing the objective function all the way is not surprising. To gain a better 
+understanding of why the convergence properties of the PD solver worsen when combining larger time steps and stiffness values, we again create separate plots for the 
+inertial and constraint terms. This is analogous 
 
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives_large_ts.pdf}
@@ -434,14 +437,23 @@ times larger than the minimal value achieved by the other solvers.
     \label{fig:strain-beam-untwist-objectives-large-ts}
 \end{figure}
 
-As discussed in Section \ref{ss:pd-properties}, each PD iteration is guaranteed to weakly reduce the objective function. However, this only ensures that the objective function 
-at the configuration PD converges to is never higher than the initial objective value. There is no guarantee that 
-PD converges to the true implicit positions. Thus, the observation that PD can fail at reducing the objective function all the way is not surprising. To gain a better 
-understanding of why the convergence properties of the PD solver worsen when combining larger time steps and stiffness values, we again create separate plots for the 
-inertial and constraint terms. This is analogous to the experiments conducted in Figure \ref{fig:strain-beam-untwist-objectives-split} to investigate 
+\noindent
+to the experiments conducted in Figure \ref{fig:strain-beam-untwist-objectives-split} to investigate 
 the unfavorable convergence properties of XPBD observed in Figure \ref{fig:strain-beam-untwist-objectives}. 
 
-\begin{figure}[t]
+Again, Figure \ref{fig:strain-beam-untwist-objectives-split-large-ts} shows that the solvers mostly decrease the constraint term and increase the inertial term during each 
+iteration. QN, ADMM and PD are more successful at reducing the constraint energy than XPBD, even 
+though PD converges to a constraint energy that is slightly larger than the one achieved by QN and ADMM this time. Each of the PD-style solvers manages to bring the 
+constraint energy down to close to zero. This is significantly lower than the minimum achieved for a time step of \SI{1e-2}{\second} and stiffness \num{1e8} (see 
+Fig. \ref{fig:strain-beam-untwist-objectives-split}). However, it is evident that XPBD has not fully converged yet as it still continues to decrease the constraint energy 
+values. All in all, the results for the constraint energy are qualitatively the same as the ones observed for 
+time step \SI{1e-2}{\second} and stiffness \num{1e8}. On the other hand, the plots for the inertial term differ quite significantly. With larger time step and stiffness,
+QN, ADMM and XPBD converge to roughly the same inertial term, whereas the PD solver converges to a value that is more than twice as large. Already after 20 iterations, 
+the inertial term achieved by PD is larger than the value that the other solvers converge to. Still, PD continues to increase the inertial term during the first 400 
+iterations. Finally, each of the solvers converge to an inertial term that is significantly lower than the corresponding inertial term obtained with time step 
+\SI{1e-2}{\second} and stiffness \num{1e8}.
+
+\begin{figure}[h]
     \centering
     \begin{subfigure}{\textwidth}
         \includegraphics[width=\linewidth]{figures/strain_beam_untwist_constraintObjectives_large_ts.pdf}
@@ -454,18 +466,6 @@ the unfavorable convergence properties of XPBD observed in Figure \ref{fig:strai
     stiffness \num{1e9}.}
     \label{fig:strain-beam-untwist-objectives-split-large-ts}
 \end{figure}
-
-Again, Figure \ref{fig:strain-beam-untwist-objectives-split-large-ts} shows that the solvers mostly decrease the constraint term and increase the inertial term during each 
-iteration. QN, ADMM and PD are more successful at reducing the constraint energy than XPBD, even 
-though PD converges to a constraint energy that is slightly larger than the one achieved by QN and ADMM this time. Each of the PD-style solvers manages to bring the 
-constraint energy down to close to zero. This is significantly lower than the minimum achieved for a time step of \SI{1e-2}{\second} and stiffness \num{1e8} (see 
-Fig. \ref{fig:strain-beam-untwist-objectives-split}). However, it is evident that XPBD has not fully converged yet as it still continues to decrease the constraint energy 
-values. All in all, the results for the constraint energy are qualitatively the same as the ones observied for 
-time step \SI{1e-2}{\second} and stiffness \num{1e8}. On the other hand, the plots for the inertial term differ quite significantly. With larger time step and stiffness,
-QN, ADMM and XPBD converge to roughly the same inertial term, whereas the PD solver converges to a value that is more than twice as large. Already after 20 iterations, 
-the inertial term achieved by PD is larger than the value that the other solvers converge to. Still, PD continues to increase the inertial term during the first 400 
-iterations. Finally, each of the solvers converge to an inertial term that is significantly lower than the corresponding inertial term obtained with time step 
-\SI{1e-2}{\second} and stiffness \num{1e8}.
 
 Since the weight of the inertial term decreases with increasing time step size and the weight of the constraint term increases with increasing stiffness values, moving 
 particles away from their inertial positions to reduce the constraint energy is encouraged in Figure \ref{fig:strain-beam-untwist-objectives-split-large-ts} compared to
@@ -523,9 +523,9 @@ First, the data provides insight into why the spike of the inertial term of the 
 Figure \ref{fig:strain-beam-untwist-objectives-split-large-ts} does not go along with a large decrease in the constraint term: The spike is caused by 
 rigid-body motion, to which elastic energy potentials are invariant. Secondly, we discussed in Section \ref{ss:pd-quasi-newton} that PD can be considered 
 a quasi-Newton method with constant Hessian approximation. The QN solver enhances the PD solver by integrating local curvature information into the Hessian 
-approximation via an LBFGS update and adding a line search algorithm. Since the QN solver does not introduce any global linear momentum, it follows that
+approximation via an L-BFGS update and adding a line search algorithm. Since the QN solver does not introduce any global linear momentum, it follows that
 the reason for the PD solver's inability to preserve the linear momentum is the lack of one or both of these features of the QN solver. To find out which of 
-these factors is more important, it might be interesting to remove the line search or the LBFGS-update from the QN solver and take another look at the momenta. 
+these factors is more important, it might be interesting to remove the line search or the L-BFGS update from the QN solver and take another look at the momenta. 
 Lastly, recall that ADMM and PD are almost identical for strain constraints if the ADMM weights $w_i$ are set to $\sqrt{k}$. For the experiments in 
 Figure \ref{fig:strain-beam-untwist-momenta-large-ts}, $w_i \approx \frac{1}{2}\sqrt{k}$ is used. Thus, the smaller linear momentum observed for ADMM invites 
 the hypothesis that lower ADMM weights can be beneficial for the preservation of linear momentum. However, more effort is required to verify this claim and 
@@ -562,7 +562,7 @@ Figure \ref{fig:strain-beam-twist-typical-objectives}. While the results obtaine
 sizes and stiffness values, the behavior of XPBD and ADMM can vary quite dramatically across different parameter settings. The plots in 
 Figure \ref{fig:strain-beam-twist-typical-objectives} show that both QN and PD converge to a configuration with a lower objective value than the initial 
 objective value within the first 20 iterations. Note that it takes a larger number of iterations to achieve convergence in the corresponding untwisting beam experiments 
-(see Fig. \ref{fig:strain-beam-untwist-objectives-large-ts}). This is particularly noticable for the PD solver. Figure \ref{fig:strain-beam-twist-typical-objectives} 
+(see Fig. \ref{fig:strain-beam-untwist-objectives-large-ts}). This is particularly noticeable for the PD solver. Figure \ref{fig:strain-beam-twist-typical-objectives} 
 shows that ADMM exhibits the same behavior as QN and PD for time step \SI{1e-1}{\second} and stiffness \num{1e9}. While this can be observed for a variety of 
 different parameter settings, there are also many cases where ADMM either does not converge at all or converges to a solution whose objective value is 
 significantly lower than the objective value achieved by the other PD-style solvers. Lastly, XPBD converges to a configuration with an objective value that is 
@@ -582,7 +582,7 @@ we pointed out that the PD solver can fail to decrease the objective value to th
 undesired rigid-body motion during early PD iterations when the penalty for moving particles away from their inertial positions is largely outweighed by the incentives 
 for minimizing constraint energies. Since the position constraints at the ends of the beam in the twisting beam experiments further disincentivize moving the beam's 
 center of gravity, it is not surprising that this failure mode of the PD solver is not encountered. The fact that convergence is achieved after fewer iterations 
-during the twisting beam experiments than during the unwisting beam experiments is expected considering that the initial particle positions are much closer to the true 
+during the twisting beam experiments than during the untwisting beam experiments is expected considering that the initial particle positions are much closer to the true 
 implicit positions that the solvers aim to converge. To see this, observe that the QN solver untwists the beam from its initial deformed configuration all the way to its 
 undeformed reference configuration over a single time step in Figure \ref{fig:strain-beam-untwist-geometries-large-ts} b. In contrast, the beam is only twisted by a 
 couple of degrees during the twisting beam experiments. As mentioned earlier, the results for XPBD and ADMM are more complex and merit a more detailed discussion below.
@@ -599,7 +599,7 @@ term to increase. Table \ref{tbl:strain-beam-twist-xpbd-failures} shows that XPB
 values are used. In particular, XPBD always fails once the stiffness is larger than some time step dependent threshold. This threshold 
 increases with increasing time step size.
 
-\begin{table}[h]
+\begin{table}[tb]
 \centering
     \begin{tabular}{ |r||c|c|c|c| } 
      \hline
@@ -627,14 +627,14 @@ data presented in Table \ref{tbl:strain-beam-twist-xpbd-failures}.
 
 To get a feeling for the visual effects resulting from the large (constraint) objective value achieved when XPBD fails, we take a closer look at the 
 geometry of a twisting strain beam after 1000 XPBD iterations over a time step of \SI{1e2}{\second} with constraint stiffness \num{1e12} in 
-Figure \ref{fig:twisting-beam-xpbd-failure-geometry}. The left panel shows that the surface of the XPBD geometry is noticably rugged. Recall that 
+Figure \ref{fig:twisting-beam-xpbd-failure-geometry}. The left panel shows that the surface of the XPBD geometry is noticeably rugged. Recall that 
 the same observation is made after 10 XPBD iterations in the untwisting beam setting (see Fig. \ref{fig:strain-beam-untwist-geometries}). The 
-effect is particularly noticable at the ends of the beam, where individual tetrahedra protrude from the volume of the body. To highlight this, 
+effect is particularly noticeable at the ends of the beam, where individual tetrahedra protrude from the volume of the body. To highlight this, 
 we zoom in on the geometry at one end of the beam in the right panel of Figure \ref{fig:twisting-beam-xpbd-failure-geometry}. The geometry that the QN solver 
 converges to is given as a reference. While the QN geometry is flat at the end of the beam, the XPBD geometry is irregular. Additionally, it 
 appears that the end of the beam is twisted further in the counterclockwise direction when using the XPBD solver.
 
-\begin{figure}[h]
+\begin{figure}[tb]
     \resizebox{\textwidth}{!}{
     \includegraphics[height=10cm, trim={0 5.0cm 0 2.5cm}, clip]{figures/twisted_beam_rugged_xpbd.png}
     \quad
@@ -648,7 +648,7 @@ appears that the end of the beam is twisted further in the counterclockwise dire
 Again, the observed rugged surface fits with our hypothesis that the failures of the XPBD solver in the twisting beam scenario are due to 
 oscillations of the Gauss-Seidel-type solver at the core of XPBD. The protrusions at the end of the beam are most likely caused by oscillations 
 between the incompatible position constraints and local strain constraints. Together, our results from Figure \ref{fig:strain-beam-untwist-geometries} and 
-Figure \ref{fig:twisting-beam-xpbd-failure-geometry} suggest that oscillations can cause noticable geometric artifacts if an insufficiently low number of 
+Figure \ref{fig:twisting-beam-xpbd-failure-geometry} suggest that oscillations can cause noticeable geometric artifacts if an insufficiently low number of 
 XPBD iterations is used or if subsets of constraints are fundamentally incompatible. The observation that the beam is twisted further from its 
 initial configuration for XPBD than for QN is expected considering that the XPBD solver has no explicit penalty for moving particles away from their inertial 
 positions (see Sec.\ \ref{ss:xpbd-properties}). Thus, XPBD has more freedom to update particle positions in such a way that the position constraints 
@@ -770,7 +770,7 @@ The results in Figure \ref{fig:strain-beam-twist-admm-geometries} support the hy
 converge to a local minimum. By overtwisting the beam at two locations, the ADMM solver is eventually able to arrive at a configuration where most of the twist from the 
 initial deformed configuration is removed without violating the position constraints at the end of the beam. Recall that the value of the objective function can be 
 interpreted as the energy of the beam at a configuration (see Sec.\ \ref{ss:analysis-solvers}). Then, it is obvious that the overtwisting motion required to achieve this 
-global minimum is not phyiscally plausible, since the energy of the beam is increased to a larger value than the energy at the initial deformed state in the process.
+global minimum is not physically plausible, since the energy of the beam is increased to a larger value than the energy at the initial deformed state in the process.
 However, without external forces, the energy of the beam should be conserved according to Newton's laws of motion. For the experiments above, ADMM weights of 
 $w_i = 0.3\sqrt{k}$ were used, where $k$ is the strain constraint stiffness. The fact that PD does not converge to the global minimum even though it is almost 
 identical to ADMM with weights $w_i = \sqrt{k}$ is in line with our observation that lower ADMM weights encourage more aggressive optimization of the constraint 
@@ -800,7 +800,7 @@ from their inertial positions, it is expected that such aggressive minimizations
 (see Sec.\ \ref{ss:variational-implicit-euler}). Still, it is likely that the choice of the ADMM weights has a strong impact on whether the ADMM solver converges to the 
 the global minimum or not.
 
-Lastly, we show that there are time step sizes and stiffness values for which ADMM does not converge at all in the twisting beam scenario. Conside the plot of the 
+Lastly, we show that there are time step sizes and stiffness values for which ADMM does not converge at all in the twisting beam scenario. Consider the plot of the 
 objective values over the iterations for a time step of \SI{1e-2}{\second} and a stiffness value of \num{1e8} in 
 Figure \ref{fig:strain-beam-twist-objectives-admm-failure}. The graphs show that ADMM oscillates between configurations with objective values that are larger 
 than the initial objective value and objective values that are smaller than the minimal objective values achieved by QN and PD. Similar results are observed for 

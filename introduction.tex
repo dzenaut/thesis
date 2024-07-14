@@ -2,29 +2,32 @@
 Visually pleasing simulations of deformable bodies are the cornerstone of many applications of computer graphics like animated movies and video games.
 This creates the need for simulation procedures that are capable of handling a variety of non-linear materials including rubber and biological soft 
 tissue such as skin, fat and muscles. Realistic results can be achieved through physics-based simulation, where a body's response to deformation is 
-calculated in accordance with the equations of motion and its physical material model. Additionally, handling common interactions such as collisions, 
-joints or simply attaching different bodies to each other requires the ability to exert more direct control over the positions of the simulated bodies. 
-Ideally, this is achieved by introducing hard constraints that are guaranteed to be satisfied at all times into the simulation.
+calculated in accordance with the equations of motion and its physical material model. However, simulating materials with large material stiffness 
+can often prove challenging since large restorative forces in response to even small deformations can cause simulations to become unstable. Similar 
+issues arise when handling common interactions between bodies in a purely force-based approach. For example, resolving interpenetrations requires 
+the limit of infinitely stiff forces. There, it is often desirable to bypass forces entirely and exert more direct control over the positions of 
+individual particles by introducing geometric constraints instead. In real-time applications, the physics update often needs to be performed during a 
+single frame. Since accurate constrained physics-based simulation is too expensive to fit into the available time budget, simulation methods that are 
+suitable for real-time applications typically trade accuracy and generality for speed. For the reasons outline above, these tradeoffs become particularly 
+apparent when simulating stiff materials and modelling interactions between different bodies.
 
-In real-time applications, the physics update often needs to be performed during a single frame. Since accurate physics-based simulation is too 
-expensive to fit into the available time budget, simulation methods that are suitable for real-time applications trade accuracy 
-and generality for speed. Two popular approaches for real-time physics-based simulation are XPBD \cite{macklin2016} and Projective Dynamics (PD) 
+Two popular approaches for real-time physics-based simulation are XPBD \cite{macklin2016} and Projective Dynamics (PD) 
 \cite{bouaziz2014}. In XPBD, energy terms are expressed in terms of compliant constraints whose contributing particles are moved closer to physically 
 valid positions by independent constraint projections. On the other hand, PD treats numerical integration of the equations of motion as an optimization 
 problem that can be solved efficiently by restricting energy potentials to a special structure. PD can be extended to more general energy potentials 
 by interpreting it through the lense of the Alternating Direction Method of Multipliers (ADMM) for constrained optimization \cite{overby2017} and 
-Quasi-Newton methods for unconstrained optimization \cite{liu2017}, without sacrificing the efficiency of the original PD algorithm. 
-
-While the inventors of the methods above do provide experimental data that highlights each of the solvers' key characteristics, comprehensive 
-comparisons between different approaches are difficult to come by. In particular, comparisons between simulation methods are usually only conducted 
-for simple material models, low stiffness values and a small range of time step sizes. This makes it challenging to evaluate which simulation method 
-is most suitable for a specific simulation scenario. The goal of this thesis is to bridge this gap. The main contributions consist of the following:
+Quasi-Newton methods for unconstrained optimization \cite{liu2017}, without sacrificing the efficiency of the original PD algorithm. While the inventors 
+of these methods do provide experimental data that highlights each of the solvers' key characteristics, comparisons between simulation methods are usually 
+only conducted for simple material models, low material stiffness and a small range of time step sizes. This makes it difficult to evaluate which 
+simulation method to pick for specific simulation scenarios, particularly in challenging settings with stiff materials.  The goal of this thesis is to 
+bridge this gap. The main contributions consist of the following:
 
 \begin{itemize}
-    \item A comprehensive theoretical analysis of each of the simulation methods that often -- particularly for XPBD -- goes beyond the analysis 
-        provided in the original publications. 
-    \item A detailed discussion of the compatibilty of the simulation methods -- particularly XPBD -- with popular non-linear material models.
+    \item A comprehensive theoretical analysis of XPBD and PD-style simulation methods that often -- particularly for XPBD -- goes beyond the 
+    analysis provided in the original publications. 
+    \item A detailed discussion of the compatibility of XPBD and PD-style simulation methods -- particularly XPBD -- with popular non-linear 
+    material models.
     \item Experimental data that suggests that ADMM weights are dependent on the time step size.
-    \item An extensive comparison between the simulation methods in various settings, including different material models with combinations of 
-        a variety of material parameters and time step sizes.
+    \item An extensive comparison between XPBD and PD-style simulation methods in various settings, including different material models with 
+    combinations of a variety of material parameters and time step sizes.
 \end{itemize}

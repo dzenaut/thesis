@@ -58,7 +58,7 @@ moved while all the other particle positions remain untouched. Additionally, pos
 visible during the projection of the constraints following thereafter. Inequality constraints that are already satisfied are simply skipped. 
 During each solver iteration, all constraints are cycled through once.
 
-\begin{algorithm}
+\begin{algorithm}[tb]
 \caption{Position Based Dynamics Framework}\label{alg:pbd}
 \begin{algorithmic}[1]
 \Procedure{solvePBD}{$\vecm{q}_n$, $\vecm{v}_n$, $f_{\text{ext}}$, $h$}
@@ -142,12 +142,12 @@ a distance constraint with rest length 0 acting on predictions $\vecm{p}_{i_1}, 
     C_{\text{dist}}(\vecm{p}) = \vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert.
 \end{equation}
 
-\noindent Then, after $n_s$ solver iterations the remaning error is going to be $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)^{n_s}$. Müller et al.\ 
+\noindent Then, after $n_s$ solver iterations the remaining error is going to be $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)^{n_s}$. Müller et al.\ 
 suggest establishing a linear relationship by multiplying corrections by $k^{\prime} = 1 - (1-k)^{1/n_s}$. This way, the error becomes
 $\vert \vecm{p}_{i_1} - \vecm{p}_{i_2} \vert (1-k)$ after $n_s$ solver iterations. A summary of the constraint solver is given in Algorithm 
 \ref{alg:pbd-solver}.
 
-\begin{algorithm}
+\begin{algorithm}[tb]
 \caption{PBD Constraint Solver}\label{alg:pbd-solver}
 \begin{algorithmic}[1]
 \Procedure{projectConstraints}{$C_1, \ldots, C_r, \vecm{p}_1, \ldots, \vecm{p}_m$}
@@ -181,7 +181,7 @@ in lines 8-9 of Algorithm \ref{alg:pbd-solver}
 more challenging. Synchronization is required to make sure that constraints that involve the same particle do not run into race conditions. 
 Alternatively, graph coloring algorithms where constraints of the same color are guaranteed to work on separate sets of particles can be employed. 
 Due to the fact that constraints are handled individually, the solver is incapable of finding a 
-compromise between contradicting constraints \cite{mueller2006, bouaziz2014}. In fact, oscillations can occur in over-constrainted situations. 
+compromise between contradicting constraints \cite{mueller2006, bouaziz2014}. In fact, oscillations can occur in over-constrained situations. 
 The exact result depends on the order in which constraints are handled.
 
 \paragraph{Relation to the Newton-Raphson Method.}
@@ -330,7 +330,7 @@ can be written in terms of some positional constraint function $C_j$
 \end{equation}
 
 \noindent where $\alpha_j$ is the inverse stiffness of the constraint. If the constraint functions are grouped into a vector-valued function
-$\vecm{C}$ with $\vecm{C}(\vecm{q}) = [C_1(\vecm{q}), \ldots, C_r(\vecm{q})]^T$ and the inverse stiffnesses are aggregrated into the diagonal matrix
+$\vecm{C}$ with $\vecm{C}(\vecm{q}) = [C_1(\vecm{q}), \ldots, C_r(\vecm{q})]^T$ and the inverse stiffnesses are aggregated into the diagonal matrix
 $\matm{\alpha} = \text{diag}(\alpha_1, \ldots, \alpha_r)$, then
 
 \begin{equation}\label{eq:xpbd-potential}
@@ -580,7 +580,7 @@ an equivalent non-negative energy potential $\psi^\prime$ can be constructed by 
 \end{equation}
 
 \noindent Note that this strategy does not work if $\psi$ does not have a lower bound. For example, the Neohookean energy density from 
-Equation \ref{eq:neohookean-material-model} is unbounded from below due to the volume-preserving log terms. Consequently, it is imcompatible with the XPBD 
+Equation \ref{eq:neohookean-material-model} is unbounded from below due to the volume-preserving log terms. Consequently, it is incompatible with the XPBD 
 solver.
 
 \paragraph{Simplifying Assumptions.}
@@ -788,8 +788,8 @@ larger time steps to make matters worse.
 
 In the approaches to physical simulations via implicit time integration that we have encountered so far, a new linear system needs to be solved
 at every time step. If the linear system is solved directly, this can quickly become prohibitively expensive for large simulations since 
-a new matrix factorization needs to be computed every time a new sytem needs to be solved. In XPBD, this issue is dealt with by using an iterative 
-solver. In Projective Dynamics (PD\index{PD}), Bouaziz et al.\ \cite{bouaziz2014} instead restrict energy potentials to a specific structure 
+a new matrix factorization needs to be computed every time a new system needs to be solved. In XPBD, this issue is dealt with by using an iterative 
+solver. In Projective Dynamics (PD), Bouaziz et al.\ \cite{bouaziz2014} instead restrict energy potentials to a specific structure 
 which allows for efficient implicit time integration via alternating steps of local and global optimization \cite{bouaziz2014}. The local 
 optimization steps are comprised of per-constraint projections of particle positions onto constraint manifolds. The global optimization 
 step combines the results from the individual 
@@ -1025,7 +1025,7 @@ Note that $\matm{S}$ is constant as long as the constraint set remains unchanged
 iteration as the projections $\matm{p}_j$ change during the local optimization steps.  An overview over the algorithm is given in 
 Algorithm \ref{alg:pd}.
 
-\begin{algorithm}
+\begin{algorithm}[tb]
 \caption{Projective Implicit Euler Solver}\label{alg:pd}
 \begin{algorithmic}
 \Procedure{solvePD}{$\matm{q}_n$, $\matm{v}_n$, $\matm{f}_{\text{ext}}$, $h$}
@@ -1056,7 +1056,7 @@ the global system can be solved independently and in parallel for each coordinat
 \paragraph{Generality.}
 The last property follows from the fact that the squared distance functions $d_j$ in Equation \ref{eq:pd-distance} have no dependencies between 
 $x$-, $y$- and $z$-coordinates. This detail demonstrates that restricting to PD energy potentials comes at the cost of generality: 
-Many arbitrary nonlinear elastic potentials, particulary those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
+Many arbitrary nonlinear elastic potentials, particularly those that have dependencies between $x$-, $y$- and $z$-coordinates, cannot be expressed 
 in terms of PD elastic potentials. Further, since PD energy potentials $\psi_j$ are defined in terms of a squared distance function $\d_j$, the 
 resulting forces are always proportional to the distance from the constraint manifold $\cman{C}_j$ \cite{overby2017}. Many classical energies 
 like the Neohookean and St.\ Venant-Kirchhoff energies do not fit into the PD framework \cite{liu2017}.  On the other hand, the authors show that 
@@ -1273,7 +1273,7 @@ inertial positions, i.e.\ $\matm{q}_0 = \tilde{\matm{q}}$ (lines 3-4). For each 
 direction $\matm{p}_k$ is determined. Given the step size $\alpha_k$ and the search direction $\matm{p}_k$, the next iterate 
 is computed in line 12. Finally, the positions and the velocities for the next time step are updated after the last iteration in line 15.
 
-\begin{algorithm}
+\begin{algorithm}[t]
 \caption{L-BFGS Method For PD Energies}\label{alg:pd-lbfgs}
 \begin{algorithmic}[1]
 \State \textbf{require } $\beta \in (0, 1)$, $t \in (0, 1)$
@@ -1302,7 +1302,7 @@ and solving an LSE with constant system matrix $\matm{S}$ (line 7). The quantiti
 positions and gradients from previous iterations and are stored over a window of $l$ iterations (see Alg.\ \ref{alg:pd-lbfgs}, line 6). This 
 enables capturing curvature information during the computation of the search direction $\matm{p}_k$ in the two-loop recursion. 
 
-\begin{algorithm}
+\begin{algorithm}[tb]
 \caption{L-BFGS Two-Loop Recursion}\label{alg:lbfgs-recursion}
 \begin{algorithmic}[1]
 \Procedure{twoLoopRecursion}{$\matm{B}_0$, $\matm{q}_k$, $\matm{s}$, $\matm{y}$, $\rho$, $l$, $k$}
@@ -1354,7 +1354,7 @@ We focus on the setting of tetrahedral meshes with energy potentials that are de
 for each tetrahedron. Here, the energy of the entire body is the sum of the individual tetrahedral energies (see Sec.\ \ref{ss:deformable-bodies}).
 As shown in Section \ref{ss:pd-deformable-bodies}, the energy of a single tetrahedron can be emulated using PD potentials when the strain material model is 
 used (see Eq.\ \ref{eq:pd-strain}). Here, $\matm{G}_j = \matm{A}_j$, where $\matm{A}_j$ is the linear operator that maps $\matm{q}$ 
-to the tranpose of the deformation gradient $\matm{F}^T_j$, $\cman{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
+to the transpose of the deformation gradient $\matm{F}^T_j$, $\cman{C}_j = \text{SO}(3)$ and $w_j = k_jV_j$, where $V_j$ is the
 volume of the undeformed tetrahedron and $k_j$ is a user-defined stiffness value. 
 Liu et al.\ suggest approximating more general tetrahedral energies with PD strain potentials and using the global system
 matrix $\matm{S}$ that arises as the initial Hessian approximation $\matm{B}_0$ given by
@@ -1458,7 +1458,7 @@ authors report that it may be useful to reduce the window size for simulations w
 \paragraph{Changing Constraint Sets.}
 In PD, the system matrix $\matm{S}$ and its factorization need to be recomputed each time a constraint is added to or removed from the simulation. This is not the case 
 for the initial Hessian approximation $\matm{B}_0$ used in the QN solver \cite{liu2017}. When a new constraint is added, it is accounted for by the contribution of its 
-energy or energy gradient to the evalution of $g$ and $\nabla g$. Ignoring its contribution to the initial matrix approximation $\matm{B}_0$ can be interpreted as a more 
+energy or energy gradient to the evaluation of $g$ and $\nabla g$. Ignoring its contribution to the initial matrix approximation $\matm{B}_0$ can be interpreted as a more 
 aggressive Hessian approximation that might negatively affect the convergence rate of the solver. However, with an an appropriate step size selection algorithm in place, 
 the solver will still successfully decrease the objective function $g$. This suggests that it might be helpful to replace backtracking with a step size selection 
 algorithm that ensures that the step size $\alpha_k$ satisfies both Wolfe conditions during simulations with rapidly changing constraint sets. This includes collision 
@@ -1559,7 +1559,7 @@ Plugging the identities from Equation \ref{eq:admm-translation} into the ADMM up
 
 \noindent where $\bar{\vecm{u}} = \matm{W}^{-1}\vecm{u}$. We point out that the matrix $\matm{M} + \rho h^2 \matm{D}^T\matm{W}^T\matm{W}\matm{D}$ in the $\vecm{q}$-update 
 is constant across the entire simulation if the set of energy terms remains unchanged. Finally, note that $\rho$ can be absorbed into $\matm{W}$ via $\matm{W} \leftarrow 
-\sqrt{\rho}\matm{W}$. Thus, $\rho$ is ommitted in the following for convenience. 
+\sqrt{\rho}\matm{W}$. Thus, $\rho$ is omitted in the following for convenience. 
 
 Due to the separable structure of $\Psi_*$ and $\matm{W}$, the $\vecm{z}$- and $\bar{\vecm{u}}$-updates can be performed independently for each energy term. For each 
 $\psi_j$, the corresponding subvectors $\vecm{z}_j$ and $\bar{\vecm{u}_j}$ can be updated via
@@ -1679,4 +1679,3 @@ In Section \ref{ss:admm-hard-constraints}, we demonstrated how to model hard con
 \noindent Overby et al.\ \cite{overby2017} point out that while the $\vecm{z}_j$ satisfy their constraints at all times, the same may not be true for the particle 
 positions $\vecm{q}$ before convergence is achieved. This is particularly important in the context of real-time applications, where the number of solver iterations 
 is often capped to ensure that the physics simulations fit into the time budget of a single frame.
-

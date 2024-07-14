@@ -49,7 +49,7 @@ $\vecm{q}(t), \vecm{v}(t), \vecm{f}(\vecm{q}(t)) \in \mathbb{R}^{3m}$ and $\matm
 $\vecm{q}(t)$ and $\dot{\vecm{q}}(t)$ for time-dependent quantities for the sake of brevity.
 
 The positions $\vecm{q}(t)$ and velocities $\vecm{v}(t)$ at time $t$ can be determined by solving the equations of motion given some initial conditions
-$\vecm{q}(0) = \vecm{q}_0$ and $\vecm{v}(0) = \vecm{v}_0$. Here, $\vecm{q}_0$ and $\vecm{v}_0$ are the initial positions and velocitities, respectively. 
+$\vecm{q}(0) = \vecm{q}_0$ and $\vecm{v}(0) = \vecm{v}_0$. Here, $\vecm{q}_0$ and $\vecm{v}_0$ are the initial positions and velocities, respectively. 
 A function $\vecm{s}$ is a solution of the equations of motion if 
 
 \[
@@ -75,7 +75,7 @@ Numerical integration schemes for the equations of motion aim at approximating t
 at discrete points in time $t_n, n \in \mathbb{N}$ without computing the analytical solution $\vecm{s}$ directly. In the context of this 
 thesis, $t_n = nh$ for some time step $h \in \mathbb{R}$. Note that the time step is constant. The approximations of $\vecm{q}(t_n)$ 
 and $\vecm{v}(t_n)$ produced by the integration scheme are referred to as $\vecm{q}_n$ and $\vecm{v}_n$, respectively. In the following, we 
-introduce explit, symplectic and implicit Euler integration in Section \ref{ss:explicit-euler}, \ref{ss:symplectic-euler} and 
+introduce explicit, symplectic and implicit Euler integration in Section \ref{ss:explicit-euler}, \ref{ss:symplectic-euler} and 
 \ref{ss:implicit-euler}, respectively.
 
 \subsection{Explicit Euler Integration}\label{ss:explicit-euler}
@@ -94,14 +94,14 @@ with the time step $h$. In the explicit Euler method, we approximate $\dot{\vecm
 
 One main criterion for evaluating numerical integration schemes is the global trunction error \cite{chapra2005}, which is the error between 
 $(\vecm{q}^T_n, \vecm{v}^T_n)^T$ and $(\vecm{q}(t_n)^T, \vecm{v}(t_n)^T)^T$ incurred during $n$ applications of the update formula. The global 
-trunction error is the sum 
-of the local trunction error (the error that results in the application of the method over a single time step $h$) and the propagated truncation 
+truncation error is the sum 
+of the local truncation error (the error that results in the application of the method over a single time step $h$) and the propagated truncation 
 error (the error resulting from the approximations produced during the previous steps). It can be shown that the global truncation error of 
 explicit Euler integration over $n$ iterations is $\mathcal{O}(nh)$. Thus, explicit Euler integration is a first-order method. 
 
 The main drawback of explicit Euler integration is that its estimates $\vecm{q}_n$ and $\vecm{v}_n$ can often diverge with growing $n$ unless 
-prohibitely small time steps are used, even if the true functions $\vecm{q}$ and $\vecm{v}$ are bounded \cite{chapra2005}. Such integration schemes 
-are called unstable. In the context of phyiscal simulations, it is also desirable that numerical integration schemes preserve important physical 
+prohibitively small time steps are used, even if the true functions $\vecm{q}$ and $\vecm{v}$ are bounded \cite{chapra2005}. Such integration schemes 
+are called unstable. In the context of physical simulations, it is also desirable that numerical integration schemes preserve important physical 
 invariants of the equations of motion such as the conservation of momentum and energy. However, in the absence of artificial damping, explicit
 Euler integration amplifies the energy of the simulated system. For example, it fails unconditionally on the undampened harmonic oscillator 
 \cite{servin2006}. Using the explicit Euler method with larger time steps often manifests itself in exploding
@@ -142,7 +142,7 @@ Despite the added complexity, implicit Euler integration is still only first-ord
 remains a popular choice for physical simulation since it can be shown to be unconditionally stable \cite{chapra2005}. This allows 
 dramatically increasing the size of the time steps. The additional cost of a single implicit Euler 
 step compared to the previously mentioned integration schemes is offset by the fact that fewer steps are required to drive the 
-simulation forward the same amount of time in a stable manner. It is worth poiting out that the stability guarantees of implicit Euler 
+simulation forward the same amount of time in a stable manner. It is worth pointing out that the stability guarantees of implicit Euler 
 integration require the computation of the exact solution of the NLSE in Equation \ref{eq:implicit-euler}. Solving the NLSE commonly involves
 solving derived LSEs whose system matrices are often ill-conditioned if the equations of motion are stiff (see Sec.\ \ref{ss:penalty-forces}). 
 Thus, implicit Euler integration is still prone to numerical instabilities in practice. Finally, implicit Euler integration is known 
@@ -250,7 +250,7 @@ the true solution of the NLSE for implicit Euler integration (see Eq.\ \ref{eq:i
 Equation \ref{eq:implicit-euler} is also at the heart of XPBD (see Sec.\ \ref{ss:xpbd-constraint-projection}), even though the manner in which the 
 approximation is achieved differs quite significantly from the linear implicit Euler stepper.
 
-The second strategy is to compute the exact solution of Equation \ref{eq:implicit-euler}, but to restrict to a subset of forces whose strucuture 
+The second strategy is to compute the exact solution of Equation \ref{eq:implicit-euler}, but to restrict to a subset of forces whose structure 
 allows speeding up the process of solving the NLSE. As an example, note that Equation \ref{eq:implicit-euler} is linear if the featured forces 
 are linear. In this case, $\vecm{q}_{n+1}, \vecm{v}_{n+1}$ can be determined in a single linear solve. A similar approach, but with a less 
 restrictive subset of forces that allows modelling nonlinearities, is used in PD (see Sec.\ \ref{s:pd}). The second method is particularly appealing 
@@ -387,7 +387,7 @@ Since the PD solver cannot be applied to classical material models like the St.\
 material model is the main tool for achieving simulations of deformable bodies using PD (see Sec.\ \ref{s:pd}).
 While simple, the strain material model comes with a couple of disadvantages. Firstly, the computation of the singular value decomposition of 
 $\matm{F}$ is expensive. Secondly, the restorative elastic forces arising from the strain material model are proportional 
-to the aformentioned distance between the deformation and its closest rigid-body transform. As such, the strain material model is too 
+to the aforementioned distance between the deformation and its closest rigid-body transform. As such, the strain material model is too 
 restrictive to model complex materials such as skin or flesh \cite{liu2017}. 
 
 \subsection{Neohookean Material Model}\label{ss:neohookean-material}
@@ -463,7 +463,7 @@ in the context of real-time adaptions of implicit Euler integration that only pe
 significantly from these methods, the challenges encountered in modelling hard constraints are largely transferrable. Handling hard constraints 
 via stiff penalty forces as outlined above is covered in more detail in Section \ref{ss:penalty-forces}. Adding hard constraints to the equations
 of motion without introducing stiff constraint forces via a Differential Algebraic Equation (DAE) is explored in Section \ref{ss:hard-constraints}.
-Finally, adding regularization to the resulting DAE in a physcially meaningful manner yields a method called compliant constraints. 
+Finally, adding regularization to the resulting DAE in a physically meaningful manner yields a method called compliant constraints. 
 Compliant constraints are introduced in Section \ref{ss:compliant-constraints}.
 
 \subsection{Penalty Forces}\label{ss:penalty-forces}
