@@ -1,2 +1,38 @@
 \chapter{Related Work}\label{ch:related-work}
+In their presentations of XPBD \cite{macklin2016} and PD-style solvers, including the original PD solver \cite{bouaziz2014} and its 
+extensions using ADMM \cite{overby2017} and Quasi-Newton (QN) methods \cite{liu2017}, the authors offer experimental data showcasing 
+the key properties of each method. A brief summary is provided below.
 
+\paragraph{XPBD.}
+Macklin et al.\ \cite{macklin2016} demonstrate that XPBD overcomes the problem of time step dependent constraint stiffness of its 
+predecessor PBD \cite{mueller2006} by example of cloth simulations using geometric constraints. Additionally, the authors compare 
+XPBD to Newton's method, demonstrating that XPBD achieves visually indistinguishable results from Newton's method in simple one- 
+and two-dimensional scenarios. Macklin and Müller \cite{macklin2021} later propose a method for modelling Neohookean materials using 
+XPBD. Here, the stability of the resulting solver is demonstrated for varying degrees of material incompressibility, controlled by 
+the Poisson ratio. However, the material stiffness (controlled by Youngs Modulus) is kept low and fixed.
+
+\paragraph{PD.}
+Of the methods discussed in this thesis, PD dates back the furthest. Bouaziz et al. \cite{bouaziz2014} primarily compare their solver 
+to XPBD's predecessor, PBD. However, since PBD can be easily extended to XPBD without any drawbacks, XPBD has largely replaced PBD 
+in recent years. Consequently, the experimental data provided by \cite{bouaziz2014} offers limited insights into the differences 
+between PD and XPBD.
+
+\paragraph{ADMM.}
+Overby et al.\ \cite{overby2017} compare ADMM to PD and an L-BFGS method, which differs from the one proposed by Liu et al.\ 
+\cite{liu2017}. They evaluate the convergence rates of these methods by examining how quickly they minimize the objective function of 
+the variational form of implicit Euler integration. However, their experiments are limited to a simple non-linear material model 
+with fixed material stiffness.
+
+\paragraph{QN.}
+During their presentation of a Quasi-Newton method for the variational form of implicit Euler integration based on PD, Liu et 
+al.\ \cite{liu2017} evaluate solver convergence using the same methodology as Overby et al.\ \cite{overby2017}. While their 
+experimental data is still limited to fixed material stiffness, they use the more complex non-linear Neohookean material model. 
+Liu et al.\ \cite{liu2017} emphasize the differences between their L-BFGS method and other methods for unconstrained 
+optimization, comparing it to L-BFGS methods with different initial Hessian approximations, conjugate gradient solvers, and Newton's method.
+
+\paragraph{}
+\noindent Overall, the summary above highlights the scarcity of experimental data comparing XPBD and PD-style methods. Additionally, 
+comparisons between these simulation methods often focus on linear or simple non-linear material models with fixed material stiffness. 
+As such, the experimental data only provides a limited view of the simulation methods' characteristics in specific settings. Given the 
+current data, it is challenging to assess each method's suitability for more complex scenarios involving non-linear material models and 
+significant material stiffness.
