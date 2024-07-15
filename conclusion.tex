@@ -1,1 +1,25 @@
 \chapter{Conclusion}\label{ch:conclusion}
+XPBD and PD-style methods, including the original PD method and its extensions based on the Alternating Direction Method of 
+Multipliers (ADMM) and Quasi-Newton methods (QN), are popular choices for real-time physics-based simulation. Despite their 
+popularity, there is a lack of experimental data demonstrating the suitability of each method for different simulation 
+scenarios. This thesis addresses this gap by comparing these methods in various settings with different non-linear material 
+models, spanning a wide range of material stiffness values and time step sizes. Our analysis reveals that ADMM and, to a 
+lesser extent, XPBD are not suited for simulating complex non-linear materials with significant stiffness, as exemplified 
+by the Neohookean material model. Due to the incompatibility of Neohookean energy terms with PD energy potentials, the QN 
+method emerges as the most reliable option for robust simulation of stiff non-linear materials. Moreover, we observe that 
+XPBD can often introduce noticeable geometric artifacts when handling incompatible stiff constraints. Despite its favorable 
+convergence properties, achieving precise control over individual particle positions remains challenging with the QN solver.
+
+While our study provides extensive experimental data comparing XPBD and PD-style solvers, it is not exhaustive. Notably, 
+we lack experiments evaluating the ability of solvers to precisely control particle positions. In scenarios where strict 
+enforcement of particle positions is critical, XPBD and ADMM may offer advantages over QN, despite their generally poorer 
+convergence properties in our experiments with soft position constraints. Additionally, our experiments with the Neohookean 
+model prioritize modelling large material stiffness over strict volume preservation, which differs from the focus of 
+Macklin and Müller \cite{macklin2021}. They propose that XPBD performs well in scenarios where materials are nearly 
+incompressible. Future work could expand our this analysis to include a broader range of material models.
+
+Lastly, Chen et al.\ \cite{chen2024} recently presented a method called Vertex Block Descent that is similar to XPBD, but 
+performs updates on individual particles instead of groups of particles contributing to a single constraint. This approach
+supports massive parallelization, enabling the simulation of complex geometries at competitive frame rates. It would 
+be interesting to extend our analysis to this method as well.
+

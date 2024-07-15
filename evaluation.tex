@@ -655,10 +655,9 @@ positions (see Sec.\ \ref{ss:xpbd-properties}). Thus, XPBD has more freedom to u
 that cause the beam to twist are satisfied. On the other hand, moving particles away from their inertial positions is associated with a penalty that is 
 quadratic in the inverse of the time step size when using the QN solver. As a result, the final QN positions at the end of the beam are further 
 away from the reference positions of the position constraints. While the behavior of the QN solver is physically accurate, it 
-also highlights one of its weaknesses: Due to the penalty incurred for moving particles away from their inertial positions and the fact that 
-position constraints can only be modelled via stiff springs, exerting exact control over a set of particle positions is challenging. Note that even the 
-large stiffness value of \num{1e12} used for the position constraints in Figure \ref{fig:twisting-beam-xpbd-failure-geometry} is insufficient for moving particles 
-to their reference positions when using the QN solver.
+also highlights one of its weaknesses: Due to the penalty incurred for moving particles away from their inertial positions, exerting exact control over a set of 
+particle positions is challenging. Note that even the large stiffness value of \num{1e12} used for the position constraints in Figure 
+\ref{fig:twisting-beam-xpbd-failure-geometry} is insufficient for moving particles to their reference positions when using the QN solver.
 
 \begin{table}[h]
 \centering
