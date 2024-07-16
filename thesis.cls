@@ -162,7 +162,7 @@
     methods across a variety of settings using a wide range of material models, material stiffness values and time step sizes. Most importantly, we 
     show that PD-style simulation methods are more robust than XPBD for simulations with competing energy terms and that robust simulations using 
     stiff Neohookean materials can only be achieved using the QN method.
-    \end{abstract}
+\end{abstract}
 \cleardoublepage
 {%
 \pagestyle{plain}

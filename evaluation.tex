@@ -20,7 +20,7 @@ We start our comparison between XPBD and PD-style solvers on simulations using o
 in Section \ref{ss:untwisting-beam-strain}. The effects of adding position constraints that are incompatible with the material constraints are analyzed in 
 Section \ref{ss:twisting-beam-strain}. The experiments in Section \ref{ss:untwisting-beam-strain} are repeated for the simplified Neohookean material model (see 
 Sec.\ \ref{ss:simplified-neohookean-material}) in Section \ref{ss:untwisting-beam-neohookean} to gain insights on the compatibility of the solvers with more complicated non-linear 
-material models. Finally, we summarize our findings in Section \ref{s:discussion}.
+material models. Finally, we summarize our findings in Section \ref{s:summary}.
 
 \section{Experimental Setup}\label{ss:experimental-setup}
 Experiments start from the deformed configuration of a cuboid beam that has been twisted in opposite directions at both ends (see Fig. \ref{fig:twisting-beam-setup}, left).
@@ -47,11 +47,12 @@ material model (see Sec.\ \ref{ss:material-models}). The strain model is support
 not supported by PD. The simplified Neohookean model is chosen over the original Neohookean model because the log term in the original 
 Neohookean energy potential makes it incompatible with XPBD (see Sec.\ \ref{ss:xpbd-deformable-bodies}). The experiments are run for time steps 
 \SI{1e-1}{\second}, \SI{1e-2}{\second}, \SI{1e-3}{\second} and \SI{1e-4}{\second}. For the strain and Neohookean constraints, both 
-stiffness and Youngs modulus, respectively, are set to powers of ten ranging from \num{1e5} to \num{1e12}. The Poisson ratio is fixed 
-at 0.45 for all experiments, since we put the focus of our evaluation on material stiffness over incompressibility. A representative subset of both twisting and untwisting 
-beam experiments using the strain material model are discussed in Sections \ref{ss:untwisting-beam-strain} and \ref{ss:twisting-beam-strain}, respectively. For the 
-Neohookean material model, we focus on the untwisting beam experiment in order to isolate the effects caused by applying solvers to a more complicated non-linear material 
-model from artifacts caused by incompatible constraints. A representative set of experiments is discussed in Section \ref{ss:untwisting-beam-neohookean}.
+stiffness and Youngs modulus (in Pa), respectively, are set to powers of ten ranging from \num{1e5} to \num{1e12}. The Poisson ratio is fixed 
+at 0.45 for all experiments, since we put the focus of our evaluation on material stiffness over incompressibility. A representative subset of both 
+twisting and untwisting beam experiments using the strain material model are discussed in Sections \ref{ss:untwisting-beam-strain} and 
+\ref{ss:twisting-beam-strain}, respectively. For the Neohookean material model, we focus on the untwisting beam experiment in order to isolate the effects caused 
+by applying solvers to a more complicated non-linear material model from artifacts caused by incompatible constraints. A representative set of experiments is discussed 
+in Section \ref{ss:untwisting-beam-neohookean}.
 
 \begin{figure}[tb]
     \centering
@@ -170,7 +171,7 @@ XPBD, ADMM, PD and the QN solver instead.
     \includegraphics[width=\textwidth, trim={0 5.0cm 0 2.5cm}, clip]{figures/strain_pbd_1e-3.png}
     \subcaption{time step \SI{1e-3}{\second}}
     \end{subfigure}
-    \caption{Geometries of an untwisting beam with strain constraints (stiffness \num{1e8}) after 1000 iterations over a single time step of size \SI{1e-2}{\second} (left) 
+    \caption{Geometries of an untwisting beam with strain constraints (stiffness \num{1e8}) after 1000 iterations of a single time step of size \SI{1e-2}{\second} (left) 
     and \SI{1e-3}{\second} (right) using PBD (red) and QN (cyan).}
     \label{fig:strain-pbd}
 \end{figure}
@@ -178,7 +179,7 @@ XPBD, ADMM, PD and the QN solver instead.
 \section{ADMM Weights}\label{ss:admm-weights}
 As stated in Section \ref{ss:admm-properties}, there is no generally valid method for determining ADMM weights that ensures acceptable convergence properties.
 Thus, we need to manually fine-tune ADMM weights before comparing different solvers using the method described above. The convergence of the ADMM solver is evaluated via 
-the objective function of the beam (see Sec.\ \ref{ss:analysis-solvers}). We focus on untwisting beam experiments using strain constraints. For 
+the objective function of the beam (see Sec.\ \ref{ss:analysis-solvers}). We focus on untwisting beam experiments with the strain material model. For 
 each combination of time steps from \SI{1e-1} to \SI{1e-4} and stiffnesses $k$ from \num{1e5} to \num{1e12}, candidate weights around the recommended value $w_i = \sqrt{k}$ 
 are generated and the weight that reduces the objective function the fastest is used as the ADMM weight for all following experiments. 
 This process reveals that ADMM weights are in fact time step dependent.
@@ -215,8 +216,9 @@ size and the material stiffness remain unchanged.
         \includegraphics[width=\linewidth]{figures/strain_admm_weights_1e-3.pdf}
         \subcaption{Time step \SI{1e-3}{\second}}
     \end{subfigure}
-    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time 
-        step of size \SI{1e-2}{\second} (a) and \SI{1e-3}{\second} (b) for an untwisting beam with strain constraints with stiffness \num{1e8} using ADMM with different weights.}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a 
+        single time step of size \SI{1e-2}{\second} (a) and \SI{1e-3}{\second} (b) for an untwisting beam using the strain material model with stiffness \num{1e8} 
+        using ADMM with different weights.}
     \label{fig:strain-weights-admm}
 \end{figure}
 
@@ -251,7 +253,7 @@ is still at 1.8 \%.
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives.pdf}
     \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time 
-        step of size \SI{1e-2}{\second} for an untwisting beam using strain constraints with stiffness \num{1e8}.}
+        step of size \SI{1e-2}{\second} for an untwisting beam using the strain material model with stiffness \num{1e8}.}
     \label{fig:strain-beam-untwist-objectives}
 \end{figure}
 
@@ -264,7 +266,7 @@ Since constraints are projected independently one-by-one, later constraint proje
 \cite{bouaziz2014} describe this phenomenon as an oscillation between different constraints. On the other hand ADMM, PD and QN aim to solve the implicit equations 
 of motion exactly. The difference in the rate of convergence between ADMM and PD goes in line 
 with experimental data provided by Overby et al.\ \cite{overby2017}. There, the authors show that ADMM with a weight of $\sqrt{k}$, where $k$ is the stiffness of the 
-strain constraints, is almost equivalent to PD and that the convergence rate can often be improved by reducing the weight. As discussed in 
+strain material model, is almost equivalent to PD and that the convergence rate can often be improved by reducing the weight. As discussed in 
 Section \ref{ss:admm-properties}, this is due to the fact that lower weights allow faster progress towards positions that reduce the constraint energy, which is particularly 
 useful for simulations with larger time steps. Similarly, the faster convergence rate of QN compared to PD is expected in light of the observation that PD is a quasi-Newton method 
 with constant Hessian approximation (see \cite{liu2017}, Sec.\ \ref{ss:pd-quasi-newton}). The QN solver augments the PD solver with a line-search algorithm and L-BFGS updates to 
@@ -361,7 +363,7 @@ as \SI{1e-2}{\second} is used. However, the inertial term achieved by XPBD remai
         \includegraphics[width=\textwidth, trim={0 4.5cm 0 2.15cm}, clip]{figures/strain_beam_untwist_QN_vs_ADMM_10_iterations.png}
         \subcaption{QN and ADMM after 10 iterations}
     \end{subfigure}
-    \caption{Geometries of an untwisting beam with strain constraints (stiffness \num{1e8}) after 10 and 1000 iterations over a single time step of size 
+    \caption{Geometries of an untwisting beam using the strain material model (stiffness \num{1e8}) after 10 and 1000 iterations over a single time step of size 
         \SI{1e-2}{\second} using XPBD (pink), PD (orange), ADMM (green) and QN (cyan).}
     \label{fig:strain-beam-untwist-geometries}
 \end{figure}
@@ -410,7 +412,7 @@ of time than XPBD and PD, but ADMM and PD appear in a more favorable light compa
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives_time.pdf}
     \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the accumulated durations of 
-        the iterations over a single time step of size \SI{1e-2}{\second} for an untwisting beam using strain constraints with stiffness \num{1e8}.}
+        1000 iterations (49 iterations for QN) over a single time step of size \SI{1e-2}{\second} for an untwisting beam using the strain material model with stiffness \num{1e8}.}
     \label{fig:strain-beam-untwist-objectives-time}
 \end{figure}
 
@@ -433,7 +435,7 @@ inertial and constraint terms. This is analogous
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{figures/strain_beam_untwist_objectives_large_ts.pdf}
     \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time 
-        step of size \SI{1e-1}{\second} for an untwisting beam using strain constraints with stiffness \num{1e9}.}
+        step of size \SI{1e-1}{\second} for an untwisting beam using the strain material model with stiffness \num{1e9}.}
     \label{fig:strain-beam-untwist-objectives-large-ts}
 \end{figure}
 
@@ -462,8 +464,8 @@ iterations. Finally, each of the solvers converge to an inertial term that is si
         \includegraphics[width=\linewidth]{figures/strain_beam_untwist_inertialObjectives_large_ts.pdf}
     \end{subfigure}
     \caption{Values of the constraint (top) and inertial (bottom) terms of the objective function of the variational form of implicit Euler integration 
-        (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time step of size \SI{1e-1}{\second} for an untwisting beam using strain constraints with 
-    stiffness \num{1e9}.}
+        (see Eq.\ \ref{eq:variational-implicit}) over the iterations of a single time step of size \SI{1e-1}{\second} for an untwisting beam using the strain material 
+        model with stiffness \num{1e9}.}
     \label{fig:strain-beam-untwist-objectives-split-large-ts}
 \end{figure}
 
@@ -504,7 +506,7 @@ momentum of the beam is non-zero after 1000 PD iterations.
         \includegraphics[width=\textwidth, trim={0 4.5cm 0 2.15cm}, clip]{figures/strain_beam_untwist_QN_vs_ADMM_vs_PD_large_ts.png}
         \subcaption{QN, PD and ADMM after 1000 iterations}
     \end{subfigure}
-    \caption{Geometries of an untwisting beam with strain constraints (stiffness \num{1e9}) after 1000 iterations over a single time step of size 
+    \caption{Geometries of an untwisting beam using the strain material model (stiffness \num{1e9}) after 1000 iterations over a single time step of size 
     \SI{1e-1}{\second} using XPBD (pink), PD (orange), ADMM (green) and QN (cyan).}
     \label{fig:strain-beam-untwist-geometries-large-ts}
 \end{figure}
@@ -526,7 +528,7 @@ a quasi-Newton method with constant Hessian approximation. The QN solver enhance
 approximation via an L-BFGS update and adding a line search algorithm. Since the QN solver does not introduce any global linear momentum, it follows that
 the reason for the PD solver's inability to preserve the linear momentum is the lack of one or both of these features of the QN solver. To find out which of 
 these factors is more important, it might be interesting to remove the line search or the L-BFGS update from the QN solver and take another look at the momenta. 
-Lastly, recall that ADMM and PD are almost identical for strain constraints if the ADMM weights $w_i$ are set to $\sqrt{k}$. For the experiments in 
+Lastly, recall that ADMM and PD are almost identical for the strain material model if the ADMM weights $w_i$ are set to $\sqrt{k}$. For the experiments in 
 Figure \ref{fig:strain-beam-untwist-momenta-large-ts}, $w_i \approx \frac{1}{2}\sqrt{k}$ is used. Thus, the smaller linear momentum observed for ADMM invites 
 the hypothesis that lower ADMM weights can be beneficial for the preservation of linear momentum. However, more effort is required to verify this claim and 
 to establish the causal justification. 
@@ -540,7 +542,7 @@ to establish the causal justification.
         \includegraphics[width=\linewidth]{figures/strain_beam_untwist_angular_momenta_large_ts.pdf}
     \end{subfigure}
     \caption{Norms of the global linear (top) and global angular (bottom) momenta in $\text{kg}\cdot\text{m}^2\cdot\text{s}^{-1}$ over the iterations 
-    of a single time step of size \SI{1e-1}{\second} for an untwisting beam with strain constraints with stiffness \num{1e9}. The required velocities 
+    of a single time step of size \SI{1e-1}{\second} for an untwisting beam using the strain material model with stiffness \num{1e9}. The required velocities 
     $\vecm{v}_k$ at iteration $k$ are computed via Verlet integration (see Sec.\ \ref{ss:analysis-solvers}).
 }
     \label{fig:strain-beam-untwist-momenta-large-ts}
@@ -573,7 +575,7 @@ below its initial value. Even in such settings, the minimal objective value achi
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{figures/strain_beam_twist_typical_objectives.pdf}
     \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of 
-        a single time step of size \SI{1e-1}{\second} for a twisting beam using strain constraints with stiffness \num{1e9}.}
+        a single time step of size \SI{1e-1}{\second} for a twisting beam using the strain material model with stiffness \num{1e9}.}
     \label{fig:strain-beam-twist-typical-objectives}
 \end{figure}
 
@@ -640,7 +642,7 @@ appears that the end of the beam is twisted further in the counterclockwise dire
     \quad
     \includegraphics[height=10cm, trim={16.5cm 2.0cm 15.5cm 2.0cm}, clip]{figures/twisted_beam_sideview.png}
     }
-    \caption{Geometries of a twisting beam with strain constraints (stiffness \num{1e12}) after 1000 XPBD iterations over a time step of size \SI{1e-2}{\second} 
+    \caption{Geometries of a twisting beam using the strain material model (stiffness \num{1e12}) after 1000 XPBD iterations over a time step of size \SI{1e-2}{\second} 
     from different angles. In the right panel, the converged QN geometry is shown as a reference.}
     \label{fig:twisting-beam-xpbd-failure-geometry}
 \end{figure}
@@ -697,7 +699,7 @@ away from their inertial positions. In this setting, the lack of an explicit pen
 \begin{figure}[h]
     \includegraphics[width=\textwidth]{figures/strain_beam_twist_objectives.pdf}
     \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of 
-        a single time step of size \SI{1e-2}{\second} for a twisting beam using strain constraints with stiffness \num{1e10}.}
+        a single time step of size \SI{1e-2}{\second} for a twisting beam using the strain material model with stiffness \num{1e10}.}
     \label{fig:strain-beam-twist-objectives}
 \end{figure}
 
@@ -754,7 +756,7 @@ can be achieved during later iterations.
     \includegraphics[width=\textwidth, trim={0 5.0cm 0 2.5cm}, clip]{figures/twisted_beam_qn.png}
     \subcaption{QN after convergence}
     \end{subfigure}
-    \caption{Geometries of a twisting beam with strain constraints (stiffness \num{1e10}) after 20 (a) and 1000 (b) ADMM iterations over a time step of size 
+    \caption{Geometries of a twisting beam using the strain material model (stiffness \num{1e10}) after 20 (a) and 1000 (b) ADMM iterations over a time step of size 
         \SI{1e-2}{\second}. The converged QN geometry (c) is given as a reference.}
     \label{fig:strain-beam-twist-admm-geometries}
 \end{figure}
@@ -805,26 +807,212 @@ Figure \ref{fig:strain-beam-twist-objectives-admm-failure}. The graphs show that
 than the initial objective value and objective values that are smaller than the minimal objective values achieved by QN and PD. Similar results are observed for 
 time step size \SI{1e-1}{\second} and stiffness \num{1e10} and timestep size \SI{1e-2} and stiffness values \num{1e8} and \num{1e10}.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \includegraphics[width=\textwidth]{figures/strain_beam_twist_objectives_admm_failure.pdf}
     \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of 
-        a single time step of size \SI{1e-2}{\second} for a twisting beam using strain constraints with stiffness \num{1e8}.}
+        a single time step of size \SI{1e-2}{\second} for a twisting beam using the strain material model with stiffness \num{1e8}.}
     \label{fig:strain-beam-twist-objectives-admm-failure}
 \end{figure}
 
 Together with the results discussed above, the data from Figure \ref{fig:strain-beam-twist-objectives-admm-failure} suggests that ADMM drives particle 
-positions towards the global minimum of the objective function, but eventually undoes its progress once the particle positions get too close. It is not clear why 
-this failure to converge occurs for the parameters listed above, but not for the parameters in Table \ref{tbl:strain-beam-twist-admm-artificial}. Again, the choice 
-of the ADMM weights most likely plays an important role here. Recall that ADMM weights used during the twisting beam experiments were adopted from the corresponding 
-parameter screens for the untwisting beam experiments (see Sec.\ \ref{ss:admm-weights}). In light of the similarities between PD and ADMM with weights $w_i = \sqrt{k}$, 
-it is reasonable to assume that convergence could be achieved with more appropriate ADMM weights. As a result, it might be necessary to fine-tune ADMM weights for 
+positions towards the global minimum of the objective function, but eventually undoes its progress once the particle positions get too close. 
+It is not clear why this failure to converge occurs for the parameters listed above, but not for the parameters in Table \ref{tbl:strain-beam-twist-admm-artificial}. 
+Again, the choice 
+of the ADMM weights most likely plays an important role here. 
+Recall that ADMM weights used during the twisting beam experiments were adopted from the corresponding 
+parameter screens for the untwisting beam experiments (see Sec.\ \ref{ss:admm-weights}).  
+In light of the similarities between PD and ADMM with weights $w_i = \sqrt{k}$, 
+it is reasonable to assume that convergence could be achieved with more appropriate ADMM weights.
+As a result, it might be necessary to fine-tune ADMM weights for 
 individual simulation scenarios. Of course, this is highly impractical.
 
 \section{Untwisting Beam Simulations - Neohookean Material}\label{ss:untwisting-beam-neohookean}
+To assess each solver's suitability for more complex non-linear materials with a wide range of material stiffness values, we repeat the untwisting beam 
+experiments from Section \ref{ss:untwisting-beam-strain} using the non-linear simplified Neohookean material model (see Sec.\ \ref{ss:simplified-neohookean-material}). 
+For the sake of brevity, we will refer to the simplified Neohookean material model as the Neohookean material model in this section. Since Neohookean energy terms cannot 
+be expressed in terms of PD energy potentials, our comparison is restricted to XPBD, QN and ADMM. We begin with an overview of the convergence properties of 
+these solvers in Section \ref{ss:neohookean-convergence}. In Section \ref{ss:neohookean-admm-weights}, we describe the challenges of finding suitable ADMM weights for 
+the Neohookean material model. Finally, we provide a more detailed discussion of the results obtained for XPBD in Section \ref{ss:neohookean-xpbd}. We focus on 
+comparing the Neohookean constraint formulation due to Macklin and Müller \cite{macklin2021} (see Eq.\ \ref{eq:deviatoric-constraint} and \ref{eq:hydrostatic-constraint}) 
+with the combined constraint formulation in Equation \ref{eq:combined-neohookean-constraint}. In the following, we refer to these variants as split XPBD and combined XPBD, 
+respectively.
 
-\section{Discussion}\label{s:discussion}
+\subsection{Convergence Properties}\label{ss:neohookean-convergence}
+We start by plotting the objective function value of the variational form of implicit Euler integration over the iteration number for a time step size of \SI{1e-1}{\second} 
+and Youngs modulus of \SI{1e5}{\pascal} in Figure \ref{fig:neohookean-objective}. In this setting, both ADMM and QN converge to an objective value that is lower 
+than the objective value at the initial configuration. Convergence is achieved after 20 and 50 iterations for QN and ADMM, respectively. On the other hand, both XPBD 
+formulations increase the objective value dramatically during the first 10 iterations. While the objective value stays large for split XPBD, it is eventually lower than 
+the initial objective value for combined XPBD after roughly 250 iterations. Still, the objective value that combined XPBD converges to is larger than the one observed 
+for QN and ADMM. While QN exhibits similar behavior over all other combinations of time step sizes and values for Youngs modulus, the properties of both XPBD formulations 
+and ADMM depend strongly on the chosen parameters. Most notably, we are unable to find suitable ADMM weights if Youngs modulus is set to \SI{1e7}{\pascal} or higher (see 
+Sec.\ \ref{ss:neohookean-admm-weights}).
 
-% TODO:
-% - ADMM weights for neohookean model
-% - XPBD formulations for neohookean model (incompressibility, stability)
-% - Iteration times XPBD solvers
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{figures/neohookean_objectives.pdf}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the iterations of 
+        a single time step of size \SI{1e-1}{\second} for an untwisting beam using the simplified Neohookean material model with Poisson ratio 0.45 and Youngs modulus of 
+    \SI{1e5}{\pascal}.}
+    \label{fig:neohookean-objective}
+\end{figure}
+
+The observation that the QN solver successfully reduces the objective function value regardless of time step size and material stiffness is not surprising considering 
+that it employs an L-BFGS update that takes local curvature information of the objective function at the current configuration into account. This enables position 
+updates along efficient search directions $\matm{p}_k$, even for non-linear material models. Additionally, the backtracking algorithm used to select step sizes $\alpha_k$
+ensures that the updates $\alpha_k\matm{p}_k$ do not increase the objective function. Before we provide a more detailed discussion for ADMM (see Sec.\ 
+\ref{ss:neohookean-admm-weights}) and XPBD (see Sec.\ \ref{ss:neohookean-xpbd}), we plot the objective function values over the accumulated iteration durations in Figure 
+\ref{fig:neohookean-durations} to evaluate the computational costs of the solvers when applied to the Neohookean material model.
+
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{figures/neohookean_objectives_time.pdf}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) over the accumulated durations of 
+        500 iterations (78 iterations for QN) of a single time step of size \SI{1e-1}{\second} for an untwisting beam using the simplified Neohookean material model with Poisson ratio 0.45 and
+        Youngs Modulus of \num{1e8}{\pascal}.}
+    \label{fig:neohookean-durations}
+\end{figure}
+
+The results show that ADMM iterations are significantly more expensive than both QN and XPBD iterations. While 500 iterations of QN (extrapolated from the duration of the 
+79 iterations shown in Fig.\ \ref{fig:neohookean-durations}) and both XPBD versions can be performed within a single second, the ADMM iterations take more than six. 
+Similar to what was observed in Figure \ref{fig:strain-beam-untwist-objectives-time}, QN iterations are approximately twice as expensive as (split) XPBD iterations.
+Further, the split XPBD formulation is approx.\ twice as fast as the combined version. Even measured in time instead of iterations, both ADMM and QN are faster at 
+reducing the objective function than either XPBD version.
+
+The large computational cost of the ADMM iterations is expected considering that the $\vecm{z}_j$-update (see Eq.\ \ref{eq:admm-z-update}) has no analytical solution when using the 
+Neohookean material model (see Sec.\ \ref{ss:admm-properties}). In contrast to strain energy terms, numerical optimization algorithms -- we use an L-BFGS method -- are required to 
+perform the $\vecm{z}_j$-updates. Reducing the number of L-BFGS iterations might be an avenue for speeding up the ADMM solver, but less accurate $\vecm{z}_j$-updates can also have a 
+negative impact on convergence. As discussed in Section \ref{ss:admm-properties}, the impact of the increased cost of individual $\vecm{z}_j$-updates on total runtime decreases with 
+increasing hardware parallelism. Since our implementation is purely single threaded, the iteration durations for ADMM shown in Figure \ref{fig:neohookean-durations} might not be 
+representative of the costs observed for industrial strength implementations. Finally, the observation that split XPBD iterations are roughly twice as expensive as combined XPBD 
+iterations reflects the fact that the number of constraints is doubled in the split version of XPBD.
+
+\subsection{ADMM Weights}\label{ss:neohookean-admm-weights}
+For stiff Neohookean materials where Youngs modulus is greater than or equal to \SI{1e7}{\pascal}, we are unable to find weights for which the ADMM solver successfully reduces the 
+objective function, regardless of the chosen time step size. We demonstrate this by plotting the objective function values computed for different ADMM weights over the iteration 
+number for a time step size of \SI{1e-1}{\second} and Youngs modulus of \SI{1e7}{\pascal} in Figure $\ref{fig:neohookean-weights}$. The graphs show that ADMM fails to reduce the 
+objective function for all of the tested weights. With the best weight $w_i = 150$, the objective function value remains almost equal to the objective function at the 
+initial configuration. For both lower and higher weights, the objective function value increases instead. The resulting graphs for other candidates $w_i$ with $100 \leq w_i \leq 
+200$ and $w_i > 250$ are omitted in Figure \ref{fig:neohookean-weights}, but show similar results.
+
+\begin{figure}[t]
+    \includegraphics[width=\textwidth]{figures/neohookean_admm_weights.pdf}
+    \caption{Values of the objective function of the variational form of implicit Euler integration (see Eq.\ \ref{eq:variational-implicit}) for ADMM with different weights 
+        over the iterations of a single time step of size \SI{1e-1}{\second} for an untwisting beam using the simplified Neohookean material model with Poisson ratio 0.45 and 
+        Youngs modulus of \SI{1e5}{\pascal}.}
+    \label{fig:neohookean-weights}
+\end{figure}
+
+As discussed in Section \ref{ss:admm-properties}, the convergence of ADMM is only guaranteed for convex functions $f$ and $g$. In order to perform implicit Euler integration 
+via ADMM, we set $g(\vecm{z}) = \Psi_*(\vecm{z})$. However, the energy terms of the Neohookean material model are not convex. As a result, the degree of non-convexity in the 
+constrained optimization problem increases with increasing material stiffness. Note that the same argument can be applied to the strain material model, since its energy density 
+is non-convex as well. While tedious, finding suitable ADMM weights for the corresponding untwisting beam experiments using the strain material model is straight-forward, even 
+for high stiffness values (see Sec.\ \ref{ss:admm-weights}). It is unclear which factors make the process of finding weights for the Neohookean material model more challenging. 
+
+\subsection{Convergence Properties of XPBD}\label{ss:neohookean-xpbd}
+Regardless of which Neohookean constraint formulation is used, XPBD is only successful at reducing the objective function of the variational form of implicit Euler 
+integration to the same value as the QN solver for a few small time step sizes and values of Youngs modulus. These combinations are listed in Table \ref{tbl:xpbd-success}
+for both combined and split XPBD. Note that both methods only achieve the same result as the QN solver if the time step size is small and the material stiffness is low. 
+Consequently, the position updates computed by the XPBD solver are not physically accurate for most parameter settings. Similar observations are made for the strain 
+material model and are discussed at length in Section \ref{ss:untwisting-beam-strain}.
+
+\begin{figure}[t]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth, trim={0 5.0cm 0 1.0cm}, clip]{figures/neohookean_xpbd_ok.png}
+        \subcaption{QN and Combined XPBD}
+    \end{subfigure}
+    \hspace{0.001\textwidth}
+    \begin{subfigure}{0.49\textwidth}
+        \includegraphics[width=\textwidth, trim={0 5.0cm 0 1.0cm}, clip]{figures/neohookean_xpbd_bad.png}
+        \subcaption{Split XPBD}
+    \end{subfigure}
+    \caption{Geometries of an untwisting beam using the Neohookean material model (Poisson ratio: 0.45, Youngs Modulus: \SI{1e5}{\pascal}) after 1000 iterations over a single 
+        time step of size \SI{1e-1}{\second} using XPBD with split and combined Neohookean constraints (pink) and QN (cyan).}
+    \label{fig:neohookean-geometries}
+\end{figure}
+
+Since physical accuracy is rarely achieved, we instead focus on the robustness of each XPBD version by investigating the resulting geometries and screening for 
+visual artifacts. Consider the XPBD geometries in Figure \ref{fig:neohookean-geometries} achieved at the end of the experiment
+\ref{fig:neohookean-objective}. Despite small geometric artifacts at the edges of the geometry and differences in the twist of the beam, the 
+results achieved by combined XPBD are qualitatively the same as those achieved by the QN solver. 
+
+\begin{table}[H]
+\centering
+    \begin{tabular}{ |r||c|c|c|c| } 
+     \hline
+     time step in s & \num{1e-1} & \num{1e-2} & \num{1e-3} & \num{1e-4}\\ 
+     \hline
+     Combined XPBD & -- & -- & -- & $\leq$ \num{1e6}\\
+     Split XPBD & -- & -- & \num{1e5} & \num{1e5}, \num{1e7}\\
+     \hline
+    \end{tabular}
+    \caption{Values of Youngs Modulus in Pa for different time step sizes for which combined XPBD and split XPBD converge to the same solutions as the QN solver for 
+        the untwisting beam experiments using the simplified Neohookean material model (Poisson ratio: 0.45). }
+\label{tbl:xpbd-success}
+\end{table}
+
+\noindent In such cases, we consider a solver robust. In contrast, the geometry 
+computed by split XPBD is clearly faulty. It exhibits a drastic collapse in volume and a jagged surface that is obviously undesired. In Figure \ref{tbl:xpbd-visually-plausible},
+we list combinations of parameters for which split and combined XPBD are robust according to the methodology outlined above. The data shows that robustness of both 
+XPBD solvers improves with smaller time step sizes and smaller material stiffness. The larger the time step size, the smaller the range of permissible values for 
+Youngs modulus. For each time step, combined XPBD is robust for a wider range of values of Youngs modulus than split XPBD.
+
+
+The fact that large time step sizes and material stiffnesses prove challenging for the Gauss-Seidel solver at the core of XPBD are discussed at length in Sections 
+\ref{ss:untwisting-beam-strain} and \ref{ss:twisting-beam-strain}. As such, it is not surprising that combined and split XPBD are only robust for small time step sizes 
+and low values of Youngs modulus. However, the results suggest that at least some of the instabilities observed for split XPBD are due to the fact that each Neohookean 
+energy term is modelled via two separate constraints for the deviatoric and the hydrostatic term of the energy density (see Sec.\ \ref{ss:xpbd-deformable-bodies}). As 
+discussed in Section \ref{ss:simplified-neohookean-material}, rest stability of the simplified Neohookean material is achieved by adding a correction term to the volume 
+preserving hydrostatic term that inflates the material by just the right amount to counteract the deflation caused by the deviatoric term. As discussed in Section 
+\ref{ss:xpbd-deformable-bodies}, the XPBD solver ends up deflating and inflating corresponding tetrahedra sequentially by adding separate constraints for each term. This 
+issue is particularly severe for simulations with large time step sizes and material stiffness. Since each Neohookean energy term is modelled via a single constraint 
+term in combined XPBD, the effects of the hydrostatic and deviatoric terms are handled together, leading to less aggressive constraint projections. In light of this 
+discussion, it is not surprising that the combined XPBD formulation is more robust for large material stiffness. However, the split constraint formulation might still 
+be the superior choice where volume preservation is paramount \cite{macklin2021}.
+
+\begin{table}[H]
+\centering
+    \begin{tabular}{ |r||c|c|c|c| } 
+     \hline
+     time step in s & \num{1e-1} & \num{1e-2} & \num{1e-3} & \num{1e-4}\\ 
+     \hline
+     Combined XPBD & $\leq$ \num{1e5} & $\leq$ \num{1e7} & $\leq$ \num{1e9} & $\leq$ \num{1e11}\\
+     Split XPBD & -- & $\leq$ \num{1e5} & $\leq$ \num{1e7} & $\leq$ \num{1e10}\\
+     \hline
+    \end{tabular}
+    \caption{Values of Youngs Modulus in Pa for different time step sizes for which combined XPBD and split XPBD are robust for the untwisting beam experiments using the 
+    simplified Neohookean material model (Poisson ratio: 0.45).} 
+    \label{tbl:xpbd-visually-plausible}
+\end{table}
+
+\section{Summary}\label{s:summary}
+During the experiments provided in this chapter, we gained various insights into the properties of XPBD and PD-style solvers. In this section we provide a brief summary of 
+the most important findings. In Section \ref{ss:admm-weights}, we demonstrate that optimal ADMM weights for reliable and fast convergence are both material and time step 
+dependent. 
+Additionally, our results from Section \ref{ss:twisting-beam-admm} show that ADMM weights might not be transferrable across different simulation scenarios, even if the same 
+material parameters and time step size are used. Together, this makes the process of fine-tuning ADMM weights incredibly tedious and time consuming. 
+
+We establish basic solver properties in Section \ref{ss:untwisting-beam-strain}.  In Section \ref{ss:untwisting-beam-strain-convergence}, we demonstrate that QN typically 
+exhibits the best convergence rate, followed by ADMM, PD and then XPBD. In most experiments, XPBD is less successful at minimizing constraint energies than PD-style solvers.
+Most likely, this is due to the simplifying assumptions made during the dervivation of XPBD and its lack of a global perspective as a consequence of to the local nature of 
+the Gauss-Seidel solver at its core. In real-time settings, the time budget for physics simulations is usually too small to wait for solvers to converge. Our results from Section 
+\ref{ss:conversion-constraint-kinetic} and \ref{ss:early-termination} show that terminating solvers after a fixed number of iterations typically causes the simulated motion 
+to appear slowed down. This effect is particularly severe for solvers with slower convergence rates. Additionally, early termination can lead to noticeable geometric artifacts 
+when using XPBD. Finally, we show that PD can introduce undesired rigid-body motion into simulations with large time step sizes and material stiffness if particle positions 
+are unconstrained in Section \ref{ss:momenta-large-ts}. These issues are overcome by the QN solver, which extends PD with an L-BFGS update that takes local curvature information 
+into account and a simple step size selection algorithm.
+
+Our experiments involving soft position constraints in Section \ref{ss:twisting-beam-strain} show that XPBD is unsuited for simulations with stiff incompatible constraints. 
+In such settings, noticable geometric artifacts are not only observed after early termination, but also after the XPBD solver has achieved convergence. Again, the most plausible 
+explanation for these effects is that the XPBD solver cannot compromises between competing energy terms because it projects the corresponding constraints individually. 
+Additionally, we demonstrate that ADMM can converge to a global minimum of the objective function of implicit Euler integration, even when there is no 
+phyiscally plausible path from the initial configuration to this optimal state (see Sec.\ \ref{ss:twisting-beam-admm}). Other PD-style solvers avoid this issue by ensuring 
+that the position updates performed during each iteration are guaranteed to weakly decrease the objective function. While both PD and QN exhibit excellent convergence properties 
+during all experiments conducted in Section \ref{ss:twisting-beam-strain}, exerting accurate control over individual particle positions can prove challenging. 
+This is because implementing hard constraints in PD and QN is impossible, requiring the use of soft constraints with large, but finite, stiffnesses instead.
+In settings where hard constraints need to be enforced exactly, ADMM and XPBD may be a better choice.
+
+Lastly, we evaluate the suitability of XPBD, ADMM and QN for simulations using Neohookean materials in Section \ref{ss:untwisting-beam-neohookean}. Our results indicate that QN 
+exhibits excellent convergence properties across all time step sizes and material stiffnesses. However, we are unable to find suitable ADMM weights for Neohookean materials 
+with large values of Youngs modulus, limiting its applicability to the low stiffness range (see Sec.\ \ref{ss:neohookean-admm-weights}). Finally, in Section \ref{ss:neohookean-xpbd}, 
+we compare the Neohookean constraint formulation due to Macklin and Müller \cite{macklin2021} (see Eq.\ \ref{eq:deviatoric-constraint} and \ref{eq:hydrostatic-constraint}) 
+with the combined constraint formulation in Equation \ref{eq:combined-neohookean-constraint}. Our results suggest that modelling the hydrostatic and deviatoric 
+terms of Neohookean energy terms with a single constraint can be beneficial for large material stiffnesses.
